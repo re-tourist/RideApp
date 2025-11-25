@@ -1,0 +1,164 @@
+package com.example.rideflow.ui.screens
+
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.rideflow.R
+import androidx.compose.material3.ExperimentalMaterial3Api
+
+data class Club(
+    val id: Int,
+    val name: String,
+    val city: String,
+    val members: Int,
+    val heat: Int,
+    val logoRes: Int
+)
+
+private val localHotClubs = listOf(
+    Club(1, "北京狂魔车队", "北京市", 1943, 42987, R.drawable.ic_launcher_foreground),
+    Club(2, "CAPU行者", "北京市", 1258, 24658, R.drawable.ic_launcher_foreground),
+    Club(3, "北京骑行上班俱乐部", "北京市", 1960, 95265, R.drawable.ic_launcher_foreground)
+)
+
+private val nearbyClubs = listOf(
+    Club(4, "逸骑颠", "厦门市", 2, 0, R.drawable.ic_launcher_foreground),
+    Club(5, "马家龙老年俱乐部", "深圳市", 4, 0, R.drawable.ic_launcher_foreground)
+)
+
+private val nationalHotClubs = listOf(
+    Club(6, "【成都骑行吧】", "成都市", 1880, 96232, R.drawable.ic_launcher_foreground),
+    Club(7, "辽宁省朝阳市龙之单车俱乐部", "朝阳市", 1941, 82485, R.drawable.ic_launcher_foreground)
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ClubScreen(onBack: () -> Unit) {
+    var search by remember { mutableStateOf("") }
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(text = "俱乐部") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "返回")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { }) { Icon(Icons.Filled.Add, contentDescription = "添加") }
+                    IconButton(onClick = { }) { Icon(Icons.Filled.Settings, contentDescription = "设置") }
+                }
+            )
+        }
+    ) { innerPadding ->
+        LazyColumn(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize(),
+            contentPadding = PaddingValues(12.dp)
+        ) {
+            item {
+                Surface(color = Color(0xFF2196F3), shape = MaterialTheme.shapes.small) {
+                    Text(
+                        text = "你还没有设置主俱乐部，请前往进行设置！",
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = search,
+                    onValueChange = { search = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text(text = "搜索编号、名称、关键字") }
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+            item { SectionTitle(text = "本地热门俱乐部") }
+            items(localHotClubs) { club ->
+                ClubRow(club)
+                Divider()
+            }
+            item { SectionTitle(text = "附近俱乐部") }
+            items(nearbyClubs) { club ->
+                ClubRow(club)
+                Divider()
+            }
+            item { SectionTitle(text = "全国热门俱乐部") }
+            items(nationalHotClubs) { club ->
+                ClubRow(club)
+                Divider()
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionTitle(text: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Text(text = "查看更多", color = Color(0xFF007AFF), fontSize = 12.sp)
+    }
+}
+
+@Composable
+private fun ClubRow(club: Club) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Image(
+                painter = painterResource(id = club.logoRes),
+                contentDescription = club.name,
+                modifier = Modifier.size(48.dp),
+                contentScale = ContentScale.Crop
+            )
+            Column(modifier = Modifier.padding(start = 12.dp)) {
+                Text(text = club.name, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                Row {
+                    Text(text = club.city, fontSize = 12.sp, color = Color.Gray)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(text = "${club.members}人", fontSize = 12.sp, color = Color.Gray)
+                }
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(painter = painterResource(id = R.drawable.ic_launcher_foreground), contentDescription = "奖杯")
+            Text(text = "x${club.heat}", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(start = 6.dp))
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ClubScreenPreview() {
+    ClubScreen(onBack = {})
+}
+
