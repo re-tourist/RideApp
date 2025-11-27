@@ -11,8 +11,8 @@ import org.koin.dsl.module
  */
 val appModule = module {
     // 单例提供AuthRepository
-    single { AuthRepository() }
-    
-    // 提供AuthViewModel
+    single{ AuthRepository() }
+
+// 提供AuthViewModel
     viewModel { AuthViewModel(get()) }
 }
