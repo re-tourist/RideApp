@@ -113,7 +113,7 @@ private val mockPosts = listOf(
 )
 
 @Composable
-fun CommunityScreen() {
+fun CommunityScreen(navController: androidx.navigation.NavController) {
     var selectedTab by remember { mutableStateOf(0) }
     var showPostDialog by remember { mutableStateOf(false) }
     var showClubDialog by remember { mutableStateOf(false) }
@@ -454,5 +454,5 @@ fun PostCard(post: Post) {
 @Preview(showBackground = true)
 @Composable
 fun CommunityScreenPreview() {
-    CommunityScreen()
+    CommunityScreen(navController = androidx.navigation.compose.rememberNavController())
 }

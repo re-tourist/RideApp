@@ -1,10 +1,5 @@
 package com.example.rideflow.ui.screens
 
-import android.content.Context
-import android.net.Uri
-import androidx.activity.ComponentActivity
-import androidx.activity.result.contract.*
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -14,8 +9,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -26,7 +19,6 @@ import java.time.format.DateTimeFormatter
 
 @Composable
 fun EditProfileScreen(onBackPress: () -> Unit) {
-    val context = LocalContext.current
     var nickname by remember { mutableStateOf("这个人比较厉害耶") }
     var bio by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -34,11 +26,6 @@ fun EditProfileScreen(onBackPress: () -> Unit) {
     var birthDate by remember { mutableStateOf<LocalDate?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
     var emergencyContact by remember { mutableStateOf("") } // 紧急联系人
-    
-    // 更换头像函数（简化实现）
-    fun changeAvatar() {
-        println("更换头像功能被点击")
-    }
     
     // 格式化日期显示
     fun formatDate(date: LocalDate?): String {
@@ -92,35 +79,20 @@ fun EditProfileScreen(onBackPress: () -> Unit) {
                 .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 头像编辑部分
-            Column(
-                modifier = Modifier.padding(bottom = 30.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+            // 头像显示部分
+            Box(
+                modifier = Modifier
+                    .size(100.dp)
+                    .padding(bottom = 30.dp)
             ) {
-                // 头像显示和修改
-                // 简化实现，移除background修饰符
-                Box(
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = "用户头像",
+                    tint = Color(0xFFBDC3C7),
                     modifier = Modifier
-                        .size(100.dp)
-                ) {
-                    // 简化实现，始终使用Icon代替图片选择逻辑
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "用户头像",
-                        tint = Color.Gray,
-                        modifier = Modifier
-                            .size(60.dp)
-                            .align(Alignment.Center)
-                    )
-                }
-                // 暂时注释掉更换头像按钮以避免相关错误
-                // TextButton(onClick = { changeAvatar() }) {
-                //     Text(
-                //         text = "更换头像",
-                //         fontSize = 14.sp,
-                //         color = Color(0xFF3498DB)
-                //     )
-                // }
+                        .size(60.dp)
+                        .align(Alignment.Center)
+                )
             }
             
             // 个人信息输入部分
