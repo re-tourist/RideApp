@@ -2,6 +2,7 @@ package com.example.rideflow.di
 
 import com.example.rideflow.auth.AuthRepository
 import com.example.rideflow.auth.AuthViewModel
+import com.example.rideflow.profile.EditProfileViewModel
 import com.example.rideflow.profile.ProfileRepository
 import com.example.rideflow.profile.ProfileViewModel
 import org.koin.androidx.viewmodel.dsl.viewModel
@@ -23,4 +24,7 @@ val appModule = module {
 
     // 提供ProfileViewModel
     viewModel { ProfileViewModel(get(), get()) }
+
+    // 提供EditProfileViewModel
+    viewModel { EditProfileViewModel(get(), get()) }
 }

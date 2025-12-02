@@ -31,7 +31,7 @@ class ProfileRepository(private val authRepository: com.example.rideflow.auth.Au
         email: String? = null,
         avatarUrl: String? = null,
         bio: String? = null,
-        gender: Int? = null,
+        gender: String? = null,
         birthday: String? = null,
         emergencyContact: String? = null
     ): Boolean {

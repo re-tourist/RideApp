@@ -10,14 +10,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * ProfileViewModel - 管理用户信息界面的状态和逻辑
+ * EditProfileViewModel - 管理个人修改信息界面的状态和逻辑
  */
-class ProfileViewModel(
+class EditProfileViewModel(
     private val profileRepository: ProfileRepository,
     private val authRepository: AuthRepository
 ) : ViewModel() {
 
-    // 用户资料状态
+    // 当前用户资料状态
     private val _userProfile = MutableStateFlow<UserData?>(null)
     val userProfile: StateFlow<UserData?> = _userProfile.asStateFlow()
 
@@ -29,9 +29,13 @@ class ProfileViewModel(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
-    // 更新状态
+    // 更新成功状态
     private val _updateSuccess = MutableStateFlow(false)
     val updateSuccess: StateFlow<Boolean> = _updateSuccess.asStateFlow()
+
+    // 表单数据
+    private val _formData = MutableStateFlow(EditProfileFormData())
+    val formData: StateFlow<EditProfileFormData> = _formData.asStateFlow()
 
     /**
      * 加载用户资料
@@ -46,6 +50,22 @@ class ProfileViewModel(
                 if (userId != null) {
                     val userData = profileRepository.getCurrentUserProfile(userId)
                     _userProfile.value = userData
+                    
+                    // 将用户数据填充到表单
+                    userData?.let { user ->
+                        _formData.value = EditProfileFormData(
+                            nickname = user.nickname ?: "",
+                            email = user.email ?: "",
+                            bio = user.bio ?: "",
+                            gender = when (user.gender) {
+                                1 -> "male"
+                                2 -> "female"
+                                else -> "other"
+                            },
+                            birthday = user.birthday ?: "",
+                            emergencyContact = user.emergencyContact ?: ""
+                        )
+                    }
                 } else {
                     _errorMessage.value = "用户未登录"
                 }
@@ -65,68 +85,64 @@ class ProfileViewModel(
     }
 
     /**
-     * 更新用户资料
+     * 更新表单数据
      */
-    fun updateUserProfile(
+    fun updateFormData(
         nickname: String? = null,
         email: String? = null,
-        avatarUrl: String? = null,
         bio: String? = null,
         gender: String? = null,
         birthday: String? = null,
         emergencyContact: String? = null
     ) {
+        val current = _formData.value
+        _formData.value = current.copy(
+            nickname = nickname ?: current.nickname,
+            email = email ?: current.email,
+            bio = bio ?: current.bio,
+            gender = gender ?: current.gender,
+            birthday = birthday ?: current.birthday,
+            emergencyContact = emergencyContact ?: current.emergencyContact
+        )
+    }
+
+    /**
+     * 保存用户资料
+     */
+    fun saveUserProfile() {
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
             _updateSuccess.value = false
             
             try {
-                // 获取当前登录用户ID
-                val currentUserId = authRepository.getCurrentUserId()
-                if (currentUserId.isNullOrEmpty()) {
-                    _errorMessage.value = "用户未登录"
+                val currentFormData = _formData.value
+                
+                // 检查必填字段
+                if (currentFormData.nickname.isBlank()) {
+                    _errorMessage.value = "昵称不能为空"
                     return@launch
                 }
-
-                // 检查昵称是否可用（如果提供了新昵称）
-                if (!nickname.isNullOrEmpty() && nickname != _userProfile.value?.nickname) {
-                    val isNicknameAvailable = profileRepository.isNicknameAvailable(nickname)
-                    if (!isNicknameAvailable) {
-                        _errorMessage.value = "昵称已被使用"
-                        return@launch
-                    }
-                }
-
-                // 检查邮箱是否可用（如果提供了新邮箱）
-                if (!email.isNullOrEmpty() && email != _userProfile.value?.email) {
-                    val isEmailAvailable = profileRepository.isEmailAvailable(email)
-                    if (!isEmailAvailable) {
-                        _errorMessage.value = "邮箱已被使用"
-                        return@launch
-                    }
-                }
-
+                
                 // 更新用户资料
                 val success = profileRepository.updateUserProfile(
-                    nickname = nickname,
-                    email = email,
-                    avatarUrl = avatarUrl,
-                    bio = bio,
-                    gender = gender,
-                    birthday = birthday,
-                    emergencyContact = emergencyContact
+                    nickname = currentFormData.nickname.ifBlank { null },
+                    email = currentFormData.email.ifBlank { null },
+                    bio = currentFormData.bio.ifBlank { null },
+                    gender = if (currentFormData.gender != "other") currentFormData.gender else null,
+                    birthday = currentFormData.birthday.ifBlank { null },
+                    emergencyContact = currentFormData.emergencyContact.ifBlank { null }
                 )
 
                 if (success) {
                     _updateSuccess.value = true
-                    // 重新加载用户资料
+                    // 重新加载用户资料以获取最新数据
                     loadUserProfile()
                 } else {
-                    _errorMessage.value = "更新用户资料失败"
+                    _errorMessage.value = "保存用户资料失败"
                 }
             } catch (e: Exception) {
-                _errorMessage.value = "更新用户资料失败: ${e.message}"
+                _errorMessage.value = "保存用户资料失败: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
@@ -146,18 +162,16 @@ class ProfileViewModel(
     fun clearUpdateSuccess() {
         _updateSuccess.value = false
     }
-
-    /**
-     * 检查用户是否登录
-     */
-    fun isUserLoggedIn(): Boolean {
-        return authRepository.getCurrentUserId()?.isNotEmpty() == true
-    }
-
-    /**
-     * 获取当前用户ID
-     */
-    fun getCurrentUserId(): String? {
-        return authRepository.getCurrentUserId()
-    }
 }
+
+/**
+ * 编辑资料表单数据类
+ */
+data class EditProfileFormData(
+    val nickname: String = "",
+    val email: String = "",
+    val bio: String = "",
+    val gender: String = "other", // "male"男，"female"女，"other"其他
+    val birthday: String = "",
+    val emergencyContact: String = ""
+)

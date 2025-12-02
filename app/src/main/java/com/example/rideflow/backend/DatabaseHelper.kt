@@ -60,13 +60,14 @@ object DatabaseHelper {
 
             // 设置参数
             params.forEachIndexed { index, param ->
-                when (param) {
-                    is Int -> statement?.setInt(index + 1, param)
-                    is String -> statement?.setString(index + 1, param)
-                    is Double -> statement?.setDouble(index + 1, param)
-                    is Float -> statement?.setFloat(index + 1, param)
-                    is Long -> statement?.setLong(index + 1, param)
-                    is Boolean -> statement?.setBoolean(index + 1, param)
+                when {
+                    param == null -> statement?.setNull(index + 1, java.sql.Types.NULL)
+                    param is Int -> statement?.setInt(index + 1, param)
+                    param is String -> statement?.setString(index + 1, param)
+                    param is Double -> statement?.setDouble(index + 1, param)
+                    param is Float -> statement?.setFloat(index + 1, param)
+                    param is Long -> statement?.setLong(index + 1, param)
+                    param is Boolean -> statement?.setBoolean(index + 1, param)
                     else -> statement?.setObject(index + 1, param)
                 }
             }
@@ -109,13 +110,14 @@ object DatabaseHelper {
 
             // 设置参数
             params.forEachIndexed { index, param ->
-                when (param) {
-                    is Int -> statement.setInt(index + 1, param)
-                    is String -> statement.setString(index + 1, param)
-                    is Double -> statement.setDouble(index + 1, param)
-                    is Float -> statement.setFloat(index + 1, param)
-                    is Long -> statement.setLong(index + 1, param)
-                    is Boolean -> statement.setBoolean(index + 1, param)
+                when {
+                    param == null -> statement.setNull(index + 1, java.sql.Types.NULL)
+                    param is Int -> statement.setInt(index + 1, param)
+                    param is String -> statement.setString(index + 1, param)
+                    param is Double -> statement.setDouble(index + 1, param)
+                    param is Float -> statement.setFloat(index + 1, param)
+                    param is Long -> statement.setLong(index + 1, param)
+                    param is Boolean -> statement.setBoolean(index + 1, param)
                     else -> statement.setObject(index + 1, param)
                 }
             }
@@ -160,13 +162,14 @@ object DatabaseHelper {
 
             // 设置参数
             params.forEachIndexed { index, param ->
-                when (param) {
-                    is Int -> statement.setInt(index + 1, param)
-                    is String -> statement.setString(index + 1, param)
-                    is Double -> statement.setDouble(index + 1, param)
-                    is Float -> statement.setFloat(index + 1, param)
-                    is Long -> statement.setLong(index + 1, param)
-                    is Boolean -> statement.setBoolean(index + 1, param)
+                when {
+                    param == null -> statement.setNull(index + 1, java.sql.Types.NULL)
+                    param is Int -> statement.setInt(index + 1, param)
+                    param is String -> statement.setString(index + 1, param)
+                    param is Double -> statement.setDouble(index + 1, param)
+                    param is Float -> statement.setFloat(index + 1, param)
+                    param is Long -> statement.setLong(index + 1, param)
+                    param is Boolean -> statement.setBoolean(index + 1, param)
                     else -> statement.setObject(index + 1, param)
                 }
             }
@@ -203,13 +206,14 @@ object DatabaseHelper {
             // 添加批量参数
             paramsList.forEach { params ->
                 params.forEachIndexed { index, param ->
-                    when (param) {
-                        is Int -> statement?.setInt(index + 1, param)
-                        is String -> statement?.setString(index + 1, param)
-                        is Double -> statement?.setDouble(index + 1, param)
-                        is Float -> statement?.setFloat(index + 1, param)
-                        is Long -> statement?.setLong(index + 1, param)
-                        is Boolean -> statement?.setBoolean(index + 1, param)
+                    when {
+                        param == null -> statement?.setNull(index + 1, java.sql.Types.NULL)
+                        param is Int -> statement?.setInt(index + 1, param)
+                        param is String -> statement?.setString(index + 1, param)
+                        param is Double -> statement?.setDouble(index + 1, param)
+                        param is Float -> statement?.setFloat(index + 1, param)
+                        param is Long -> statement?.setLong(index + 1, param)
+                        param is Boolean -> statement?.setBoolean(index + 1, param)
                         else -> statement?.setObject(index + 1, param)
                     }
                 }

@@ -198,28 +198,28 @@ object AuthDatabaseHelper {
      * 更新用户信息
      */
     fun updateUser(userId: String, nickname: String?, email: String?, avatarUrl: String?, 
-                   bio: String?, gender: Int?, birthday: String?, emergencyContact: String?): Boolean {
+                   bio: String?, gender: String?, birthday: String?, emergencyContact: String?): Boolean {
         return try {
             val sql = """
                 UPDATE users 
-                SET nickname = COALESCE(?, nickname),
-                    email = COALESCE(?, email),
-                    avatar_url = COALESCE(?, avatar_url),
-                    bio = COALESCE(?, bio),
+                SET nickname = COALESCE(NULLIF(?, ''), nickname),
+                    email = COALESCE(NULLIF(?, ''), email),
+                    avatar_url = COALESCE(NULLIF(?, ''), avatar_url),
+                    bio = COALESCE(NULLIF(?, ''), bio),
                     gender = COALESCE(?, gender),
-                    birthday = COALESCE(?, birthday),
-                    emergency_contact = COALESCE(?, emergency_contact),
+                    birthday = COALESCE(NULLIF(?, ''), birthday),
+                    emergency_contact = COALESCE(NULLIF(?, ''), emergency_contact),
                     updated_at = CURRENT_TIMESTAMP
                 WHERE user_id = ?
             """.trimIndent()
 
-            // 处理可空参数，将null转换为空字符串
+            // 处理可空参数，将null转换为空字符串，让NULLIF函数处理
             val params = listOf<Any>(
                 nickname ?: "",
                 email ?: "",
                 avatarUrl ?: "",
                 bio ?: "",
-                gender ?: 0,
+                gender ?: "",
                 birthday ?: "",
                 emergencyContact ?: "",
                 userId
@@ -277,9 +277,14 @@ object AuthDatabaseHelper {
             email = row["email"]?.toString() ?: "",
             avatarUrl = row["avatar_url"]?.toString(),
             bio = row["bio"]?.toString(),
-            gender = when (row["gender"]) {
-                is Int -> row["gender"] as Int
-                is Long -> (row["gender"] as Long).toInt()
+            gender = when (val genderValue = row["gender"]) {
+                is Int -> genderValue as Int
+                is Long -> (genderValue as Long).toInt()
+                is String -> when (genderValue) {
+                    "male" -> 1
+                    "female" -> 2
+                    else -> 0
+                }
                 else -> 0
             },
             birthday = row["birthday"]?.toString(),
