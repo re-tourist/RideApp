@@ -115,4 +115,11 @@ class AuthRepository {
             null
         }
     }
+
+    /**
+     * 获取当前登录用户ID
+     */
+    fun getCurrentUserId(): String? {
+        return getCurrentUser()?.userId
+    }
 }
