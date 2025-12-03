@@ -1,10 +1,5 @@
 package com.example.rideflow.ui.screens
 
-import android.content.Context
-import android.net.Uri
-import androidx.activity.ComponentActivity
-import androidx.activity.result.contract.*
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -17,8 +12,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -51,11 +44,6 @@ fun EditProfileScreen(onBackPress: () -> Unit) {
         if (updateSuccess) {
             onBackPress()
         }
-    }
-    
-    // 更换头像函数（简化实现）
-    fun changeAvatar() {
-        println("更换头像功能被点击")
     }
     
     // 格式化日期显示

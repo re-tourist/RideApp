@@ -81,6 +81,9 @@ dependencies {
     // Compose运行时LiveData支持
     implementation("androidx.compose.runtime:runtime-livedata:1.5.4")
     
+    // Coil图片加载库
+    implementation("io.coil-kt:coil-compose:2.4.0")
+    
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

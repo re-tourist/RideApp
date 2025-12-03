@@ -1,6 +1,7 @@
 package com.example.rideflow.ui.screens
 
 import androidx.compose.foundation.Image
+import com.example.rideflow.navigation.AppRoutes
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -61,7 +62,7 @@ private val mockArticles = listOf(
 )
 
 @Composable
-fun DiscoverScreen() {
+fun DiscoverScreen(navController: androidx.navigation.NavController) {
     var subPage by remember { mutableStateOf(DiscoverSubPage.Main) }
     when (subPage) {
         DiscoverSubPage.Main -> {
@@ -75,12 +76,11 @@ fun DiscoverScreen() {
                 }
                 item {
                     CategorySection(
-                        onActivitiesClick = { subPage = DiscoverSubPage.Activities },
-                        onRouteBookClick = { subPage = DiscoverSubPage.RouteBook },
-                        onRaceClick = { subPage = DiscoverSubPage.Race },
-                        onClubClick = { subPage = DiscoverSubPage.Club },
-                        onRiderClick = { subPage = DiscoverSubPage.Rider }
-                    )
+            onRouteBookClick = { subPage = DiscoverSubPage.RouteBook },
+            onClubClick = { navController.navigate(com.example.rideflow.navigation.AppRoutes.CLUB_SCREEN) },
+            onRiderClick = { subPage = DiscoverSubPage.Rider },
+            navController = navController
+        )
                     Spacer(modifier = Modifier.height(24.dp))
                 }
                 items(mockArticles) {
@@ -89,9 +89,7 @@ fun DiscoverScreen() {
                 }
             }
         }
-        DiscoverSubPage.Activities -> {
-            ActivitiesScreen(onBack = { subPage = DiscoverSubPage.Main })
-        }
+        // 活动页面现在是一个独立的导航路由，不在这里渲染
         DiscoverSubPage.RouteBook -> {
             RouteBookScreen(
                 onBack = { subPage = DiscoverSubPage.Main },
@@ -102,11 +100,17 @@ fun DiscoverScreen() {
             MyRouteBookScreen(onBack = { subPage = DiscoverSubPage.RouteBook })
         }
         DiscoverSubPage.Race -> {
-            RaceScreen(onBack = { subPage = DiscoverSubPage.Main })
+            // RaceScreen现在是一个独立的导航路由，不在这里渲染
         }
+        DiscoverSubPage.CreateRace -> {
+            CreateRaceScreen(onBack = { subPage = DiscoverSubPage.Race })
+        }
+        // 俱乐部子页面已改为独立路由
         DiscoverSubPage.Club -> {
-            ClubScreen(onBack = { subPage = DiscoverSubPage.Main })
+            // 这个情况不会再发生，因为点击俱乐部类别会直接导航
+            ClubScreen(onBack = { subPage = DiscoverSubPage.Main }, navController = navController)
         }
+        // 骑友子页面
         DiscoverSubPage.Rider -> {
             RiderScreen(onBack = { subPage = DiscoverSubPage.Main })
         }
@@ -169,11 +173,10 @@ fun BannerSection() {
 
 @Composable
 fun CategorySection(
-    onActivitiesClick: () -> Unit,
     onRouteBookClick: () -> Unit,
-    onRaceClick: () -> Unit,
     onClubClick: () -> Unit,
-    onRiderClick: () -> Unit
+    onRiderClick: () -> Unit,
+    navController: androidx.navigation.NavController
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -182,7 +185,7 @@ fun CategorySection(
         CategoryItem(
             icon = Icons.Filled.Star,
             label = "赛事",
-            onClick = onRaceClick
+            onClick = { navController.navigate(AppRoutes.RACE) }
         )
         CategoryItem(
             icon = Icons.Filled.List,
@@ -192,7 +195,7 @@ fun CategorySection(
         CategoryItem(
             icon = Icons.Filled.Home,
             label = "活动",
-            onClick = onActivitiesClick
+            onClick = { navController.navigate(AppRoutes.ACTIVITIES) }
         )
         CategoryItem(
             icon = Icons.Filled.Home,
@@ -232,7 +235,7 @@ fun CategoryItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: S
     }
 }
 
-enum class DiscoverSubPage { Main, Activities, RouteBook, MyRouteBook, Race, Club, Rider }
+enum class DiscoverSubPage { Main, RouteBook, MyRouteBook, Race, Club, Rider, CreateRace }
 
 @Composable
 fun ArticleCard(article: Article) {
@@ -287,5 +290,5 @@ fun ArticleCard(article: Article) {
 @Preview(showBackground = true)
 @Composable
 fun DiscoverScreenPreview() {
-    DiscoverScreen()
+    DiscoverScreen(navController = androidx.navigation.compose.rememberNavController())
 }

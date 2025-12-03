@@ -1,6 +1,7 @@
 package com.example.rideflow.ui.screens
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -32,9 +33,9 @@ data class Club(
 )
 
 private val localHotClubs = listOf(
-    Club(1, "北京狂魔车队", "北京市", 1943, 42987, R.drawable.ic_launcher_foreground),
-    Club(2, "CAPU行者", "北京市", 1258, 24658, R.drawable.ic_launcher_foreground),
-    Club(3, "北京骑行上班俱乐部", "北京市", 1960, 95265, R.drawable.ic_launcher_foreground)
+    Club(1, "北京狂魔车队", "北京市", 1943, 429, R.drawable.ic_launcher_foreground),
+    Club(2, "CAPU行者", "北京市", 1258, 246, R.drawable.ic_launcher_foreground),
+    Club(3, "北京骑行上班俱乐部", "北京市", 1960, 95, R.drawable.ic_launcher_foreground)
 )
 
 private val nearbyClubs = listOf(
@@ -43,13 +44,13 @@ private val nearbyClubs = listOf(
 )
 
 private val nationalHotClubs = listOf(
-    Club(6, "【成都骑行吧】", "成都市", 1880, 96232, R.drawable.ic_launcher_foreground),
-    Club(7, "辽宁省朝阳市龙之单车俱乐部", "朝阳市", 1941, 82485, R.drawable.ic_launcher_foreground)
+    Club(6, "【成都骑行吧】", "成都市", 1880, 232, R.drawable.ic_launcher_foreground),
+    Club(7, "辽宁省朝阳市龙之单车俱乐部", "朝阳市", 1941, 485, R.drawable.ic_launcher_foreground)
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ClubScreen(onBack: () -> Unit) {
+fun ClubScreen(onBack: () -> Unit, navController: androidx.navigation.NavController) {
     var search by remember { mutableStateOf("") }
     Scaffold(
         topBar = {
@@ -61,8 +62,8 @@ fun ClubScreen(onBack: () -> Unit) {
                     }
                 },
                 actions = {
-                    IconButton(onClick = { }) { Icon(Icons.Filled.Add, contentDescription = "添加") }
-                    IconButton(onClick = { }) { Icon(Icons.Filled.Settings, contentDescription = "设置") }
+                    IconButton(onClick = { navController.navigate(com.example.rideflow.navigation.AppRoutes.CREATE_CLUB) }) { Icon(Icons.Filled.Add, contentDescription = "添加") }
+                    IconButton(onClick = { navController.navigate(com.example.rideflow.navigation.AppRoutes.SET_MAIN_CLUB) }) { Icon(Icons.Filled.Settings, contentDescription = "设置") }
                 }
             )
         }
@@ -93,17 +94,17 @@ fun ClubScreen(onBack: () -> Unit) {
             }
             item { SectionTitle(text = "本地热门俱乐部") }
             items(localHotClubs) { club ->
-                ClubRow(club)
+                ClubRow(club) { navController.navigate("club_detail/${club.id}") }
                 Divider()
             }
             item { SectionTitle(text = "附近俱乐部") }
             items(nearbyClubs) { club ->
-                ClubRow(club)
+                ClubRow(club) { navController.navigate("club_detail/${club.id}") }
                 Divider()
             }
             item { SectionTitle(text = "全国热门俱乐部") }
             items(nationalHotClubs) { club ->
-                ClubRow(club)
+                ClubRow(club) { navController.navigate("club_detail/${club.id}") }
                 Divider()
             }
         }
@@ -125,11 +126,12 @@ private fun SectionTitle(text: String) {
 }
 
 @Composable
-private fun ClubRow(club: Club) {
+private fun ClubRow(club: Club, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = 8.dp)
+            .clickable { onClick() },
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -159,6 +161,6 @@ private fun ClubRow(club: Club) {
 @Preview(showBackground = true)
 @Composable
 fun ClubScreenPreview() {
-    ClubScreen(onBack = {})
+    ClubScreen(onBack = {}, navController = androidx.navigation.compose.rememberNavController())
 }
 
