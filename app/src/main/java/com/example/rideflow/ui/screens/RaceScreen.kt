@@ -1,12 +1,14 @@
 package com.example.rideflow.ui.screens
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.rideflow.R
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.navigation.NavController
+import com.example.rideflow.navigation.AppRoutes
 
 data class Race(
     val id: Int,
@@ -41,7 +45,7 @@ private val mockRaces = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RaceScreen(onBack: () -> Unit) {
+fun RaceScreen(onBack: () -> Unit, onCreateRace: () -> Unit = {}, navController: NavController) {
     var selectedCategory by remember { mutableStateOf(0) }
     Scaffold(
         topBar = {
@@ -50,6 +54,11 @@ fun RaceScreen(onBack: () -> Unit) {
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "返回")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onCreateRace) {
+                        Icon(imageVector = Icons.Filled.Add, contentDescription = "创建赛事")
                     }
                 }
             )
@@ -87,7 +96,9 @@ fun RaceScreen(onBack: () -> Unit) {
                 contentPadding = PaddingValues(12.dp)
             ) {
                 items(filtered) { race ->
-                    RaceCard(race = race)
+                    RaceCard(race = race, onClick = { 
+                        navController.navigate("${AppRoutes.RACE_DETAIL}/${race.id}") 
+                    })
                     Spacer(modifier = Modifier.height(12.dp))
                 }
             }
@@ -97,9 +108,9 @@ fun RaceScreen(onBack: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RaceCard(race: Race) {
+fun RaceCard(race: Race, onClick: () -> Unit = {}) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
         shape = MaterialTheme.shapes.medium,
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
@@ -160,6 +171,6 @@ fun RaceCard(race: Race) {
 @Preview(showBackground = true)
 @Composable
 fun RaceScreenPreview() {
-    RaceScreen(onBack = {})
+    RaceScreen(onBack = {}, navController = androidx.navigation.compose.rememberNavController())
 }
 

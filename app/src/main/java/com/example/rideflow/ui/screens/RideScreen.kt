@@ -61,7 +61,7 @@ data class RideReport(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RideScreen() {
+fun RideScreen(navController: androidx.navigation.NavController) {
     var rideStatus = remember { mutableStateOf<RideStatus>(RideStatus.NotStarted) }
     var showReportDialog = remember { mutableStateOf(false) }
 
@@ -284,31 +284,39 @@ private fun InProgressContent(
     onPauseClick: () -> Unit,
     onStopClick: () -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        Card(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            shape = RoundedCornerShape(12.dp),
-            elevation = CardDefaults.cardElevation(8.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(duration, fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color(0xFF007AFF), modifier = Modifier.align(Alignment.CenterHorizontally))
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(distance, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("距离(km)", fontSize = 12.sp, color = Color.Gray) }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(currentSpeed, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("速度(km/h)", fontSize = 12.sp, color = Color.Gray) }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(avgSpeed, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("均速(km/h)", fontSize = 12.sp, color = Color.Gray) }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(calories, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("卡路里", fontSize = 12.sp, color = Color.Gray) }
+    Box(modifier = Modifier.fillMaxSize()) {
+        // 上半部分：骑行数据和地图
+        Column(modifier = Modifier.fillMaxSize()) {
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                shape = RoundedCornerShape(12.dp),
+                elevation = CardDefaults.cardElevation(8.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(duration, fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color(0xFF007AFF), modifier = Modifier.align(Alignment.CenterHorizontally))
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(distance, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("距离(km)", fontSize = 12.sp, color = Color.Gray) }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(currentSpeed, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("速度(km/h)", fontSize = 12.sp, color = Color.Gray) }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(avgSpeed, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("均速(km/h)", fontSize = 12.sp, color = Color.Gray) }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(calories, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("卡路里", fontSize = 12.sp, color = Color.Gray) }
+                    }
                 }
             }
+            // 地图区域使用具体高度
+            Box(
+                modifier = Modifier.fillMaxWidth().height(200.dp).background(Color.LightGray.copy(alpha = 0.3f), RoundedCornerShape(4.dp)).padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) { Text("骑行地图（含路线轨迹）", color = Color.Gray, fontSize = 16.sp) }
         }
-        Box(
-            modifier = Modifier.fillMaxWidth().weight(1f).background(Color.LightGray.copy(alpha = 0.3f), RoundedCornerShape(4.dp)).padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) { Text("骑行地图（含路线轨迹）", color = Color.Gray, fontSize = 16.sp) }
-        Row(modifier = Modifier.fillMaxWidth().padding(24.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-            Button(onClick = onPauseClick, modifier = Modifier.size(64.dp), shape = RoundedCornerShape(50), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9500))) { Text("暂停", color = Color.White, fontSize = 14.sp) }
-            Spacer(modifier = Modifier.width(40.dp))
-            Button(onClick = onStopClick, modifier = Modifier.size(64.dp), shape = RoundedCornerShape(50), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF3B30))) { Text("结束", color = Color.White, fontSize = 14.sp) }
+        
+        // 下半部分：按钮区域，固定在导航栏上方
+        Box(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 100.dp)) {
+            Row(modifier = Modifier.padding(horizontal = 24.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                Button(onClick = onPauseClick, modifier = Modifier.size(80.dp, 50.dp), shape = RoundedCornerShape(25.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9500))) { Text("暂停", color = Color.White, fontSize = 14.sp) }
+                Spacer(modifier = Modifier.width(40.dp))
+                Button(onClick = onStopClick, modifier = Modifier.size(80.dp, 50.dp), shape = RoundedCornerShape(25.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF3B30))) { Text("结束", color = Color.White, fontSize = 14.sp) }
+            }
         }
     }
 }
