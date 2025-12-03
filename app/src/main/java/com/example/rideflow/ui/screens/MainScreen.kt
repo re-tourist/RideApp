@@ -30,7 +30,7 @@ fun MainScreen(navController: NavController) {
         NavItem(
             title = "社区",
             icon = Icons.Filled.List,
-            screen = { CommunityScreen(navController) }
+            screen = { CommunityScreen() }
         ),
         NavItem(
             title = "我的",
