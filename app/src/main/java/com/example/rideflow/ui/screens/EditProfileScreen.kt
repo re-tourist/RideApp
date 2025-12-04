@@ -1,10 +1,5 @@
 package com.example.rideflow.ui.screens
 
-import android.content.Context
-import android.net.Uri
-import androidx.activity.ComponentActivity
-import androidx.activity.result.contract.*
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -17,17 +12,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.rideflow.profile.EditProfileViewModel
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.koin.androidx.compose.koinViewModel
-import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,8 +30,6 @@ fun EditProfileScreen(onBackPress: () -> Unit) {
     val errorMessage by editProfileViewModel.errorMessage.collectAsState()
     val updateSuccess by editProfileViewModel.updateSuccess.collectAsState()
     
-    val context = LocalContext.current
-    
     // 页面加载时获取用户资料
     LaunchedEffect(Unit) {
         editProfileViewModel.loadUserProfileData()
@@ -51,11 +40,6 @@ fun EditProfileScreen(onBackPress: () -> Unit) {
         if (updateSuccess) {
             onBackPress()
         }
-    }
-    
-    // 更换头像函数（简化实现）
-    fun changeAvatar() {
-        println("更换头像功能被点击")
     }
     
     // 格式化日期显示
@@ -132,7 +116,7 @@ fun EditProfileScreen(onBackPress: () -> Unit) {
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                TextButton(onClick = { changeAvatar() }) {
+                TextButton(onClick = { }) {
                     Text("更换头像")
                 }
             }

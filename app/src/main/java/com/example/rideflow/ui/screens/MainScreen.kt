@@ -20,12 +20,12 @@ fun MainScreen(navController: NavController) {
         NavItem(
             title = "运动",
             icon = Icons.Filled.Star,
-            screen = { RideScreen() }
+            screen = { RideScreen(navController) }
         ),
         NavItem(
             title = "发现",
             icon = Icons.Filled.Home,
-            screen = { DiscoverScreen() }
+            screen = { DiscoverScreen(navController) }
         ),
         NavItem(
             title = "社区",
@@ -72,14 +72,14 @@ fun MainScreen(navController: NavController) {
             }
         }
     ) {
-        navItems[currentIndex].screen()
+        navItems[currentIndex].screen(navController)
     }
 }
 
 data class NavItem(
     val title: String,
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
-    val screen: @Composable () -> Unit
+    val screen: @Composable (NavController) -> Unit
 )
 
 @Preview(showBackground = true)
