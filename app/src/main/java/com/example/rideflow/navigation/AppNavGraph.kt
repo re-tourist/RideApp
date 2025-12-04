@@ -61,7 +61,11 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
         }
 
         composable(AppRoutes.RIDE_PREFERENCE) {
-            com.example.rideflow.ui.screens.RidePreferenceScreen(navController = navController)
+            val uid = when (authState) {
+                is com.example.rideflow.auth.AuthState.Authenticated -> (authState as com.example.rideflow.auth.AuthState.Authenticated).userData.userId
+                else -> ""
+            }
+            com.example.rideflow.ui.screens.RidePreferenceScreen(navController = navController, userId = uid)
         }
 
         composable(AppRoutes.ACHIEVEMENTS) {
