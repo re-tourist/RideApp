@@ -11,7 +11,7 @@
  Target Server Version : 80044 (8.0.44-0ubuntu0.22.04.1)
  File Encoding         : 65001
 
- Date: 05/12/2025 00:53:09
+ Date: 05/12/2025 19:10:45
 */
 
 SET NAMES utf8mb4;
@@ -344,13 +344,13 @@ CREATE TABLE `users`  (
 -- ----------------------------
 -- Records of users
 -- ----------------------------
-INSERT INTO `users` VALUES (1, 'testuser', 'test@example.com', '123456', '', '222', 'male', '2025-12-03', '12345678900', 0, 1, '2025-12-05 00:43:38', '2025-11-27 20:58:42', '2025-12-05 00:43:38');
+INSERT INTO `users` VALUES (1, 'testuser', 'test@example.com', '123456', '', '222', 'male', '2025-12-03', '12345678900', 0, 1, '2025-12-05 19:09:16', '2025-11-27 20:58:42', '2025-12-05 19:09:16');
 INSERT INTO `users` VALUES (2, 'admin', 'admin@example.com', 'admin123', NULL, NULL, 'other', NULL, NULL, 0, 1, NULL, '2025-11-27 20:58:42', '2025-11-27 20:58:42');
 INSERT INTO `users` VALUES (3, 'user1', 'user1@example.com', 'password1', NULL, NULL, 'other', NULL, NULL, 0, 1, NULL, '2025-11-27 20:58:42', '2025-11-27 20:58:42');
 INSERT INTO `users` VALUES (6, '1', '111@qq.com', '111111', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-11-28 00:01:50', '2025-11-27 21:42:01', '2025-11-28 00:01:50');
 INSERT INTO `users` VALUES (7, 'a', 'a@qq.com', 'aaaaaa', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-11-28 00:06:10', '2025-11-28 00:06:10', '2025-11-28 00:06:10');
 INSERT INTO `users` VALUES (8, '123456', '710963274@qq.com', '123456', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-12-03 00:50:28', '2025-12-02 12:09:25', '2025-12-03 00:50:28');
 INSERT INTO `users` VALUES (9, 'ddd', 'aaa@gmail.com', 'sssssss', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-12-02 20:24:26', '2025-12-02 20:24:26', '2025-12-02 20:24:26');
-INSERT INTO `users` VALUES (10, '111', '111@gmail.com', '111111', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-12-05 00:21:48', '2025-12-02 20:48:47', '2025-12-05 00:21:48');
+INSERT INTO `users` VALUES (10, '111', '111@gmail.com', '111111', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-12-05 08:55:16', '2025-12-02 20:48:47', '2025-12-05 08:55:16');
 
 SET FOREIGN_KEY_CHECKS = 1;
