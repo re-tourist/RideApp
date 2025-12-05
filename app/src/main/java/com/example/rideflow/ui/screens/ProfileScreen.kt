@@ -33,13 +33,42 @@ import com.example.rideflow.R
 import com.example.rideflow.navigation.AppRoutes
 import com.example.rideflow.ui.theme.RideFlowTheme
 import java.util.*
+import com.example.rideflow.backend.DatabaseHelper
+import android.os.Handler
+import android.os.Looper
+import coil.compose.AsyncImage
+import java.text.SimpleDateFormat
 
 @Composable
-fun ProfileScreen(navController: NavController) {
+fun ProfileScreen(navController: NavController, userId: String = "") {
     var showAchievementDialog by remember { mutableStateOf(false) }
     var showCalendarDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
     var showNotificationsDialog by remember { mutableStateOf(false) }
+    var nickname by remember { mutableStateOf("") }
+    var avatarUrl by remember { mutableStateOf("") }
+    val handler = Handler(Looper.getMainLooper())
+    LaunchedEffect(userId) {
+        val uid = userId.toIntOrNull()
+        if (uid != null) {
+            Thread {
+                DatabaseHelper.processQuery(
+                    "SELECT nickname, avatar_url, user_id FROM users WHERE user_id = ?",
+                    listOf(uid)
+                ) { rs ->
+                    if (rs.next()) {
+                        val n = rs.getString(1) ?: ""
+                        val a = rs.getString(2) ?: ""
+                        handler.post {
+                            nickname = n
+                            avatarUrl = a ?: ""
+                        }
+                    }
+                    Unit
+                }
+            }.start()
+        }
+    }
     
     // 跳转到个人资料详情页面
     fun navigateToEditProfile() {
@@ -74,23 +103,32 @@ fun ProfileScreen(navController: NavController) {
                                     .clickable(onClick = { navigateToEditProfile() }),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Person,
-                                    contentDescription = "用户头像，点击编辑资料",
-                                    tint = Color(0xFF3498DB),
-                                    modifier = Modifier.size(36.dp)
-                                )
+                                if (avatarUrl.isNotBlank()) {
+                                    AsyncImage(
+                                        model = avatarUrl,
+                                        contentDescription = "用户头像",
+                                        modifier = Modifier.size(60.dp).clip(CircleShape),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.Person,
+                                        contentDescription = "用户头像，点击编辑资料",
+                                        tint = Color(0xFF3498DB),
+                                        modifier = Modifier.size(36.dp)
+                                    )
+                                }
                             }
                             Column(modifier = Modifier.padding(start = 16.dp)) {
                                 Text(
-                                    text = "maxzill",
+                                    text = if (nickname.isNotBlank()) nickname else "",
                                     fontSize = 24.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White,
                                     modifier = Modifier.clickable(onClick = { navigateToEditProfile() })
                                 )
                                 Text(
-                                    text = "昵称: 这个人比较厉害耶",
+                                    text = "用户ID: ${userId}",
                                     fontSize = 15.sp,
                                     color = Color.White.copy(alpha = 0.8f),
                                     modifier = Modifier.clickable(onClick = { navigateToEditProfile() })

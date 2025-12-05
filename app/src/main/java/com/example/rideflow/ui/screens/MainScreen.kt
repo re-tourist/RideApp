@@ -35,7 +35,7 @@ fun MainScreen(navController: NavController, userId: String = "") {
         NavItem(
             title = "我的",
             icon = Icons.Filled.Person,
-            screen = { ProfileScreen(navController = navController) }
+            screen = { ProfileScreen(navController = navController, userId = userId) }
         )
     )
     
