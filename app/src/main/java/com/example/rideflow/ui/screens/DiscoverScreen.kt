@@ -67,7 +67,7 @@ private fun loadArticles(handler: Handler, onLoaded: (List<Article>) -> Unit) {
 }
 
 @Composable
-fun DiscoverScreen(navController: androidx.navigation.NavController) {
+fun DiscoverScreen(navController: androidx.navigation.NavController, userId: String = "") {
     var subPage by remember { mutableStateOf(DiscoverSubPage.Main) }
     val handler = Handler(Looper.getMainLooper())
     var articles by remember { mutableStateOf<List<Article>>(emptyList()) }
@@ -101,11 +101,12 @@ fun DiscoverScreen(navController: androidx.navigation.NavController) {
         DiscoverSubPage.RouteBook -> {
             RouteBookScreen(
                 onBack = { subPage = DiscoverSubPage.Main },
-                onOpenMyRouteBook = { subPage = DiscoverSubPage.MyRouteBook }
+                onOpenMyRouteBook = { subPage = DiscoverSubPage.MyRouteBook },
+                userId = userId
             )
         }
         DiscoverSubPage.MyRouteBook -> {
-            MyRouteBookScreen(onBack = { subPage = DiscoverSubPage.RouteBook })
+            MyRouteBookScreen(onBack = { subPage = DiscoverSubPage.RouteBook }, userId = userId)
         }
         DiscoverSubPage.Race -> {
             // RaceScreen现在是一个独立的导航路由，不在这里渲染
@@ -120,7 +121,7 @@ fun DiscoverScreen(navController: androidx.navigation.NavController) {
         }
         // 骑友子页面
         DiscoverSubPage.Rider -> {
-            RiderScreen(onBack = { subPage = DiscoverSubPage.Main })
+            RiderScreen(onBack = { subPage = DiscoverSubPage.Main }, userId = userId)
         }
     }
 }

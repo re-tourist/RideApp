@@ -25,12 +25,12 @@ fun MainScreen(navController: NavController, userId: String = "") {
         NavItem(
             title = "发现",
             icon = Icons.Filled.Home,
-            screen = { DiscoverScreen(navController) }
+            screen = { DiscoverScreen(navController, userId = userId) }
         ),
         NavItem(
             title = "社区",
             icon = Icons.Filled.List,
-            screen = { CommunityScreen() }
+            screen = { CommunityScreen(userId = userId) }
         ),
         NavItem(
             title = "我的",

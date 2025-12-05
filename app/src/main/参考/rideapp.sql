@@ -11,7 +11,7 @@
  Target Server Version : 80044 (8.0.44-0ubuntu0.22.04.1)
  File Encoding         : 65001
 
- Date: 05/12/2025 19:10:45
+ Date: 05/12/2025 20:14:27
 */
 
 SET NAMES utf8mb4;
@@ -39,6 +39,50 @@ CREATE TABLE `articles`  (
 -- ----------------------------
 INSERT INTO `articles` VALUES (1, '骑车时别听歌，除非你...', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '2025-11-20', 2444, '2025-12-04 23:01:07');
 INSERT INTO `articles` VALUES (2, '告别耳内闷罐，这款耳机成了我的通勤与运动全能搭子', 2, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '2025-11-20', 1876, '2025-12-04 23:01:07');
+
+-- ----------------------------
+-- Table structure for club_badges
+-- ----------------------------
+DROP TABLE IF EXISTS `club_badges`;
+CREATE TABLE `club_badges`  (
+  `club_id` int NOT NULL,
+  `badge_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `icon_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  PRIMARY KEY (`club_id`, `badge_name`) USING BTREE,
+  CONSTRAINT `fk_club_badges_club` FOREIGN KEY (`club_id`) REFERENCES `clubs` (`club_id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of club_badges
+-- ----------------------------
+INSERT INTO `club_badges` VALUES (1, '活跃', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg');
+INSERT INTO `club_badges` VALUES (1, '荣誉', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg');
+INSERT INTO `club_badges` VALUES (2, '荣誉', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg');
+INSERT INTO `club_badges` VALUES (3, '活跃', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg');
+
+-- ----------------------------
+-- Table structure for club_members
+-- ----------------------------
+DROP TABLE IF EXISTS `club_members`;
+CREATE TABLE `club_members`  (
+  `club_id` int NOT NULL,
+  `user_id` int NOT NULL,
+  `role` enum('member','captain') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT 'member',
+  `joined_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`club_id`, `user_id`) USING BTREE,
+  INDEX `idx_club_members_user`(`user_id` ASC) USING BTREE,
+  CONSTRAINT `fk_club_members_club` FOREIGN KEY (`club_id`) REFERENCES `clubs` (`club_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_club_members_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of club_members
+-- ----------------------------
+INSERT INTO `club_members` VALUES (1, 1, 'captain', '2025-11-01 09:00:00');
+INSERT INTO `club_members` VALUES (1, 2, 'member', '2025-11-05 10:00:00');
+INSERT INTO `club_members` VALUES (1, 3, 'member', '2025-11-06 10:00:00');
+INSERT INTO `club_members` VALUES (2, 2, 'captain', '2025-11-03 09:00:00');
+INSERT INTO `club_members` VALUES (3, 3, 'captain', '2025-11-04 09:00:00');
 
 -- ----------------------------
 -- Table structure for clubs
@@ -190,6 +234,49 @@ INSERT INTO `ride_preference_options` VALUES (31, 5, '赛事讨论', 5, '2025-12
 INSERT INTO `ride_preference_options` VALUES (32, 5, '二手交易', 6, '2025-12-02 20:14:29', '2025-12-02 20:14:29');
 
 -- ----------------------------
+-- Table structure for rider_profiles
+-- ----------------------------
+DROP TABLE IF EXISTS `rider_profiles`;
+CREATE TABLE `rider_profiles`  (
+  `user_id` int NOT NULL,
+  `city` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  `level` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  `main_club_id` int NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`user_id`) USING BTREE,
+  INDEX `fk_rider_profiles_club`(`main_club_id` ASC) USING BTREE,
+  CONSTRAINT `fk_rider_profiles_club` FOREIGN KEY (`main_club_id`) REFERENCES `clubs` (`club_id`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  CONSTRAINT `fk_rider_profiles_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of rider_profiles
+-- ----------------------------
+INSERT INTO `rider_profiles` VALUES (1, '上海市', '普通', 1, '2025-12-05 20:12:47');
+INSERT INTO `rider_profiles` VALUES (2, '北京市', '金牌骑客', 1, '2025-12-05 20:12:47');
+INSERT INTO `rider_profiles` VALUES (3, '成都市', '菜鸟骑迹', 3, '2025-12-05 20:12:47');
+
+-- ----------------------------
+-- Table structure for route_downloads
+-- ----------------------------
+DROP TABLE IF EXISTS `route_downloads`;
+CREATE TABLE `route_downloads`  (
+  `route_id` int NOT NULL,
+  `user_id` int NOT NULL,
+  `downloaded_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`route_id`, `user_id`) USING BTREE,
+  INDEX `idx_route_downloads_user`(`user_id` ASC) USING BTREE,
+  CONSTRAINT `fk_route_downloads_route` FOREIGN KEY (`route_id`) REFERENCES `routes` (`route_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_route_downloads_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of route_downloads
+-- ----------------------------
+INSERT INTO `route_downloads` VALUES (1, 1, '2025-12-05 08:30:00');
+INSERT INTO `route_downloads` VALUES (3, 1, '2025-12-05 08:45:00');
+
+-- ----------------------------
 -- Table structure for route_favorites
 -- ----------------------------
 DROP TABLE IF EXISTS `route_favorites`;
@@ -208,6 +295,7 @@ CREATE TABLE `route_favorites`  (
 -- ----------------------------
 INSERT INTO `route_favorites` VALUES (1, 1, '2025-12-04 23:00:55');
 INSERT INTO `route_favorites` VALUES (2, 2, '2025-12-04 23:00:55');
+INSERT INTO `route_favorites` VALUES (3, 1, '2025-12-05 09:00:00');
 
 -- ----------------------------
 -- Table structure for route_tags
@@ -247,14 +335,42 @@ CREATE TABLE `routes`  (
   PRIMARY KEY (`route_id`) USING BTREE,
   INDEX `idx_routes_location`(`location` ASC) USING BTREE,
   INDEX `idx_routes_difficulty`(`difficulty` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '路书' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '路书' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of routes
 -- ----------------------------
 INSERT INTO `routes` VALUES (1, '滨江环线', 32.50, 210, '上海市', '简单', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '2025-12-04 23:00:55', '2025-12-04 23:00:55');
 INSERT INTO `routes` VALUES (2, '西郊爬坡挑战', 65.00, 980, '浙江省', '困难', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '2025-12-04 23:00:55', '2025-12-04 23:00:55');
-INSERT INTO `routes` VALUES (3, '城市夜骑', 18.30, 80, '上海市', '中等', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '2025-12-04 23:00:55', '2025-12-04 23:00:55');
+INSERT INTO `routes` VALUES (3, '城市夜骑', 18.30, 80, '上海市', '中等', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '2025-12-04 23:00:55', '2025-12-05 19:42:13');
+INSERT INTO `routes` VALUES (4, '测试', 11.11, 100, '南昌市', '简单', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '2025-12-05 19:42:07', '2025-12-05 19:42:11');
+
+-- ----------------------------
+-- Table structure for user_events
+-- ----------------------------
+DROP TABLE IF EXISTS `user_events`;
+CREATE TABLE `user_events`  (
+  `user_event_id` int NOT NULL AUTO_INCREMENT COMMENT '用户-活动关系ID',
+  `user_id` int NOT NULL COMMENT '用户ID',
+  `event_id` int NOT NULL COMMENT '活动ID',
+  `relation` enum('registered','favorite') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT 'registered' COMMENT '关联类型：报名/收藏',
+  `status` enum('upcoming','in_progress','completed','cancelled') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT 'upcoming' COMMENT '状态：即将到来/进行中/已完成/已取消',
+  `registered_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `notes` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '备注（可选）',
+  PRIMARY KEY (`user_event_id`) USING BTREE,
+  UNIQUE INDEX `unique_user_event_relation`(`user_id` ASC, `event_id` ASC, `relation` ASC) USING BTREE,
+  INDEX `idx_user_events_user`(`user_id` ASC) USING BTREE,
+  INDEX `idx_user_events_event`(`event_id` ASC) USING BTREE,
+  CONSTRAINT `fk_user_events_event` FOREIGN KEY (`event_id`) REFERENCES `events` (`event_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_user_events_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户与活动关系（我的活动）' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of user_events
+-- ----------------------------
+INSERT INTO `user_events` VALUES (1, 1, 1, 'registered', 'completed', '2025-12-05 19:12:14', '已参加并完成');
+INSERT INTO `user_events` VALUES (2, 1, 2, 'registered', 'upcoming', '2025-12-05 19:12:14', '已报名，待开始');
+INSERT INTO `user_events` VALUES (3, 1, 3, 'favorite', 'upcoming', '2025-12-05 19:12:14', '收藏关注');
 
 -- ----------------------------
 -- Table structure for user_ride_preferences
@@ -344,7 +460,7 @@ CREATE TABLE `users`  (
 -- ----------------------------
 -- Records of users
 -- ----------------------------
-INSERT INTO `users` VALUES (1, 'testuser', 'test@example.com', '123456', '', '222', 'male', '2025-12-03', '12345678900', 0, 1, '2025-12-05 19:09:16', '2025-11-27 20:58:42', '2025-12-05 19:09:16');
+INSERT INTO `users` VALUES (1, 'testuser', 'test@example.com', '123456', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '222', 'male', '2025-12-03', '12345678900', 0, 1, '2025-12-05 19:36:52', '2025-11-27 20:58:42', '2025-12-05 19:36:52');
 INSERT INTO `users` VALUES (2, 'admin', 'admin@example.com', 'admin123', NULL, NULL, 'other', NULL, NULL, 0, 1, NULL, '2025-11-27 20:58:42', '2025-11-27 20:58:42');
 INSERT INTO `users` VALUES (3, 'user1', 'user1@example.com', 'password1', NULL, NULL, 'other', NULL, NULL, 0, 1, NULL, '2025-11-27 20:58:42', '2025-11-27 20:58:42');
 INSERT INTO `users` VALUES (6, '1', '111@qq.com', '111111', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-11-28 00:01:50', '2025-11-27 21:42:01', '2025-11-28 00:01:50');
