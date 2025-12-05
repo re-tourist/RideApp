@@ -22,6 +22,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import com.example.rideflow.backend.DatabaseHelper
+import android.os.Handler
+import android.os.Looper
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 // ------------------------------------
 // 1. 数据模型
@@ -96,11 +101,56 @@ data class RankingItem(
 // ------------------------------------
 
 @Composable
-fun CommunityScreen() {
-    // 状态提升: 存储所有帖子和当前关注的用户ID
-    val allPosts = remember { mutableStateListOf(*generateSamplePosts().toTypedArray()) }
-    val initialFollowingIds = allPosts.filter { it.userId % 2 == 0 }.map { it.userId }.toSet() // 偶数ID默认关注
-    val followingUserIds = remember { mutableStateOf(initialFollowingIds) }
+fun CommunityScreen(userId: String = "") {
+    val handler = Handler(Looper.getMainLooper())
+    val allPosts = remember { mutableStateListOf<Post>() }
+    val followingUserIds = remember { mutableStateOf(setOf<Int>()) }
+    LaunchedEffect(userId) {
+        Thread {
+            val posts = mutableListOf<Post>()
+            val likesMap = mutableMapOf<Int, Int>()
+            val commentsMap = mutableMapOf<Int, Int>()
+            DatabaseHelper.processQuery(
+                "SELECT post_id, author_user_id, content_text, image_url, created_at FROM community_posts ORDER BY created_at DESC LIMIT 200"
+            ) { rs ->
+                while (rs.next()) {
+                    val pid = rs.getInt(1)
+                    val uid = rs.getInt(2)
+                    val content = rs.getString(3) ?: ""
+                    val img = rs.getString(4) ?: "[图片]"
+                    val created = rs.getTimestamp(5)
+                    val timeStr = if (created != null) SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(created) else ""
+                    posts.add(Post(pid, uid, Icons.Default.Person, "", timeStr, content, img, 0, 0))
+                }
+                Unit
+            }
+            DatabaseHelper.processQuery("SELECT p.post_id, u.nickname FROM community_posts p JOIN users u ON p.author_user_id = u.user_id") { urs ->
+                val nameMap = mutableMapOf<Int, String>()
+                while (urs.next()) nameMap[urs.getInt(1)] = urs.getString(2) ?: ""
+                posts.replaceAll { p -> p.copy(userName = nameMap[p.id] ?: "") }
+                Unit
+            }
+            DatabaseHelper.processQuery("SELECT post_id, COUNT(*) c FROM post_likes GROUP BY post_id") { lrs ->
+                while (lrs.next()) likesMap[lrs.getInt(1)] = lrs.getInt(2)
+                Unit
+            }
+            DatabaseHelper.processQuery("SELECT post_id, COUNT(*) c FROM post_comments GROUP BY post_id") { crs ->
+                while (crs.next()) commentsMap[crs.getInt(1)] = crs.getInt(2)
+                Unit
+            }
+            val merged = posts.map { p -> p.copy(likes = likesMap[p.id] ?: 0, comments = commentsMap[p.id] ?: 0) }
+            handler.post { allPosts.clear(); allPosts.addAll(merged) }
+            val uid = userId.toIntOrNull()
+            if (uid != null) {
+                val follows = mutableSetOf<Int>()
+                DatabaseHelper.processQuery("SELECT followed_user_id FROM user_follows WHERE follower_user_id = ?", listOf(uid)) { frs ->
+                    while (frs.next()) follows.add(frs.getInt(1))
+                    Unit
+                }
+                handler.post { followingUserIds.value = follows }
+            }
+        }.start()
+    }
 
     // 新的分类标签
     val categories = remember { listOf("关注动态", "热门动态", "社区交易", "俱乐部") }
@@ -629,16 +679,44 @@ fun HotDynamicScreen(
     }
 }
 
-// ------------------------------------
-// 9. 社区交易子模块 (TradeScreen)
-// ------------------------------------
+ 
 
 @Composable
 fun TradeScreen() {
     val tabs = listOf("二手交易", "官方售卖")
     var selectedTabIndex by remember { mutableIntStateOf(0) }
 
-    val tradeItems = remember { mutableStateListOf(*generateTradeItems().toTypedArray()) }
+    val tradeItems = remember { mutableStateListOf<TradeItem>() }
+    val handler = Handler(Looper.getMainLooper())
+    LaunchedEffect(Unit) {
+        Thread {
+            val list = mutableListOf<TradeItem>()
+            DatabaseHelper.processQuery("SELECT item_id, is_official, title, description, price, image_url, external_url, seller_user_id, category, is_published, created_at FROM trade_items ORDER BY created_at DESC LIMIT 200") { rs ->
+                while (rs.next()) {
+                    val id = rs.getInt(1)
+                    val off = rs.getInt(2) == 1
+                    val title = rs.getString(3) ?: ""
+                    val desc = rs.getString(4) ?: ""
+                    val price = rs.getBigDecimal(5)?.toPlainString() ?: "0"
+                    val img = rs.getString(6) ?: "[图片]"
+                    val url = rs.getString(7) ?: ""
+                    val sellerId = rs.getInt(8)
+                    val cat = rs.getString(9) ?: ""
+                    val pub = rs.getInt(10) == 1
+                    var sellerName: String? = null
+                    if (sellerId > 0) {
+                        DatabaseHelper.processQuery("SELECT nickname FROM users WHERE user_id = ?", listOf(sellerId)) { urs ->
+                            if (urs.next()) sellerName = urs.getString(1)
+                            Unit
+                        }
+                    }
+                    list.add(TradeItem(id, off, title, desc, "¥ ${price}", img, url, sellerName, pub))
+                }
+                handler.post { tradeItems.clear(); tradeItems.addAll(list) }
+                Unit
+            }
+        }.start()
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         TabRow(selectedTabIndex = selectedTabIndex, containerColor = Color.White) {
@@ -680,9 +758,7 @@ fun SecondHandMarketScreen(allTradeItems: List<TradeItem>) {
             contentPadding = PaddingValues(vertical = 8.dp)
         ) {
             items(secondhandItems, key = { it.id }) { item ->
-                TradePostCard(item = item) {
-                    println("Navigate to external URL: ${item.externalUrl}")
-                }
+                TradePostCard(item = item) { }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             }
         }
@@ -724,9 +800,7 @@ fun OfficialStoreScreen(allTradeItems: List<TradeItem>) {
             contentPadding = PaddingValues(vertical = 8.dp)
         ) {
             items(officialItems.filter { it.description.contains(selectedCategory) || selectedCategory == "配件" }, key = { it.id }) { item ->
-                TradePostCard(item = item) {
-                    println("Navigate to official store: ${item.externalUrl}")
-                }
+                TradePostCard(item = item) { }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             }
         }
@@ -780,9 +854,7 @@ fun TradePostCard(item: TradeItem, onClick: () -> Unit) {
     }
 }
 
-// ------------------------------------
-// 10. 俱乐部主屏幕 (ClubScreen) - 修改版
-// ------------------------------------
+ 
 
 @Composable
 fun ClubScreen() {
@@ -826,7 +898,43 @@ fun ClubScreen() {
     }
 
     // 俱乐部动态数据 (复用Post模型)
-    val clubPosts = remember { generateClubPosts() }
+    val clubPosts = remember { mutableStateListOf<Post>() }
+    val handler = Handler(Looper.getMainLooper())
+    LaunchedEffect(Unit) {
+        Thread {
+            val posts = mutableListOf<Post>()
+            val likesMap = mutableMapOf<Int, Int>()
+            val commentsMap = mutableMapOf<Int, Int>()
+            DatabaseHelper.processQuery("SELECT post_id, author_user_id, content_text, image_url, created_at FROM community_posts WHERE club_id IS NOT NULL ORDER BY created_at DESC LIMIT 200") { rs ->
+                while (rs.next()) {
+                    val pid = rs.getInt(1)
+                    val uid = rs.getInt(2)
+                    val content = rs.getString(3) ?: ""
+                    val img = rs.getString(4) ?: "[图片]"
+                    val created = rs.getTimestamp(5)
+                    val timeStr = if (created != null) SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(created) else ""
+                    posts.add(Post(pid, uid, Icons.Default.DateRange, "", timeStr, content, img, 0, 0))
+                }
+                Unit
+            }
+            DatabaseHelper.processQuery("SELECT p.post_id, c.name FROM community_posts p JOIN clubs c ON p.club_id = c.club_id WHERE p.club_id IS NOT NULL") { crs ->
+                val nameMap = mutableMapOf<Int, String>()
+                while (crs.next()) nameMap[crs.getInt(1)] = crs.getString(2) ?: ""
+                posts.replaceAll { p -> p.copy(userName = nameMap[p.id] ?: "") }
+                Unit
+            }
+            DatabaseHelper.processQuery("SELECT post_id, COUNT(*) c FROM post_likes GROUP BY post_id") { lrs ->
+                while (lrs.next()) likesMap[lrs.getInt(1)] = lrs.getInt(2)
+                Unit
+            }
+            DatabaseHelper.processQuery("SELECT post_id, COUNT(*) c FROM post_comments GROUP BY post_id") { crs2 ->
+                while (crs2.next()) commentsMap[crs2.getInt(1)] = crs2.getInt(2)
+                Unit
+            }
+            val merged = posts.map { p -> p.copy(likes = likesMap[p.id] ?: 0, comments = commentsMap[p.id] ?: 0) }
+            handler.post { clubPosts.clear(); clubPosts.addAll(merged) }
+        }.start()
+    }
 
     // 主视图：如果进入子页面则显示子页面内容，否则显示主俱乐部页面
     if (showClubManagement) {

@@ -18,28 +18,58 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.rideflow.R
 import androidx.compose.material3.ExperimentalMaterial3Api
+import com.example.rideflow.backend.DatabaseHelper
+import android.os.Handler
+import android.os.Looper
+import coil.compose.AsyncImage
 
 data class Rider(
     val id: Int,
     val name: String,
     val city: String,
     val level: String,
-    val avatarRes: Int
+    val avatarRes: Int,
+    val avatarUrl: String? = null
 )
 
-private val nearbyRiders = listOf(
-    Rider(1, "shockman911", "上海", "金牌骑客", R.drawable.ic_launcher_foreground),
-    Rider(2, "KCT江鹰", "杭州", "菜鸟骑迹", R.drawable.ic_launcher_foreground)
-)
-
-private val myRiders = listOf(
-    Rider(3, "至若", "上海", "普通", R.drawable.ic_launcher_foreground)
-)
+@Composable
+private fun loadRiders(userId: String): Pair<List<Rider>, List<Rider>> {
+    val handler = Handler(Looper.getMainLooper())
+    var nearby by remember { mutableStateOf<List<Rider>>(emptyList()) }
+    var mine by remember { mutableStateOf<List<Rider>>(emptyList()) }
+    LaunchedEffect(userId) {
+        Thread {
+            val nlist = mutableListOf<Rider>()
+            DatabaseHelper.processQuery(
+                "SELECT u.user_id, u.nickname, rp.city, rp.level, u.avatar_url, rp.main_club_id FROM rider_profiles rp JOIN users u ON rp.user_id = u.user_id ORDER BY u.user_id"
+            ) { rs ->
+                val clubMap = mutableMapOf<Int, Int>()
+                while (rs.next()) {
+                    val id = rs.getInt(1)
+                    val name = rs.getString(2)
+                    val city = rs.getString(3) ?: ""
+                    val level = rs.getString(4) ?: "普通"
+                    val avatar = rs.getString(5)
+                    val clubId = rs.getInt(6)
+                    clubMap[id] = clubId
+                    nlist.add(Rider(id, name, city, level, R.drawable.ic_launcher_foreground, avatar))
+                }
+                val uid = userId.toIntOrNull()
+                val myClub = if (uid != null) clubMap[uid] else null
+                val mlist = if (myClub != null && myClub > 0) nlist.filter { rider -> clubMap[rider.id] == myClub } else nlist.filter { rider -> rider.id.toString() == userId }
+                handler.post { nearby = nlist; mine = mlist }
+                Unit
+            }
+        }.start()
+    }
+    return Pair(nearby, mine)
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RiderScreen(onBack: () -> Unit) {
+fun RiderScreen(onBack: () -> Unit, userId: String = "") {
     var selectedTab by remember { mutableStateOf(0) }
+    val (nearbyRiders, myRiders) = loadRiders(userId)
     Scaffold(
         topBar = {
             TopAppBar(
@@ -81,11 +111,11 @@ private fun RiderRow(rider: Rider) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Image(
-                painter = painterResource(id = rider.avatarRes),
-                contentDescription = rider.name,
-                modifier = Modifier.size(48.dp)
-            )
+            if (rider.avatarUrl != null) {
+                AsyncImage(model = rider.avatarUrl, contentDescription = rider.name, modifier = Modifier.size(48.dp))
+            } else {
+                Image(painter = painterResource(id = rider.avatarRes), contentDescription = rider.name, modifier = Modifier.size(48.dp))
+            }
             Column(modifier = Modifier.padding(start = 12.dp)) {
                 Text(text = rider.name, fontSize = 16.sp, fontWeight = FontWeight.Medium)
                 Row {

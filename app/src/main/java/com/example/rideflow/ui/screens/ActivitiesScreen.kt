@@ -25,6 +25,10 @@ import androidx.navigation.NavController
 import com.example.rideflow.R
 import com.example.rideflow.navigation.AppRoutes
 import androidx.compose.material3.ExperimentalMaterial3Api
+import com.example.rideflow.backend.DatabaseHelper
+import android.os.Handler
+import android.os.Looper
+import coil.compose.AsyncImage
 
 data class Activity(
     val id: Int,
@@ -33,6 +37,7 @@ data class Activity(
     val location: String,
     val tags: List<String>,
     val imageRes: Int,
+    val imageUrl: String? = null,
     val isOpen: Boolean
 )
 
@@ -90,6 +95,47 @@ private val mockActivitiesList = listOf(
 @Composable
 fun ActivitiesScreen(navController: NavController, onBack: () -> Unit, onCreateActivity: () -> Unit) {
     var selectedCategory by remember { mutableStateOf(0) }
+    val handler = Handler(Looper.getMainLooper())
+    var dbActivities by remember { mutableStateOf<List<Activity>>(emptyList()) }
+    LaunchedEffect(Unit) {
+        Thread {
+            val list = mutableListOf<Activity>()
+            DatabaseHelper.processQuery(
+                "SELECT event_id, title, event_date, location, event_type, is_open, cover_image_url FROM events ORDER BY event_date DESC LIMIT 100"
+            ) { rs ->
+                while (rs.next()) {
+                    val id = rs.getInt(1)
+                    val title = rs.getString(2)
+                    val date = rs.getTimestamp(3)?.toString() ?: ""
+                    val loc = rs.getString(4) ?: ""
+                    val type = rs.getString(5) ?: "骑行"
+                    val open = rs.getBoolean(6)
+                    val coverUrl = rs.getString(7) ?: "https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg"
+                    val tags = mutableListOf<String>()
+                    DatabaseHelper.processQuery(
+                        "SELECT tag_name FROM event_tags WHERE event_id = ?",
+                        listOf(id)
+                    ) { trs ->
+                        while (trs.next()) tags.add(trs.getString(1) ?: "")
+                        Unit
+                    }
+                    val item = Activity(
+                        id = id,
+                        title = title,
+                        date = "时间：" + (if (date.isNotEmpty()) date.substring(0, 16) else "待定"),
+                        location = "地点：" + loc,
+                        tags = if (tags.isEmpty()) listOf(type) else tags,
+                        imageRes = R.drawable.ic_launcher_foreground,
+                        imageUrl = coverUrl,
+                        isOpen = open
+                    )
+                    list.add(item)
+                }
+                handler.post { dbActivities = list }
+                Unit
+            }
+        }.start()
+    }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -126,13 +172,13 @@ fun ActivitiesScreen(navController: NavController, onBack: () -> Unit, onCreateA
                     )
                 }
             }
-            val filteredActivities = remember(selectedCategory) {
+            val filteredActivities = remember(selectedCategory, dbActivities) {
                 when (selectedCategory) {
-                    0 -> mockActivitiesList.filter { it.isOpen }
-                    1 -> mockActivitiesList.filter { it.tags.contains("骑行") }
-                    2 -> mockActivitiesList.filter { it.tags.contains("跑步") }
-                    3 -> mockActivitiesList.filter { it.tags.contains("徒步") }
-                    else -> mockActivitiesList
+                    0 -> dbActivities.filter { it.isOpen }
+                    1 -> dbActivities.filter { it.tags.contains("骑行") }
+                    2 -> dbActivities.filter { it.tags.contains("越野跑") || it.tags.contains("跑步") }
+                    3 -> dbActivities.filter { it.tags.contains("徒步") }
+                    else -> dbActivities
                 }
             }
             LazyColumn(
@@ -163,12 +209,21 @@ fun ActivityItemCard(activity: Activity, onClick: () -> Unit) {
     ) {
         Column {
             Box(modifier = Modifier.height(160.dp)) {
-                Image(
-                    painter = painterResource(id = activity.imageRes),
-                    contentDescription = activity.title,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
+                if (activity.imageUrl != null) {
+                    AsyncImage(
+                        model = activity.imageUrl,
+                        contentDescription = activity.title,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(id = activity.imageRes),
+                        contentDescription = activity.title,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
