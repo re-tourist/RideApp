@@ -679,9 +679,7 @@ fun HotDynamicScreen(
     }
 }
 
-// ------------------------------------
-// 9. 社区交易子模块 (TradeScreen)
-// ------------------------------------
+ 
 
 @Composable
 fun TradeScreen() {
@@ -760,9 +758,7 @@ fun SecondHandMarketScreen(allTradeItems: List<TradeItem>) {
             contentPadding = PaddingValues(vertical = 8.dp)
         ) {
             items(secondhandItems, key = { it.id }) { item ->
-                TradePostCard(item = item) {
-                    println("Navigate to external URL: ${item.externalUrl}")
-                }
+                TradePostCard(item = item) { }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             }
         }
@@ -804,9 +800,7 @@ fun OfficialStoreScreen(allTradeItems: List<TradeItem>) {
             contentPadding = PaddingValues(vertical = 8.dp)
         ) {
             items(officialItems.filter { it.description.contains(selectedCategory) || selectedCategory == "配件" }, key = { it.id }) { item ->
-                TradePostCard(item = item) {
-                    println("Navigate to official store: ${item.externalUrl}")
-                }
+                TradePostCard(item = item) { }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             }
         }
@@ -860,9 +854,7 @@ fun TradePostCard(item: TradeItem, onClick: () -> Unit) {
     }
 }
 
-// ------------------------------------
-// 10. 俱乐部主屏幕 (ClubScreen) - 修改版
-// ------------------------------------
+ 
 
 @Composable
 fun ClubScreen() {
