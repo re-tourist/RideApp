@@ -14,20 +14,48 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import com.example.rideflow.R
 import androidx.compose.material3.ExperimentalMaterial3Api
+import com.example.rideflow.backend.DatabaseHelper
+import android.os.Handler
+import android.os.Looper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MyRouteBookScreen(onBack: () -> Unit) {
+fun MyRouteBookScreen(onBack: () -> Unit, userId: String = "") {
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("已下载", "我制作的", "我的收藏")
-    val all = listOf(
-        RouteBook(10, "本地环线", 12.0, 120, "上海市", listOf("骑行", "休闲"), R.drawable.ic_launcher_foreground, "简单"),
-        RouteBook(11, "山地挑战", 54.0, 820, "浙江省", listOf("骑行", "爬坡"), R.drawable.ic_launcher_foreground, "困难"),
-        RouteBook(12, "夜骑精选", 20.0, 100, "上海市", listOf("夜骑"), R.drawable.ic_launcher_foreground, "中等")
-    )
-    val downloaded = all.take(2)
-    val created = all.drop(1)
-    val favorites = all
+    val handler = Handler(Looper.getMainLooper())
+    var favorites by remember { mutableStateOf<List<RouteBook>>(emptyList()) }
+    LaunchedEffect(userId) {
+        val uid = userId.toIntOrNull()
+        if (uid != null) {
+            Thread {
+                val list = mutableListOf<RouteBook>()
+                val tagsMap = mutableMapOf<Int, MutableList<String>>()
+                DatabaseHelper.processQuery(
+                    "SELECT r.route_id, r.title, r.distance_km, r.elevation_m, r.location, r.difficulty, r.cover_image_url FROM route_favorites rf JOIN routes r ON rf.route_id = r.route_id WHERE rf.user_id = ?",
+                    listOf(uid)
+                ) { rs ->
+                    while (rs.next()) {
+                        val id = rs.getInt(1)
+                        val title = rs.getString(2)
+                        val dist = rs.getDouble(3)
+                        val elev = rs.getInt(4)
+                        val loc = rs.getString(5) ?: ""
+                        val diff = rs.getString(6) ?: "简单"
+                        val img = rs.getString(7) ?: "https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg"
+                        list.add(RouteBook(id, title, dist, elev, loc, emptyList(), R.drawable.ic_launcher_foreground, img, diff))
+                    }
+                    Unit
+                }
+                DatabaseHelper.processQuery("SELECT route_id, tag_name FROM route_tags") { trs ->
+                    while (trs.next()) tagsMap.getOrPut(trs.getInt(1)) { mutableListOf() }.add(trs.getString(2) ?: "")
+                    Unit
+                }
+                val merged = list.map { r -> r.copy(tags = tagsMap[r.id] ?: emptyList()) }
+                handler.post { favorites = merged }
+            }.start()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -51,11 +79,7 @@ fun MyRouteBookScreen(onBack: () -> Unit) {
                     )
                 }
             }
-            val data = when (selectedTab) {
-                0 -> downloaded
-                1 -> created
-                else -> favorites
-            }
+            val data = when (selectedTab) { 2 -> favorites; 0 -> favorites; else -> favorites }
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(12.dp)

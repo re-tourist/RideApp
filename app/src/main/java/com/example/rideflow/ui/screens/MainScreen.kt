@@ -15,7 +15,7 @@ import androidx.navigation.NavController
 import com.example.rideflow.R
 
 @Composable
-fun MainScreen(navController: NavController) {
+fun MainScreen(navController: NavController, userId: String = "") {
     val navItems = listOf(
         NavItem(
             title = "运动",

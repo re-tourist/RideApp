@@ -1,10 +1,15 @@
 package com.example.rideflow.ui.screens
 
 import androidx.compose.foundation.Image
-import com.example.rideflow.navigation.AppRoutes
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -14,7 +19,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.foundation.clickable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -26,44 +30,48 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.rideflow.R
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Person
+import com.example.rideflow.navigation.AppRoutes
+import com.example.rideflow.backend.DatabaseHelper
+import android.os.Handler
+import android.os.Looper
 
 // 模拟数据类
 data class Article(
     val id: Int,
     val title: String,
     val author: String,
-    val imageRes: Int,
+    val imageUrl: String? = null,
     val date: String,
     val views: Int
 )
 
-private val mockArticles = listOf(
-    Article(
-        id = 1,
-        title = "骑车时别听歌，除非你...",
-        author = "骑行达人",
-        imageRes = R.drawable.ic_launcher_foreground,
-        date = "2025-11-20",
-        views = 2444
-    ),
-    Article(
-        id = 2,
-        title = "告别'耳内闷罐'！这款耳机，成了我的通勤与运动'全能搭子'",
-        author = "骑行爱好者",
-        imageRes = R.drawable.ic_launcher_foreground,
-        date = "2025-11-20",
-        views = 1876
-    )
-)
+private fun loadArticles(handler: Handler, onLoaded: (List<Article>) -> Unit) {
+    Thread {
+        val list = mutableListOf<Article>()
+        DatabaseHelper.processQuery(
+            "SELECT a.article_id, a.title, u.nickname, a.publish_date, a.views, a.image_url FROM articles a JOIN users u ON a.author_id = u.user_id ORDER BY a.publish_date DESC LIMIT 20"
+        ) { rs ->
+            while (rs.next()) {
+                val id = rs.getInt(1)
+                val title = rs.getString(2)
+                val author = rs.getString(3)
+                val date = rs.getDate(4)?.toString() ?: ""
+                val views = rs.getInt(5)
+                val img = rs.getString(6) ?: "https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg"
+                list.add(Article(id, title, author, img, date, views))
+            }
+            handler.post { onLoaded(list) }
+            Unit
+        }
+    }.start()
+}
 
 @Composable
 fun DiscoverScreen(navController: androidx.navigation.NavController) {
     var subPage by remember { mutableStateOf(DiscoverSubPage.Main) }
+    val handler = Handler(Looper.getMainLooper())
+    var articles by remember { mutableStateOf<List<Article>>(emptyList()) }
+    LaunchedEffect(Unit) { loadArticles(handler) { list -> articles = list } }
     when (subPage) {
         DiscoverSubPage.Main -> {
             LazyColumn(
@@ -83,7 +91,7 @@ fun DiscoverScreen(navController: androidx.navigation.NavController) {
         )
                     Spacer(modifier = Modifier.height(24.dp))
                 }
-                items(mockArticles) {
+                items(articles) {
                     ArticleCard(article = it)
                     Spacer(modifier = Modifier.height(16.dp))
                 }
@@ -259,8 +267,8 @@ fun ArticleCard(article: Article) {
                     color = Color.Gray
                 )
             }
-            Image(
-                painter = painterResource(id = article.imageRes),
+            coil.compose.AsyncImage(
+                model = article.imageUrl ?: "https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg",
                 contentDescription = article.title,
                 modifier = Modifier.size(80.dp, 80.dp),
                 contentScale = ContentScale.Crop

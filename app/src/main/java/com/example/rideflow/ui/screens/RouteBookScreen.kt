@@ -29,15 +29,16 @@ data class RouteBook(
     val location: String,
     val tags: List<String>,
     val coverImage: Int,
+    val coverImageUrl: String? = null,
     val difficulty: String
 )
 
 private val routeCategories = listOf("热门", "周边", "长距离", "爬坡", "休闲")
 
 private val mockRoutes = listOf(
-    RouteBook(1, "滨江环线", 32.5, 210, "上海市", listOf("骑行", "休闲"), R.drawable.ic_launcher_foreground, "简单"),
-    RouteBook(2, "西郊爬坡挑战", 65.0, 980, "浙江省", listOf("骑行", "爬坡"), R.drawable.ic_launcher_foreground, "困难"),
-    RouteBook(3, "城市夜骑", 18.3, 80, "上海市", listOf("骑行", "夜骑"), R.drawable.ic_launcher_foreground, "中等")
+    RouteBook(1, "滨江环线", 32.5, 210, "上海市", listOf("骑行", "休闲"), R.drawable.ic_launcher_foreground, coverImageUrl = null, difficulty = "简单"),
+    RouteBook(2, "西郊爬坡挑战", 65.0, 980, "浙江省", listOf("骑行", "爬坡"), R.drawable.ic_launcher_foreground, coverImageUrl = null, difficulty = "困难"),
+    RouteBook(3, "城市夜骑", 18.3, 80, "上海市", listOf("骑行", "夜骑"), R.drawable.ic_launcher_foreground, coverImageUrl = null, difficulty = "中等")
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -110,12 +111,21 @@ fun RouteCard(route: RouteBook) {
     ) {
         Column {
             Box(modifier = Modifier.height(160.dp)) {
-                Image(
-                    painter = painterResource(id = route.coverImage),
-                    contentDescription = route.title,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
+                if (route.coverImageUrl != null) {
+                    coil.compose.AsyncImage(
+                        model = route.coverImageUrl,
+                        contentDescription = route.title,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(id = route.coverImage),
+                        contentDescription = route.title,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()

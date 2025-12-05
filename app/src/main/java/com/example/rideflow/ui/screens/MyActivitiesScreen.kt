@@ -27,7 +27,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -36,6 +36,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.rideflow.backend.DatabaseHelper
+import android.os.Handler
+import android.os.Looper
 
 data class ActivityItem(
     val id: Int,
@@ -60,7 +63,7 @@ val mockActivities = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MyActivitiesScreen(navController: NavController) {
+fun MyActivitiesScreen(navController: NavController, userId: String = "") {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -77,12 +80,49 @@ fun MyActivitiesScreen(navController: NavController) {
             )
         }
     ) { innerPadding ->
+        val handler = Handler(Looper.getMainLooper())
+        var activities by remember { mutableStateOf<List<ActivityItem>>(emptyList()) }
+        LaunchedEffect(userId) {
+            val uid = userId.toIntOrNull()
+            if (uid != null) {
+                Thread {
+                    val list = mutableListOf<ActivityItem>()
+                    DatabaseHelper.processQuery(
+                        "SELECT record_id, start_time, duration_sec, distance_km, avg_speed_kmh, calories FROM user_ride_records WHERE user_id = ? ORDER BY start_time DESC",
+                        listOf(uid)
+                    ) { rs ->
+                        while (rs.next()) {
+                            val id = rs.getInt(1)
+                            val start = rs.getTimestamp(2)?.toString() ?: ""
+                            val durSec = rs.getInt(3)
+                            val dist = rs.getDouble(4)
+                            val avg = rs.getDouble(5)
+                            val cal = rs.getInt(6)
+                            list.add(
+                                ActivityItem(
+                                    id = id,
+                                    title = "骑行记录",
+                                    date = start,
+                                    location = "",
+                                    distance = String.format("%.1fkm", dist),
+                                    duration = String.format("%d分钟", durSec / 60),
+                                    type = ActivityType.CYCLE,
+                                    status = ActivityStatus.COMPLETED
+                                )
+                            )
+                        }
+                        handler.post { activities = list }
+                        Unit
+                    }
+                }.start()
+            }
+        }
         LazyColumn(modifier = Modifier.fillMaxSize().padding(innerPadding), contentPadding = PaddingValues(16.dp)) {
             item {
                 ActivityStatsCard()
                 Spacer(modifier = Modifier.height(16.dp))
             }
-            items(mockActivities) { activity ->
+            items(activities) { activity ->
                 ActivityCard(activity)
                 Spacer(modifier = Modifier.height(12.dp))
             }
