@@ -28,6 +28,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -47,6 +48,18 @@ import com.amap.api.maps2d.CameraUpdateFactory
 import com.amap.api.maps2d.model.LatLng
 import com.amap.api.maps2d.model.PolylineOptions
 import com.amap.api.maps2d.model.MarkerOptions
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Looper
+import androidx.core.content.ContextCompat
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.mutableStateListOf
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.Priority
 
 sealed class RideStatus {
     object NotStarted : RideStatus()
@@ -80,7 +93,9 @@ private fun AMap2DContainer(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val mapView = remember { MapView(context) }
-    DisposableEffect(lifecycleOwner, mapView) {
+    
+    // 处理生命周期
+    DisposableEffect(lifecycleOwner) {
         mapView.onCreate(null)
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
@@ -96,26 +111,145 @@ private fun AMap2DContainer(
             mapView.onDestroy()
         }
     }
-    AndroidView(factory = { mapView }, modifier = modifier) { view ->
-        val map = view.map
-        map.uiSettings.isZoomControlsEnabled = true
-        map.uiSettings.isMyLocationButtonEnabled = false
-        map.clear()
-        myLocation?.let {
-            map.moveCamera(CameraUpdateFactory.newLatLngZoom(it, 15f))
-            map.addMarker(MarkerOptions().position(it).title("当前位置"))
+    
+    // 记住上次的参数，避免重复更新
+    val lastMyLocation = remember { mutableStateOf<LatLng?>(null) }
+    val lastRoutePoints = remember { mutableStateOf<List<LatLng>>(emptyList()) }
+    val isInitialSetup = remember { mutableStateOf(true) }
+    val mapInitialized = remember { mutableStateOf(false) }
+    
+    // 简化的AndroidView实现
+    AndroidView(
+        factory = { 
+            // 初始化地图
+            try {
+                val map = mapView.map
+                
+                // 基础设置 - 优化地图显示
+                map.uiSettings.isZoomControlsEnabled = true
+                map.uiSettings.isMyLocationButtonEnabled = false
+                map.uiSettings.isScaleControlsEnabled = true
+                map.uiSettings.isCompassEnabled = false
+                
+                // 设置地图类型为标准地图
+                map.mapType = com.amap.api.maps2d.AMap.MAP_TYPE_NORMAL
+                
+                // 添加相机监听器，仅用于调试日志
+                map.setOnCameraChangeListener(object : com.amap.api.maps2d.AMap.OnCameraChangeListener {
+                    override fun onCameraChange(position: com.amap.api.maps2d.model.CameraPosition?) {
+                        position?.let {
+                            android.util.Log.d("AMap", "相机变化中: 缩放=${it.zoom}, 位置=${it.target.latitude},${it.target.longitude}")
+                        }
+                    }
+                    
+                    override fun onCameraChangeFinish(position: com.amap.api.maps2d.model.CameraPosition?) {
+                        position?.let {
+                            android.util.Log.d("AMap", "相机变化完成: 缩放=${it.zoom}, 位置=${it.target.latitude},${it.target.longitude}")
+                            if (it.zoom < 3f) {
+                                android.util.Log.w("AMap", "缩放级别异常(${it.zoom})，可能显示异常")
+                            }
+                        }
+                    }
+                })
+                
+                // 设置默认位置（杭州）- 使用适中的缩放级别
+                val defaultLocation = LatLng(30.311664, 120.394605) // 杭州坐标
+                val cameraUpdate = CameraUpdateFactory.newLatLngZoom(defaultLocation, 14f) // 14f适合显示城市区域
+                map.moveCamera(cameraUpdate)
+                
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            
+            mapView 
+        },
+        modifier = modifier,
+        update = { view ->
+            try {
+                val map = view.map
+                
+                // 确保地图已初始化
+                if (!mapInitialized.value) return@AndroidView
+                
+                // 只在参数真正变化时更新，避免重复更新导致的闪烁
+                val locationChanged = myLocation != lastMyLocation.value
+                val routeChanged = routePoints != lastRoutePoints.value
+                val shouldUpdate = locationChanged || routeChanged || isInitialSetup.value
+                
+                if (!shouldUpdate) return@AndroidView
+                
+                // 清除之前的标记和覆盖物
+                map.clear()
+                
+                // 记录调试信息
+                android.util.Log.d("AMapUpdate", "更新地图: location=${myLocation}, routes=${routePoints.size}个点")
+                
+                // 添加当前位置 - 确保始终显示当前位置
+                if (myLocation != null && (locationChanged || isInitialSetup.value)) {
+                    map.addMarker(
+                        MarkerOptions()
+                            .position(myLocation)
+                            .title("当前位置")
+                            .icon(com.amap.api.maps2d.model.BitmapDescriptorFactory.defaultMarker(com.amap.api.maps2d.model.BitmapDescriptorFactory.HUE_BLUE))
+                    )
+                    
+                    // 只在初始设置时移动相机到当前位置
+                    if (isInitialSetup.value && routePoints.isEmpty()) {
+                        // 没有路线时，以当前位置为中心显示
+                        val cameraUpdate = CameraUpdateFactory.newLatLngZoom(myLocation, 14f) // 14f适合显示当前位置周围区域
+                        map.animateCamera(cameraUpdate)
+                    }
+                }
+                
+                // 添加路线 - 只在路线变化时更新
+                if (routeChanged || isInitialSetup.value) {
+                    if (routePoints.size >= 2) {
+                        map.addPolyline(
+                            PolylineOptions()
+                                .add(*routePoints.toTypedArray())
+                                .width(6f)
+                                .color(Color(0xFF007AFF).toArgb())
+                                .visible(true)
+                        )
+                        
+                        // 添加起点和终点标记
+                        map.addMarker(MarkerOptions().position(routePoints.first()).title("起点"))
+                        map.addMarker(MarkerOptions().position(routePoints.last()).title("终点"))
+                        
+                        // 有路线时调整视野以包含整个路线
+                        if (isInitialSetup.value) {
+                            try {
+                                val builder = com.amap.api.maps2d.model.LatLngBounds.Builder()
+                                routePoints.forEach { builder.include(it) }
+                                val bounds = builder.build()
+                                val padding = 100 // 像素
+                                val cameraUpdate = CameraUpdateFactory.newLatLngBounds(bounds, padding)
+                                map.moveCamera(cameraUpdate)
+                            } catch (e: Exception) {
+                                // 边界计算失败时退回到显示起点
+                                val cameraUpdate = CameraUpdateFactory.newLatLngZoom(routePoints.first(), 14f)
+                                map.moveCamera(cameraUpdate)
+                            }
+                        }
+                    } else if (myLocation != null && isInitialSetup.value) {
+                        // 没有路线但有当前位置时，显示当前位置
+                        val cameraUpdate = CameraUpdateFactory.newLatLngZoom(myLocation, 14f)
+                        map.animateCamera(cameraUpdate)
+                    }
+                }
+                
+                // 更新记住的值
+                lastMyLocation.value = myLocation
+                lastRoutePoints.value = routePoints
+                if (isInitialSetup.value) {
+                    isInitialSetup.value = false
+                }
+                
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
-        if (routePoints.isNotEmpty()) {
-            map.addPolyline(
-                PolylineOptions()
-                    .add(*routePoints.toTypedArray())
-                    .width(8f)
-                    .color(Color(0xFF007AFF).toArgb())
-            )
-            map.addMarker(MarkerOptions().position(routePoints.first()).title("起点"))
-            map.addMarker(MarkerOptions().position(routePoints.last()).title("终点"))
-        }
-    }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -129,6 +263,72 @@ fun RideScreen(navController: androidx.navigation.NavController) {
     var currentSpeed = remember { mutableStateOf("4.3") }
     var avgSpeed = remember { mutableStateOf("4.4") }
     var calories = remember { mutableStateOf("25") }
+
+    val context = LocalContext.current
+    val fusedClient = remember { LocationServices.getFusedLocationProviderClient(context) }
+    val currentLocation = remember { mutableStateOf<LatLng?>(null) }
+    val trackPoints = remember { mutableStateListOf<LatLng>() }
+
+    val permissions = arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
+        val granted = (result[Manifest.permission.ACCESS_FINE_LOCATION] == true) || (result[Manifest.permission.ACCESS_COARSE_LOCATION] == true)
+        if (granted) {
+            fusedClient.lastLocation.addOnSuccessListener { loc ->
+                if (loc != null) {
+                    currentLocation.value = LatLng(loc.latitude, loc.longitude)
+                } else {
+                    // 使用杭州坐标作为fallback
+                    currentLocation.value = LatLng(30.311664, 120.394605)
+                }
+            }.addOnFailureListener {
+                // 定位失败时使用杭州坐标
+                currentLocation.value = LatLng(30.311664, 120.394605)
+            }
+        } else {
+            // 没有权限时使用杭州坐标
+            currentLocation.value = LatLng(30.311664, 120.394605)
+        }
+    }
+
+    DisposableEffect(rideStatus.value) {
+        val hasPermission =
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+        val callback = object : LocationCallback() {
+            override fun onLocationResult(result: LocationResult) {
+                val loc = result.lastLocation ?: return
+                val latLng = LatLng(loc.latitude, loc.longitude)
+                currentLocation.value = latLng
+                if (rideStatus.value is RideStatus.InProgress) {
+                    trackPoints.add(latLng)
+                }
+            }
+        }
+
+        if (!hasPermission) {
+            permissionLauncher.launch(permissions)
+        } else {
+            fusedClient.lastLocation.addOnSuccessListener { loc ->
+                if (loc != null) {
+                    currentLocation.value = LatLng(loc.latitude, loc.longitude)
+                } else {
+                    // 使用杭州坐标
+                    currentLocation.value = LatLng(30.311664, 120.394605)
+                }
+            }.addOnFailureListener {
+                // 定位失败时使用杭州坐标
+                currentLocation.value = LatLng(30.311664, 120.394605)
+            }
+            val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 2000L)
+                .setMinUpdateIntervalMillis(1000L)
+                .setWaitForAccurateLocation(true)
+                .build()
+            fusedClient.requestLocationUpdates(request, callback, Looper.getMainLooper())
+        }
+
+        onDispose { fusedClient.removeLocationUpdates(callback) }
+    }
 
     val historyList = listOf(
         RideHistory(
@@ -156,7 +356,11 @@ fun RideScreen(navController: androidx.navigation.NavController) {
         elevation = "45 m"
     )
 
-    val onStartClick = { rideStatus.value = RideStatus.InProgress }
+    val onStartClick = { 
+        // 重置轨迹点
+        trackPoints.clear()
+        rideStatus.value = RideStatus.InProgress 
+    }
     val onPauseClick = { rideStatus.value = RideStatus.Paused }
     val onResumeClick = { rideStatus.value = RideStatus.InProgress }
     val onStopClick = {
@@ -232,7 +436,7 @@ fun RideScreen(navController: androidx.navigation.NavController) {
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
             when (rideStatus.value) {
-                RideStatus.NotStarted -> NotStartedContent(historyList = historyList, onStartClick = onStartClick)
+                RideStatus.NotStarted -> NotStartedContent(historyList = historyList, onStartClick = onStartClick, myLocation = currentLocation.value)
                 RideStatus.InProgress -> InProgressContent(
                     duration = rideDuration.value,
                     distance = rideDistance.value,
@@ -240,7 +444,9 @@ fun RideScreen(navController: androidx.navigation.NavController) {
                     avgSpeed = avgSpeed.value,
                     calories = calories.value,
                     onPauseClick = onPauseClick,
-                    onStopClick = onStopClick
+                    onStopClick = onStopClick,
+                    myLocation = currentLocation.value,
+                    routePoints = trackPoints
                 )
                 RideStatus.Paused -> PausedContent(
                     duration = rideDuration.value,
@@ -249,7 +455,9 @@ fun RideScreen(navController: androidx.navigation.NavController) {
                     avgSpeed = avgSpeed.value,
                     calories = calories.value,
                     onResumeClick = onResumeClick,
-                    onStopClick = onStopClick
+                    onStopClick = onStopClick,
+                    myLocation = currentLocation.value,
+                    routePoints = trackPoints
                 )
             }
         }
@@ -257,16 +465,24 @@ fun RideScreen(navController: androidx.navigation.NavController) {
 }
 
 @Composable
-private fun NotStartedContent(
+fun NotStartedContent(
     historyList: List<RideHistory>,
-    onStartClick: () -> Unit
+    onStartClick: () -> Unit,
+    myLocation: LatLng?
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         item {
-            AMap2DContainer(
-    modifier = Modifier.fillMaxWidth().height(220.dp),
-    myLocation = LatLng(30.311664, 120.394605)
-)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp)
+                    .padding(horizontal = 16.dp)
+            ) {
+                AMap2DContainer(
+                    modifier = Modifier.fillMaxSize(),
+                    myLocation = myLocation
+                )
+            }
         }
         item {
             Card(
@@ -275,8 +491,8 @@ private fun NotStartedContent(
                 elevation = CardDefaults.cardElevation(4.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("经度: 120.394605", fontSize = 14.sp, color = Color.Gray)
-                    Text("纬度: 30.311664", fontSize = 14.sp, color = Color.Gray)
+                    Text("经度: ${myLocation?.longitude?.let { String.format("%.6f", it) } ?: "定位中"}", fontSize = 14.sp, color = Color.Gray)
+                    Text("纬度: ${myLocation?.latitude?.let { String.format("%.6f", it) } ?: "定位中"}", fontSize = 14.sp, color = Color.Gray)
                     Text("精度: 30.0m", fontSize = 14.sp, color = Color.Gray)
                     Text("浙江省杭州市钱塘区2号大街48-64号靠近工商大学云滨(地铁站)", fontSize = 14.sp, color = Color.Black, modifier = Modifier.padding(top = 4.dp))
                 }
@@ -331,14 +547,16 @@ private fun NotStartedContent(
 }
 
 @Composable
-private fun InProgressContent(
+fun InProgressContent(
     duration: String,
     distance: String,
     currentSpeed: String,
     avgSpeed: String,
     calories: String,
     onPauseClick: () -> Unit,
-    onStopClick: () -> Unit
+    onStopClick: () -> Unit,
+    myLocation: LatLng?,
+    routePoints: List<LatLng>
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         // 上半部分：骑行数据和地图
@@ -359,39 +577,66 @@ private fun InProgressContent(
                     }
                 }
             }
-            // 地图区域使用具体高度
-            AMap2DContainer(
-                modifier = Modifier.fillMaxWidth().height(200.dp).padding(16.dp),
-                myLocation = LatLng(30.311664, 120.394605),
-                routePoints = listOf(
-                    LatLng(30.311664, 120.394605),
-                    LatLng(30.312500, 120.395200),
-                    LatLng(30.313200, 120.396000),
-                    LatLng(30.314000, 120.396500)
+            
+            // 地图区域使用固定高度和最小化重绘
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp)
+                    .padding(horizontal = 16.dp)
+            ) {
+                AMap2DContainer(
+                    modifier = Modifier.fillMaxSize(),
+                    myLocation = myLocation,
+                    routePoints = routePoints
                 )
-            )
+            }
         }
         
         // 下半部分：按钮区域，固定在导航栏上方
-        Box(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 100.dp)) {
-            Row(modifier = Modifier.padding(horizontal = 24.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                Button(onClick = onPauseClick, modifier = Modifier.size(80.dp, 50.dp), shape = RoundedCornerShape(25.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9500))) { Text("暂停", color = Color.White, fontSize = 14.sp) }
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 100.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 24.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(
+                    onClick = onPauseClick,
+                    modifier = Modifier.size(80.dp, 50.dp),
+                    shape = RoundedCornerShape(25.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9500))
+                ) {
+                    Text("暂停", color = Color.White, fontSize = 14.sp)
+                }
                 Spacer(modifier = Modifier.width(40.dp))
-                Button(onClick = onStopClick, modifier = Modifier.size(80.dp, 50.dp), shape = RoundedCornerShape(25.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF3B30))) { Text("结束", color = Color.White, fontSize = 14.sp) }
+                Button(
+                    onClick = onStopClick,
+                    modifier = Modifier.size(80.dp, 50.dp),
+                    shape = RoundedCornerShape(25.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF3B30))
+                ) {
+                    Text("结束", color = Color.White, fontSize = 14.sp)
+                }
             }
         }
     }
 }
 
 @Composable
-private fun PausedContent(
+fun PausedContent(
     duration: String,
     distance: String,
     currentSpeed: String,
     avgSpeed: String,
     calories: String,
     onResumeClick: () -> Unit,
-    onStopClick: () -> Unit
+    onStopClick: () -> Unit,
+    myLocation: LatLng?,
+    routePoints: List<LatLng>
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         Card(
@@ -411,19 +656,20 @@ private fun PausedContent(
                 }
             }
         }
+        // 使用固定高度的Box而不是weight，避免Compose重计算导致的闪烁
         Box(
-            modifier = Modifier.fillMaxWidth().weight(1f).background(Color.LightGray.copy(alpha = 0.3f), RoundedCornerShape(4.dp)).padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(280.dp) // 固定高度
+                .background(Color.LightGray.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
+                .padding(8.dp),
             contentAlignment = Alignment.Center
-        ) {AMap2DContainer(
-                modifier = Modifier.fillMaxWidth().height(200.dp).padding(16.dp),
-                myLocation = LatLng(30.311664, 120.394605),
-                routePoints = listOf(
-                    LatLng(30.311664, 120.394605),
-                    LatLng(30.312500, 120.395200),
-                    LatLng(30.313200, 120.396000),
-                    LatLng(30.314000, 120.396500)
+        ) {
+            AMap2DContainer(
+                    modifier = Modifier.fillMaxSize(),
+                    myLocation = myLocation,
+                    routePoints = routePoints
                 )
-            ) 
         }
         Row(modifier = Modifier.fillMaxWidth().padding(24.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
             Button(onClick = onResumeClick, modifier = Modifier.size(64.dp), shape = RoundedCornerShape(50), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF34C759))) { Text("继续", color = Color.White, fontSize = 14.sp) }
