@@ -38,6 +38,17 @@ import android.os.Handler
 import android.os.Looper
 import coil.compose.AsyncImage
 import java.text.SimpleDateFormat
+import java.util.Locale
+
+data class ProfileAchievementItem(
+    val id: Int,
+    val name: String,
+    val description: String,
+    val iconUrl: String,
+    val unlocked: Boolean,
+    val progressPercent: Double,
+    val unlockedAt: String?
+)
 
 @Composable
 fun ProfileScreen(navController: NavController, userId: String = "") {
@@ -47,6 +58,7 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
     var showNotificationsDialog by remember { mutableStateOf(false) }
     var nickname by remember { mutableStateOf("") }
     var avatarUrl by remember { mutableStateOf("") }
+    var badgeItems by remember { mutableStateOf<List<ProfileAchievementItem>>(emptyList()) }
     val handler = Handler(Looper.getMainLooper())
     LaunchedEffect(userId) {
         val uid = userId.toIntOrNull()
@@ -64,6 +76,36 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
                             avatarUrl = a ?: ""
                         }
                     }
+                    Unit
+                }
+                val list = mutableListOf<ProfileAchievementItem>()
+                DatabaseHelper.processQuery(
+                    "SELECT b.badge_id, b.name, b.description, b.icon_url, COALESCE(p.is_unlocked, 0), COALESCE(p.progress_percent, 0), p.unlocked_at FROM achievement_badges b LEFT JOIN user_achievement_progress p ON p.badge_id = b.badge_id AND p.user_id = ? ORDER BY b.badge_id",
+                    listOf(uid)
+                ) { brs ->
+                    val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+                    while (brs.next()) {
+                        val id = brs.getInt(1)
+                        val name = brs.getString(2) ?: ""
+                        val desc = brs.getString(3) ?: ""
+                        val icon = brs.getString(4) ?: ""
+                        val unlocked = brs.getInt(5) == 1
+                        val progress = brs.getDouble(6)
+                        val unlockedAtTs = brs.getTimestamp(7)
+                        val unlockedAt = unlockedAtTs?.let { sdf.format(it) }
+                        list.add(
+                            ProfileAchievementItem(
+                                id,
+                                name,
+                                desc,
+                                icon,
+                                unlocked,
+                                progress,
+                                unlockedAt
+                            )
+                        )
+                    }
+                    handler.post { badgeItems = list }
                     Unit
                 }
             }.start()
@@ -430,18 +472,18 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
                         .fillMaxWidth()
                         .height(300.dp)
                 ) {
-                    items(6) { index ->
+                    items(badgeItems.size) { index ->
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(8.dp),
                             shape = RoundedCornerShape(8.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = if (index < 3) Color(0xFFE3F2FD) else Color(0xFFF5F5F5)
+                                containerColor = if (badgeItems[index].unlocked) Color(0xFFE3F2FD) else Color(0xFFF5F5F5)
                             ),
                             border = BorderStroke(
                                 1.dp,
-                                if (index < 3) Color(0xFF2196F3) else Color(0xFFE0E0E0)
+                                if (badgeItems[index].unlocked) Color(0xFF2196F3) else Color(0xFFE0E0E0)
                             )
                         ) {
                             Row(
@@ -450,40 +492,28 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
                                     .padding(12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(
-                                    imageVector = if (index < 3) Icons.Default.Star else Icons.Default.Lock,
-                                    contentDescription = "徽章图标",
-                                    tint = if (index < 3) Color.Yellow else Color.Gray,
-                                    modifier = Modifier.size(32.dp)
-                                )
+                                if (badgeItems[index].iconUrl.isNotBlank()) {
+                                    AsyncImage(model = badgeItems[index].iconUrl, contentDescription = "徽章图标", modifier = Modifier.size(32.dp).clip(RoundedCornerShape(6.dp)), contentScale = ContentScale.Crop)
+                                } else {
+                                    Icon(imageVector = if (badgeItems[index].unlocked) Icons.Default.Star else Icons.Default.Lock, contentDescription = "徽章图标", tint = if (badgeItems[index].unlocked) Color.Yellow else Color.Gray, modifier = Modifier.size(32.dp))
+                                }
                                 Column(modifier = Modifier.padding(start = 12.dp)) {
                                     Text(
-                                        text = when (index) {
-                                            0 -> "初次骑行"
-                                            1 -> "连续骑行7天"
-                                            2 -> "骑行达人"
-                                            3 -> "马拉松骑手（未解锁）"
-                                            4 -> "夜猫子骑手（未解锁）"
-                                            5 -> "环保先锋（未解锁）"
-                                            else -> "未知成就"
-                                        },
+                                        text = badgeItems[index].name,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 16.sp
                                     )
                                     Text(
-                                        text = when (index) {
-                                            0 -> "完成第一次骑行"
-                                            1 -> "连续7天完成骑行"
-                                            2 -> "累计骑行100次"
-                                            3 -> "单次骑行超过42公里"
-                                            4 -> "晚上10点后骑行3次"
-                                            5 -> "一个月内骑行20次"
-                                            else -> "未知描述"
-                                        },
+                                        text = badgeItems[index].description,
                                         fontSize = 14.sp,
                                         color = Color.Gray,
                                         modifier = Modifier.padding(top = 4.dp)
                                     )
+                                    val progressText = String.format(Locale.getDefault(), "进度：%.0f%%", badgeItems[index].progressPercent)
+                                    Text(text = progressText, fontSize = 12.sp, color = Color(0xFF2196F3), modifier = Modifier.padding(top = 4.dp))
+                                    if (badgeItems[index].unlockedAt != null) {
+                                        Text(text = "解锁于：${badgeItems[index].unlockedAt}", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(top = 2.dp))
+                                    }
                                 }
                             }
                         }

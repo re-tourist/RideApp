@@ -11,7 +11,7 @@
  Target Server Version : 80044 (8.0.44-0ubuntu0.22.04.1)
  File Encoding         : 65001
 
- Date: 05/12/2025 20:14:27
+ Date: 06/12/2025 12:16:45
 */
 
 SET NAMES utf8mb4;
@@ -110,6 +110,34 @@ INSERT INTO `clubs` VALUES (2, 'CAPU行者', '北京市', 'https://rideapp.oss-c
 INSERT INTO `clubs` VALUES (3, '成都骑行吧', '成都市', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', 1880, 96232, '2025-12-04 23:00:55', '2025-12-04 23:00:55');
 
 -- ----------------------------
+-- Table structure for community_posts
+-- ----------------------------
+DROP TABLE IF EXISTS `community_posts`;
+CREATE TABLE `community_posts`  (
+  `post_id` int NOT NULL AUTO_INCREMENT,
+  `author_user_id` int NOT NULL,
+  `club_id` int NULL DEFAULT NULL,
+  `content_text` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL,
+  `image_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`post_id`) USING BTREE,
+  INDEX `fk_posts_author`(`author_user_id` ASC) USING BTREE,
+  INDEX `fk_posts_club`(`club_id` ASC) USING BTREE,
+  CONSTRAINT `fk_posts_author` FOREIGN KEY (`author_user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_posts_club` FOREIGN KEY (`club_id`) REFERENCES `clubs` (`club_id`) ON DELETE SET NULL ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of community_posts
+-- ----------------------------
+INSERT INTO `community_posts` VALUES (1, 1, NULL, '滨江夜骑，微风很舒服', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/bj-night.jpg', '2025-12-05 08:10:00');
+INSERT INTO `community_posts` VALUES (2, 2, NULL, '西郊爬坡训练，平均功率提升了', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/hill-climb.jpg', '2025-12-05 08:20:00');
+INSERT INTO `community_posts` VALUES (3, 3, NULL, '城市早骑，通勤顺路锻炼', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/city-morning.jpg', '2025-12-05 07:30:00');
+INSERT INTO `community_posts` VALUES (4, 1, 1, '北京狂魔车队周末拉练，路线很燃', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/club-ride-1.jpg', '2025-12-04 09:00:00');
+INSERT INTO `community_posts` VALUES (5, 2, 2, 'CAPU行者夜骑分享，灯光很美', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/club-ride-2.jpg', '2025-12-04 20:30:00');
+INSERT INTO `community_posts` VALUES (6, 3, 3, '成都骑行吧晨练集合，欢迎一起', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/club-ride-3.jpg', '2025-12-03 06:45:00');
+
+-- ----------------------------
 -- Table structure for event_tags
 -- ----------------------------
 DROP TABLE IF EXISTS `event_tags`;
@@ -156,6 +184,56 @@ CREATE TABLE `events`  (
 INSERT INTO `events` VALUES (1, '迎风织金季·GBA青年自行车线上赛', '2025-11-08 09:00:00', '任意地点', '骑行', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '线上赛挑战', '2025-12-04 23:00:54', '2025-12-04 23:00:54');
 INSERT INTO `events` VALUES (2, '2025“环八娄”自行车爬坡联赛（娄城）', '2025-11-29 08:00:00', '浙江省娄城市', '骑行', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '爬坡联赛', '2025-12-04 23:00:54', '2025-12-04 23:00:54');
 INSERT INTO `events` VALUES (3, '越野跑周末挑战赛', '2025-12-01 08:30:00', '上海市郊区', '越野跑', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '周末越野跑挑战', '2025-12-04 23:00:54', '2025-12-04 23:00:54');
+
+-- ----------------------------
+-- Table structure for post_comments
+-- ----------------------------
+DROP TABLE IF EXISTS `post_comments`;
+CREATE TABLE `post_comments`  (
+  `comment_id` int NOT NULL AUTO_INCREMENT,
+  `post_id` int NOT NULL,
+  `user_id` int NOT NULL,
+  `content` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`comment_id`) USING BTREE,
+  INDEX `fk_comments_post`(`post_id` ASC) USING BTREE,
+  INDEX `fk_comments_user`(`user_id` ASC) USING BTREE,
+  CONSTRAINT `fk_comments_post` FOREIGN KEY (`post_id`) REFERENCES `community_posts` (`post_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_comments_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of post_comments
+-- ----------------------------
+INSERT INTO `post_comments` VALUES (1, 1, 2, '夜骑不错，注意安全', '2025-12-05 08:16:00');
+INSERT INTO `post_comments` VALUES (2, 1, 3, '风很舒服，支持！', '2025-12-05 08:18:00');
+INSERT INTO `post_comments` VALUES (3, 2, 1, '爬坡加油，稳步提升', '2025-12-05 08:26:00');
+INSERT INTO `post_comments` VALUES (4, 4, 3, '周末拉练报名！', '2025-12-04 09:10:00');
+
+-- ----------------------------
+-- Table structure for post_likes
+-- ----------------------------
+DROP TABLE IF EXISTS `post_likes`;
+CREATE TABLE `post_likes`  (
+  `post_id` int NOT NULL,
+  `user_id` int NOT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`post_id`, `user_id`) USING BTREE,
+  INDEX `fk_likes_user`(`user_id` ASC) USING BTREE,
+  CONSTRAINT `fk_likes_post` FOREIGN KEY (`post_id`) REFERENCES `community_posts` (`post_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_likes_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of post_likes
+-- ----------------------------
+INSERT INTO `post_likes` VALUES (1, 1, '2025-12-05 08:15:00');
+INSERT INTO `post_likes` VALUES (1, 2, '2025-12-05 09:00:00');
+INSERT INTO `post_likes` VALUES (2, 1, '2025-12-05 08:25:00');
+INSERT INTO `post_likes` VALUES (2, 3, '2025-12-05 08:40:00');
+INSERT INTO `post_likes` VALUES (4, 1, '2025-12-04 10:00:00');
+INSERT INTO `post_likes` VALUES (5, 1, '2025-12-04 21:00:00');
+INSERT INTO `post_likes` VALUES (6, 2, '2025-12-03 07:00:00');
 
 -- ----------------------------
 -- Table structure for ride_preference_categories
@@ -346,6 +424,37 @@ INSERT INTO `routes` VALUES (3, '城市夜骑', 18.30, 80, '上海市', '中等'
 INSERT INTO `routes` VALUES (4, '测试', 11.11, 100, '南昌市', '简单', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '2025-12-05 19:42:07', '2025-12-05 19:42:11');
 
 -- ----------------------------
+-- Table structure for trade_items
+-- ----------------------------
+DROP TABLE IF EXISTS `trade_items`;
+CREATE TABLE `trade_items`  (
+  `item_id` int NOT NULL AUTO_INCREMENT,
+  `is_official` tinyint NULL DEFAULT 0,
+  `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL,
+  `price` decimal(10, 2) NULL DEFAULT 0.00,
+  `image_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  `external_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  `seller_user_id` int NULL DEFAULT NULL,
+  `category` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  `is_published` tinyint NULL DEFAULT 1,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`item_id`) USING BTREE,
+  INDEX `fk_trade_seller`(`seller_user_id` ASC) USING BTREE,
+  CONSTRAINT `fk_trade_seller` FOREIGN KEY (`seller_user_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of trade_items
+-- ----------------------------
+INSERT INTO `trade_items` VALUES (1, 0, '9成新碳纤维公路车架', '尺寸M，超轻，只用了半年，因为换车出售。可小刀。', 4500.00, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/frame.jpg', 'xianyu://item/12345', 1, '整车', 1, '2025-12-05 09:00:00');
+INSERT INTO `trade_items` VALUES (2, 0, 'Shimano 105套件（二手）', '飞轮、链条、牙盘全套，正常使用痕迹，功能完好。', 1500.00, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/groupset.jpg', 'xianyu://item/67890', 2, '配件', 1, '2025-12-05 09:05:00');
+INSERT INTO `trade_items` VALUES (3, 0, '冬季骑行抓绒手套', '全新未拆封，L号，防水防风，多买了一副，便宜出。', 89.00, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/gloves.jpg', 'taobao://item/11223', 1, '配件', 1, '2025-12-05 09:10:00');
+INSERT INTO `trade_items` VALUES (4, 1, 'RideFlow 2024新款速干骑行服套装', '骑行服，透气排汗，夏季必备。分类：骑行服', 399.00, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/jersey.jpg', 'app://official/product/399', NULL, '骑行服', 1, '2025-12-05 09:20:00');
+INSERT INTO `trade_items` VALUES (5, 1, '高性能GPS码表（R700型号）', '精准定位，超长续航，支持心率监测。分类：配件', 1899.00, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/computer.jpg', 'app://official/product/r700', NULL, '配件', 1, '2025-12-05 09:25:00');
+INSERT INTO `trade_items` VALUES (6, 1, '山地越野头盔（Pro系列）', 'MIPS保护系统，轻量化设计，多色可选。分类：配件', 599.00, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/helmet.jpg', 'app://official/product/prohelmet', NULL, '配件', 1, '2025-12-05 09:30:00');
+
+-- ----------------------------
 -- Table structure for user_events
 -- ----------------------------
 DROP TABLE IF EXISTS `user_events`;
@@ -371,6 +480,26 @@ CREATE TABLE `user_events`  (
 INSERT INTO `user_events` VALUES (1, 1, 1, 'registered', 'completed', '2025-12-05 19:12:14', '已参加并完成');
 INSERT INTO `user_events` VALUES (2, 1, 2, 'registered', 'upcoming', '2025-12-05 19:12:14', '已报名，待开始');
 INSERT INTO `user_events` VALUES (3, 1, 3, 'favorite', 'upcoming', '2025-12-05 19:12:14', '收藏关注');
+
+-- ----------------------------
+-- Table structure for user_follows
+-- ----------------------------
+DROP TABLE IF EXISTS `user_follows`;
+CREATE TABLE `user_follows`  (
+  `follower_user_id` int NOT NULL,
+  `followed_user_id` int NOT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`follower_user_id`, `followed_user_id`) USING BTREE,
+  INDEX `fk_user_follows_followed`(`followed_user_id` ASC) USING BTREE,
+  CONSTRAINT `fk_user_follows_followed` FOREIGN KEY (`followed_user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_user_follows_follower` FOREIGN KEY (`follower_user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of user_follows
+-- ----------------------------
+INSERT INTO `user_follows` VALUES (1, 2, '2025-12-05 20:35:08');
+INSERT INTO `user_follows` VALUES (1, 3, '2025-12-05 20:35:08');
 
 -- ----------------------------
 -- Table structure for user_ride_preferences
@@ -460,7 +589,7 @@ CREATE TABLE `users`  (
 -- ----------------------------
 -- Records of users
 -- ----------------------------
-INSERT INTO `users` VALUES (1, 'testuser', 'test@example.com', '123456', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '222', 'male', '2025-12-03', '12345678900', 0, 1, '2025-12-05 19:36:52', '2025-11-27 20:58:42', '2025-12-05 19:36:52');
+INSERT INTO `users` VALUES (1, 'testuser', 'test@example.com', '123456', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '222', 'male', '2025-12-03', '12345678900', 0, 1, '2025-12-06 12:08:27', '2025-11-27 20:58:42', '2025-12-06 12:08:27');
 INSERT INTO `users` VALUES (2, 'admin', 'admin@example.com', 'admin123', NULL, NULL, 'other', NULL, NULL, 0, 1, NULL, '2025-11-27 20:58:42', '2025-11-27 20:58:42');
 INSERT INTO `users` VALUES (3, 'user1', 'user1@example.com', 'password1', NULL, NULL, 'other', NULL, NULL, 0, 1, NULL, '2025-11-27 20:58:42', '2025-11-27 20:58:42');
 INSERT INTO `users` VALUES (6, '1', '111@qq.com', '111111', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-11-28 00:01:50', '2025-11-27 21:42:01', '2025-11-28 00:01:50');
