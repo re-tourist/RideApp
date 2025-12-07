@@ -30,6 +30,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.RideFlow">
+        <meta-data android:name="com.amap.api.v2.apikey" android:value="ca12ea7d2af8d7f4e8be13bc1ad5575b" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

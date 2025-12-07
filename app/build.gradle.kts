@@ -16,6 +16,8 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        manifestPlaceholders["AMAP_API_KEY"] = "ca12ea7d2af8d7f4e8be13bc1ad5575b"
     }
 
     buildTypes {
@@ -83,6 +85,7 @@ dependencies {
     
     // Coil图片加载库
     implementation("io.coil-kt:coil-compose:2.4.0")
+    implementation("com.amap.api:map2d:latest.integration")
     
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

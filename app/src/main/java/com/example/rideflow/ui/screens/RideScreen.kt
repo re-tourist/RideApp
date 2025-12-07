@@ -35,6 +35,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.graphics.toArgb
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import com.amap.api.maps2d.MapView
+import com.amap.api.maps2d.CameraUpdateFactory
+import com.amap.api.maps2d.model.LatLng
+import com.amap.api.maps2d.model.PolylineOptions
+import com.amap.api.maps2d.model.MarkerOptions
 
 sealed class RideStatus {
     object NotStarted : RideStatus()
@@ -58,6 +70,53 @@ data class RideReport(
     val calories: String,
     val elevation: String
 )
+
+@Composable
+private fun AMap2DContainer(
+    modifier: Modifier = Modifier,
+    myLocation: LatLng? = null,
+    routePoints: List<LatLng> = emptyList()
+) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val mapView = remember { MapView(context) }
+    DisposableEffect(lifecycleOwner, mapView) {
+        mapView.onCreate(null)
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> mapView.onResume()
+                Lifecycle.Event.ON_PAUSE -> mapView.onPause()
+                Lifecycle.Event.ON_DESTROY -> mapView.onDestroy()
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            mapView.onDestroy()
+        }
+    }
+    AndroidView(factory = { mapView }, modifier = modifier) { view ->
+        val map = view.map
+        map.uiSettings.isZoomControlsEnabled = true
+        map.uiSettings.isMyLocationButtonEnabled = false
+        map.clear()
+        myLocation?.let {
+            map.moveCamera(CameraUpdateFactory.newLatLngZoom(it, 15f))
+            map.addMarker(MarkerOptions().position(it).title("当前位置"))
+        }
+        if (routePoints.isNotEmpty()) {
+            map.addPolyline(
+                PolylineOptions()
+                    .add(*routePoints.toTypedArray())
+                    .width(8f)
+                    .color(Color(0xFF007AFF).toArgb())
+            )
+            map.addMarker(MarkerOptions().position(routePoints.first()).title("起点"))
+            map.addMarker(MarkerOptions().position(routePoints.last()).title("终点"))
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -204,13 +263,10 @@ private fun NotStartedContent(
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         item {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp)
-                    .background(Color.LightGray.copy(alpha = 0.3f), RoundedCornerShape(4.dp)),
-                contentAlignment = Alignment.Center
-            ) { Text("地图显示区域", color = Color.Gray, fontSize = 16.sp) }
+            AMap2DContainer(
+    modifier = Modifier.fillMaxWidth().height(220.dp),
+    myLocation = LatLng(30.311664, 120.394605)
+)
         }
         item {
             Card(
@@ -304,10 +360,16 @@ private fun InProgressContent(
                 }
             }
             // 地图区域使用具体高度
-            Box(
-                modifier = Modifier.fillMaxWidth().height(200.dp).background(Color.LightGray.copy(alpha = 0.3f), RoundedCornerShape(4.dp)).padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) { Text("骑行地图（含路线轨迹）", color = Color.Gray, fontSize = 16.sp) }
+            AMap2DContainer(
+                modifier = Modifier.fillMaxWidth().height(200.dp).padding(16.dp),
+                myLocation = LatLng(30.311664, 120.394605),
+                routePoints = listOf(
+                    LatLng(30.311664, 120.394605),
+                    LatLng(30.312500, 120.395200),
+                    LatLng(30.313200, 120.396000),
+                    LatLng(30.314000, 120.396500)
+                )
+            )
         }
         
         // 下半部分：按钮区域，固定在导航栏上方
@@ -352,7 +414,17 @@ private fun PausedContent(
         Box(
             modifier = Modifier.fillMaxWidth().weight(1f).background(Color.LightGray.copy(alpha = 0.3f), RoundedCornerShape(4.dp)).padding(16.dp),
             contentAlignment = Alignment.Center
-        ) { Text("骑行地图（暂停）", color = Color.Gray, fontSize = 16.sp) }
+        ) {AMap2DContainer(
+                modifier = Modifier.fillMaxWidth().height(200.dp).padding(16.dp),
+                myLocation = LatLng(30.311664, 120.394605),
+                routePoints = listOf(
+                    LatLng(30.311664, 120.394605),
+                    LatLng(30.312500, 120.395200),
+                    LatLng(30.313200, 120.396000),
+                    LatLng(30.314000, 120.396500)
+                )
+            ) 
+        }
         Row(modifier = Modifier.fillMaxWidth().padding(24.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
             Button(onClick = onResumeClick, modifier = Modifier.size(64.dp), shape = RoundedCornerShape(50), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF34C759))) { Text("继续", color = Color.White, fontSize = 14.sp) }
             Spacer(modifier = Modifier.width(40.dp))
