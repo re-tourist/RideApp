@@ -30,9 +30,12 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun ProfileDetailScreen(navController: NavController) {
     val profileViewModel: ProfileViewModel = koinViewModel()
-    val userProfile by profileViewModel.userProfile.collectAsState()
-    val isLoading by profileViewModel.isLoading.collectAsState()
-    val errorMessage by profileViewModel.errorMessage.collectAsState()
+    val userProfileState = profileViewModel.userProfile.collectAsState()
+    val userProfile = userProfileState.value
+    val isLoadingState = profileViewModel.isLoading.collectAsState()
+    val isLoading = isLoadingState.value
+    val errorMessageState = profileViewModel.errorMessage.collectAsState()
+    val errorMessage = errorMessageState.value
 
     // 页面加载时获取用户资料
     LaunchedEffect(Unit) {

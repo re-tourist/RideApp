@@ -1,6 +1,6 @@
 package com.example.rideflow.auth
 
-import com.example.rideflow.backend.AuthDatabaseHelper
+import com.example.rideflow.backend.AuthApi
 import com.example.rideflow.model.UserData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
  * 处理用户登录、注册、登出等核心认证逻辑
  */
 class AuthRepository {
+    private val authApi = AuthApi()
     // 认证状态的可变状态流
     private val _authState = MutableStateFlow<AuthState>(AuthState.Unauthenticated)
 
@@ -28,25 +29,40 @@ class AuthRepository {
         _authState.value = AuthState.Authenticating
 
         try {
-            // 简单判断输入是否有效
             if (usernameOrEmail.isBlank() || password.isBlank()) {
                 throw Exception("用户名和密码不能为空")
             }
 
-            // 在IO线程执行数据库操作
-            val userData = withContext(Dispatchers.IO) {
-                AuthDatabaseHelper.login(usernameOrEmail, password)
+            val response = withContext(Dispatchers.IO) {
+                authApi.login(usernameOrEmail, password)
             }
 
-            if (userData != null) {
-                _authState.value = AuthState.Authenticated(userData)
+            val result = response.data
+            if (result != null) {
+                val mappedGender = when (result.gender?.lowercase()) {
+                    "male" -> 1
+                    "female" -> 2
+                    else -> 0
+                }
+                val mapped = UserData(
+                    userId = result.userId.toString(),
+                    nickname = (result.nickname ?: result.username),
+                    email = result.email ?: "",
+                    avatarUrl = result.avatarUrl,
+                    bio = result.bio,
+                    gender = mappedGender,
+                    birthday = null,
+                    emergencyContact = null
+                )
+                _authState.value = AuthState.Authenticated(mapped)
             } else {
-                throw Exception("用户名或密码错误，请重试")
+                throw Exception(response.message.ifBlank { "登录失败，请重试" })
             }
         } catch (e: Exception) {
             _authState.value = AuthState.Error(e.message ?: "登录失败，请重试")
         }
     }
+    
 
     /**
      * 用户注册方法
@@ -58,7 +74,6 @@ class AuthRepository {
         _authState.value = AuthState.Authenticating
 
         try {
-            // 简单验证输入
             if (email.isBlank() || nickname.isBlank() || password.isBlank()) {
                 throw Exception("请填写所有必填信息")
             }
@@ -67,15 +82,31 @@ class AuthRepository {
                 throw Exception("密码至少需要6位字符")
             }
 
-            // 在IO线程执行数据库操作
-            val userData = withContext(Dispatchers.IO) {
-                AuthDatabaseHelper.register(email, nickname, password)
+            val username = if (email.isNotBlank()) email else nickname
+            val response = withContext(Dispatchers.IO) {
+                authApi.register(username, password)
             }
 
-            if (userData != null) {
-                _authState.value = AuthState.Authenticated(userData)
+            val result = response.data
+            if (result != null) {
+                val mappedGender = when (result.gender?.lowercase()) {
+                    "male" -> 1
+                    "female" -> 2
+                    else -> 0
+                }
+                val mapped = UserData(
+                    userId = result.userId.toString(),
+                    nickname = (result.nickname ?: result.username),
+                    email = result.email ?: "",
+                    avatarUrl = result.avatarUrl,
+                    bio = result.bio,
+                    gender = mappedGender,
+                    birthday = null,
+                    emergencyContact = null
+                )
+                _authState.value = AuthState.Authenticated(mapped)
             } else {
-                throw Exception("注册失败，邮箱或昵称可能已被使用")
+                throw Exception(response.message.ifBlank { "注册失败，请重试" })
             }
         } catch (e: Exception) {
             _authState.value = AuthState.Error(e.message ?: "注册失败，请重试")

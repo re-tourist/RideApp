@@ -75,8 +75,7 @@ dependencies {
     implementation(libs.androidx.navigation.common.ktx)
     implementation(libs.androidx.navigation.runtime.ktx)
     
-    // MySQL数据库驱动 - 使用兼容性更好的旧版本
-    implementation(libs.mysql.connector.java)
+    
     
     // Compose运行时LiveData支持
     implementation("androidx.compose.runtime:runtime-livedata:1.5.4")
@@ -91,4 +90,8 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.google.code.gson:gson:2.11.0")
+
 }

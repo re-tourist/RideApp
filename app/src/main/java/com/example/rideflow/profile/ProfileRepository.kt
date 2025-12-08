@@ -1,8 +1,7 @@
 package com.example.rideflow.profile
 
 import android.util.Log
-import com.example.rideflow.backend.AuthDatabaseHelper
-import com.example.rideflow.backend.DatabaseHelper
+import com.example.rideflow.backend.ProfileApi
 import com.example.rideflow.model.UserData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -13,13 +12,32 @@ import kotlinx.coroutines.withContext
  */
 class ProfileRepository(private val authRepository: com.example.rideflow.auth.AuthRepository) {
     private val TAG = "ProfileRepository"
+    private val api = ProfileApi()
 
     /**
      * 根据用户ID获取用户资料
      */
     suspend fun getCurrentUserProfile(userId: String): UserData? {
         return withContext(Dispatchers.IO) {
-            AuthDatabaseHelper.getUserById(userId)
+            val resp = api.getProfile(userId)
+            val r = resp.data
+            if (r != null) {
+                val genderMapped = when (r.gender?.lowercase()) {
+                    "male" -> 1
+                    "female" -> 2
+                    else -> 0
+                }
+                UserData(
+                    userId = r.userId.toString(),
+                    nickname = r.nickname ?: r.username,
+                    email = r.email ?: "",
+                    avatarUrl = r.avatarUrl,
+                    bio = r.bio,
+                    gender = genderMapped,
+                    birthday = null,
+                    emergencyContact = null
+                )
+            } else null
         }
     }
 
@@ -47,9 +65,8 @@ class ProfileRepository(private val authRepository: com.example.rideflow.auth.Au
             
             Log.d(TAG, "🔄 更新用户资料，用户ID: ${currentUser.userId}")
             
-            // 在IO线程执行数据库操作
             withContext(Dispatchers.IO) {
-                val result = AuthDatabaseHelper.updateUser(
+                val resp = api.updateProfile(
                     userId = currentUser.userId.toString(),
                     nickname = nickname,
                     email = email,
@@ -59,13 +76,8 @@ class ProfileRepository(private val authRepository: com.example.rideflow.auth.Au
                     birthday = birthday,
                     emergencyContact = emergencyContact
                 )
-                
-                if (result) {
-                    Log.d(TAG, "✅ 用户资料更新成功")
-                } else {
-                    Log.d(TAG, "❌ 用户资料更新失败")
-                }
-                result
+                val ok = resp.data != null
+                ok
             }
         } catch (e: Exception) {
             Log.e(TAG, "❌ 更新用户资料异常: ${e.message}", e)
@@ -83,17 +95,9 @@ class ProfileRepository(private val authRepository: com.example.rideflow.auth.Au
             // 获取当前登录用户
             val currentUser = authRepository.getCurrentUser()
             
-            // 在IO线程执行数据库操作
             withContext(Dispatchers.IO) {
-                val sql = "SELECT COUNT(*) FROM users WHERE nickname = ? AND user_id != ?"
-                val count = DatabaseHelper.querySingleValue(
-                    sql, 
-                    listOf<Any>(nickname, currentUser?.userId ?: 0)
-                ) as? Long
-                
-                val available = count != null && count == 0L
-                Log.d(TAG, "📊 昵称可用性检查结果: $nickname -> $available")
-                available
+                val resp = api.isNicknameAvailable(nickname, currentUser?.userId)
+                resp.data == true
             }
         } catch (e: Exception) {
             Log.e(TAG, "❌ 检查昵称可用性异常: ${e.message}", e)
@@ -111,17 +115,9 @@ class ProfileRepository(private val authRepository: com.example.rideflow.auth.Au
             // 获取当前登录用户
             val currentUser = authRepository.getCurrentUser()
             
-            // 在IO线程执行数据库操作
             withContext(Dispatchers.IO) {
-                val sql = "SELECT COUNT(*) FROM users WHERE email = ? AND user_id != ?"
-                val count = DatabaseHelper.querySingleValue(
-                    sql, 
-                    listOf<Any>(email, currentUser?.userId ?: 0)
-                ) as? Long
-                
-                val available = count != null && count == 0L
-                Log.d(TAG, "📊 邮箱可用性检查结果: $email -> $available")
-                available
+                val resp = api.isEmailAvailable(email, currentUser?.userId)
+                resp.data == true
             }
         } catch (e: Exception) {
             Log.e(TAG, "❌ 检查邮箱可用性异常: ${e.message}", e)

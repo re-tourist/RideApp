@@ -24,11 +24,16 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun EditProfileScreen(onBackPress: () -> Unit) {
     val editProfileViewModel: EditProfileViewModel = koinViewModel()
-    val userProfile by editProfileViewModel.userProfile.collectAsState()
-    val formData by editProfileViewModel.formData.collectAsState()
-    val isLoading by editProfileViewModel.isLoading.collectAsState()
-    val errorMessage by editProfileViewModel.errorMessage.collectAsState()
-    val updateSuccess by editProfileViewModel.updateSuccess.collectAsState()
+    val userProfileState = editProfileViewModel.userProfile.collectAsState()
+    val userProfile = userProfileState.value
+    val formDataState = editProfileViewModel.formData.collectAsState()
+    val formData = formDataState.value
+    val isLoadingState = editProfileViewModel.isLoading.collectAsState()
+    val isLoading = isLoadingState.value
+    val errorMessageState = editProfileViewModel.errorMessage.collectAsState()
+    val errorMessage = errorMessageState.value
+    val updateSuccessState = editProfileViewModel.updateSuccess.collectAsState()
+    val updateSuccess = updateSuccessState.value
     
     // 页面加载时获取用户资料
     LaunchedEffect(Unit) {
