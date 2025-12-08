@@ -60,6 +60,11 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.Priority
+import kotlin.math.*
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.delay
+import androidx.compose.runtime.getValue   // for by
+import androidx.compose.runtime.setValue   // for by
 
 sealed class RideStatus {
     object NotStarted : RideStatus()
@@ -256,19 +261,69 @@ private fun AMap2DContainer(
 @Composable
 fun RideScreen(navController: androidx.navigation.NavController) {
     var rideStatus = remember { mutableStateOf<RideStatus>(RideStatus.NotStarted) }
+    var elapsedSeconds by remember { mutableStateOf(0L) }
+    val reportSeconds = remember { mutableStateOf(0L) }
+    val rideDurationText = remember(elapsedSeconds) {
+        val h = elapsedSeconds / 3600
+        val m = (elapsedSeconds % 3600) / 60
+        val s = elapsedSeconds % 60
+        String.format("%02d:%02d:%02d", h, m, s)
+    }
     var showReportDialog = remember { mutableStateOf(false) }
 
-    var rideDuration = remember { mutableStateOf("00:05:24") }
-    var rideDistance = remember { mutableStateOf("0.42") }
-    var currentSpeed = remember { mutableStateOf("4.3") }
-    var avgSpeed = remember { mutableStateOf("4.4") }
-    var calories = remember { mutableStateOf("25") }
+    var rideDuration = remember { mutableStateOf("00:00:00") }
+    var rideDistance = remember { mutableStateOf("0.00") }
+    var currentSpeed = remember { mutableStateOf("0.0") }
+    var avgSpeed = remember { mutableStateOf("0.0") }
+    var calories = remember { mutableStateOf("0") }
+    var maxSpeed = remember { mutableStateOf("0.0") }
+    var elevation = remember { mutableStateOf("0") }
+    
+    // 骑行统计变量
+    var startTime = remember { mutableStateOf<Long?>(null) }
+    var totalDistance = remember { mutableStateOf(0.0) } // 米
+    var maxSpeedValue = remember { mutableStateOf(0.0) } // 用于计算最大速度
+    var previousLocation = remember { mutableStateOf<LatLng?>(null) }
 
     val context = LocalContext.current
     val fusedClient = remember { LocationServices.getFusedLocationProviderClient(context) }
     val currentLocation = remember { mutableStateOf<LatLng?>(null) }
     val trackPoints = remember { mutableStateListOf<LatLng>() }
 
+    // 辅助函数：计算两点之间的距离（米）
+    fun calculateDistance(start: LatLng, end: LatLng): Double {
+        val earthRadius = 6371000.0 // 地球半径（米）
+        val lat1 = Math.toRadians(start.latitude)
+        val lat2 = Math.toRadians(end.latitude)
+        val deltaLat = Math.toRadians(end.latitude - start.latitude)
+        val deltaLng = Math.toRadians(end.longitude - start.longitude)
+        
+        val a = sin(deltaLat / 2) * sin(deltaLat / 2) +
+                cos(lat1) * cos(lat2) *
+                sin(deltaLng / 2) * sin(deltaLng / 2)
+        val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+        
+        return earthRadius * c
+    }
+    
+    // 辅助函数：获取骑行时长（小时）
+    fun getRideDurationHours(): Double {
+        val start = startTime.value ?: return 0.0
+        val durationMs = System.currentTimeMillis() - start
+        return durationMs / (1000.0 * 60.0 * 60.0)
+    }
+    
+    // 辅助函数：更新骑行时长显示
+    fun updateRideDuration() {
+        val start = startTime.value ?: return
+        val durationMs = System.currentTimeMillis() - start
+        val totalSeconds = durationMs / 1000
+        
+        val hours = totalSeconds / 3600
+        val minutes = (totalSeconds % 3600) / 60
+        val seconds = totalSeconds % 60
+    }
+    
     val permissions = arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
         val granted = (result[Manifest.permission.ACCESS_FINE_LOCATION] == true) || (result[Manifest.permission.ACCESS_COARSE_LOCATION] == true)
@@ -300,8 +355,46 @@ fun RideScreen(navController: androidx.navigation.NavController) {
                 val loc = result.lastLocation ?: return
                 val latLng = LatLng(loc.latitude, loc.longitude)
                 currentLocation.value = latLng
+                
                 if (rideStatus.value is RideStatus.InProgress) {
                     trackPoints.add(latLng)
+                    
+                    // 计算距离和速度
+                    val prevLoc = previousLocation.value
+                    if (prevLoc != null) {
+                        val distance = calculateDistance(prevLoc, latLng)
+                        totalDistance.value += distance
+                        
+                        // 更新距离显示（公里）
+                        rideDistance.value = String.format("%.2f", totalDistance.value / 1000)
+                        
+                        // 计算当前速度（km/h）
+                        val speed = loc.speed * 3.6 // m/s to km/h
+                        currentSpeed.value = String.format("%.1f", speed)
+                        
+                        // 更新最大速度
+                        if (speed > maxSpeedValue.value) {
+                            maxSpeedValue.value = speed
+                            maxSpeed.value = String.format("%.1f", speed)
+                        }
+                        
+                        // 计算平均速度
+                        val durationHours = getRideDurationHours()
+                        if (durationHours > 0) {
+                            val avgSpeedValue = (totalDistance.value / 1000) / durationHours
+                            avgSpeed.value = String.format("%.1f", avgSpeedValue)
+                        }
+                        
+                        // 计算卡路里（简化公式：距离(公里) * 体重系数 * 1.036）
+                        // 假设平均体重70kg的系数
+                        val caloriesValue = (totalDistance.value / 1000) * 50
+                        calories.value = caloriesValue.toInt().toString()
+                        
+                        // 更新骑行时长
+                        updateRideDuration()
+                    }
+                    
+                    previousLocation.value = latLng
                 }
             }
         }
@@ -348,22 +441,40 @@ fun RideScreen(navController: androidx.navigation.NavController) {
     )
 
     val rideReport = RideReport(
-        duration = rideDuration.value,
+        duration = remember(reportSeconds.value) {
+            val h = reportSeconds.value / 3600
+            val m = (reportSeconds.value % 3600) / 60
+            val s = reportSeconds.value % 60
+            String.format("%02d:%02d:%02d", h, m, s)
+        },
         distance = "${rideDistance.value} km",
         avgSpeed = "${avgSpeed.value} km/h",
-        maxSpeed = "28.5 km/h",
+        maxSpeed = "${maxSpeed.value} km/h",
         calories = "${calories.value} kcal",
-        elevation = "45 m"
+        elevation = "${elevation.value} m"
     )
 
     val onStartClick = { 
-        // 重置轨迹点
+        // 重置轨迹点和统计数据
         trackPoints.clear()
+        startTime.value = System.currentTimeMillis()
+        totalDistance.value = 0.0
+        maxSpeedValue.value = 0.0
+        previousLocation.value = null
+        rideDistance.value = "0.00"
+        currentSpeed.value = "0.0"
+        avgSpeed.value = "0.0"
+        calories.value = "0"
+        maxSpeed.value = "0.0"
+        elevation.value = "0"
         rideStatus.value = RideStatus.InProgress 
     }
     val onPauseClick = { rideStatus.value = RideStatus.Paused }
     val onResumeClick = { rideStatus.value = RideStatus.InProgress }
     val onStopClick = {
+        reportSeconds.value = elapsedSeconds      // 先记住
+        elapsedSeconds = 0                        // 再清零
+        startTime.value = null
         rideStatus.value = RideStatus.NotStarted
         showReportDialog.value = true
     }
@@ -387,6 +498,28 @@ fun RideScreen(navController: androidx.navigation.NavController) {
                 }
             }
         )
+    }
+
+    LaunchedEffect(rideStatus.value) {
+        when (rideStatus.value) {
+            RideStatus.InProgress -> {
+                // 进入骑行状态：如果还没记录过 startTime，就记一下
+                if (startTime.value == null) startTime.value = System.currentTimeMillis()
+                // 每秒 +1
+                while (true) {
+                    delay(1_000)
+                    elapsedSeconds += 1
+                }
+            }
+            RideStatus.Paused  -> {
+                // 暂停时什么都不做，elapsedSeconds 保持
+            }
+            RideStatus.NotStarted -> {
+                // 回到未开始：清零
+                elapsedSeconds = 0
+                startTime.value = null
+            }
+        }
     }
 
     Scaffold(
@@ -438,7 +571,7 @@ fun RideScreen(navController: androidx.navigation.NavController) {
             when (rideStatus.value) {
                 RideStatus.NotStarted -> NotStartedContent(historyList = historyList, onStartClick = onStartClick, myLocation = currentLocation.value)
                 RideStatus.InProgress -> InProgressContent(
-                    duration = rideDuration.value,
+                    duration = rideDurationText,
                     distance = rideDistance.value,
                     currentSpeed = currentSpeed.value,
                     avgSpeed = avgSpeed.value,
@@ -449,7 +582,7 @@ fun RideScreen(navController: androidx.navigation.NavController) {
                     routePoints = trackPoints
                 )
                 RideStatus.Paused -> PausedContent(
-                    duration = rideDuration.value,
+                    duration = rideDurationText,
                     distance = rideDistance.value,
                     currentSpeed = currentSpeed.value,
                     avgSpeed = avgSpeed.value,
