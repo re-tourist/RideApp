@@ -60,7 +60,11 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
 
         // 主应用页面
         composable(AppRoutes.MAIN) {
-            MainScreen(navController = navController)
+            val uid = when (authState) {
+                is AuthState.Authenticated -> (authState as AuthState.Authenticated).userData.userId
+                else -> ""
+            }
+            MainScreen(navController = navController, userId = uid)
         }
         
         // 编辑资料页面
@@ -74,7 +78,11 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
         }
 
         composable(AppRoutes.RIDE_PREFERENCE) {
-            com.example.rideflow.ui.screens.RidePreferenceScreen(navController = navController)
+            val uid = when (authState) {
+                is com.example.rideflow.auth.AuthState.Authenticated -> (authState as com.example.rideflow.auth.AuthState.Authenticated).userData.userId
+                else -> ""
+            }
+            com.example.rideflow.ui.screens.RidePreferenceScreen(navController = navController, userId = uid)
         }
 
         composable(AppRoutes.ACHIEVEMENTS) {
@@ -82,15 +90,27 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
         }
 
         composable(AppRoutes.EXERCISE_CALENDAR) {
-            ExerciseCalendarScreen(navController = navController)
+            val uid = when (authState) {
+                is AuthState.Authenticated -> (authState as AuthState.Authenticated).userData.userId
+                else -> ""
+            }
+            ExerciseCalendarScreen(navController = navController, userId = uid)
         }
 
         composable(AppRoutes.MY_ACTIVITIES) {
-            MyActivitiesScreen(navController = navController)
+            val uid = when (authState) {
+                is AuthState.Authenticated -> (authState as AuthState.Authenticated).userData.userId
+                else -> ""
+            }
+            MyActivitiesScreen(navController = navController, userId = uid)
         }
 
         composable(AppRoutes.RIDE_RECORD) {
-            com.example.rideflow.ui.screens.RideRecordScreen(navController = navController)
+            val uid = when (authState) {
+                is AuthState.Authenticated -> (authState as AuthState.Authenticated).userData.userId
+                else -> ""
+            }
+            com.example.rideflow.ui.screens.RideRecordScreen(navController = navController, userId = uid)
         }
 
         composable(AppRoutes.RACE) {

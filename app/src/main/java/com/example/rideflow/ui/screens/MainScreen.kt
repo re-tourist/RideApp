@@ -15,7 +15,7 @@ import androidx.navigation.NavController
 import com.example.rideflow.R
 
 @Composable
-fun MainScreen(navController: NavController) {
+fun MainScreen(navController: NavController, userId: String = "") {
     val navItems = listOf(
         NavItem(
             title = "运动",
@@ -25,17 +25,17 @@ fun MainScreen(navController: NavController) {
         NavItem(
             title = "发现",
             icon = Icons.Filled.Home,
-            screen = { DiscoverScreen(navController) }
+            screen = { DiscoverScreen(navController, userId = userId) }
         ),
         NavItem(
             title = "社区",
             icon = Icons.Filled.List,
-            screen = { CommunityScreen(navController) }
+            screen = { CommunityScreen(userId = userId) }
         ),
         NavItem(
             title = "我的",
             icon = Icons.Filled.Person,
-            screen = { ProfileScreen(navController = navController) }
+            screen = { ProfileScreen(navController = navController, userId = userId) }
         )
     )
     

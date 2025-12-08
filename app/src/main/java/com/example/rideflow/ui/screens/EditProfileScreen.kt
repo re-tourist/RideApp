@@ -18,9 +18,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.rideflow.profile.EditProfileViewModel
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.koin.androidx.compose.koinViewModel
-import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,8 +29,6 @@ fun EditProfileScreen(onBackPress: () -> Unit) {
     val isLoading by editProfileViewModel.isLoading.collectAsState()
     val errorMessage by editProfileViewModel.errorMessage.collectAsState()
     val updateSuccess by editProfileViewModel.updateSuccess.collectAsState()
-    
-    val context = LocalContext.current
     
     // 页面加载时获取用户资料
     LaunchedEffect(Unit) {
@@ -120,7 +116,7 @@ fun EditProfileScreen(onBackPress: () -> Unit) {
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                TextButton(onClick = { changeAvatar() }) {
+                TextButton(onClick = { }) {
                     Text("更换头像")
                 }
             }
