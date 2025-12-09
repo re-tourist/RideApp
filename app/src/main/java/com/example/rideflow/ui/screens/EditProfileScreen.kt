@@ -12,6 +12,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.background
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -19,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.rideflow.profile.EditProfileViewModel
 import org.koin.androidx.compose.koinViewModel
+import coil.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -114,11 +119,21 @@ fun EditProfileScreen(onBackPress: () -> Unit) {
                     modifier = Modifier.size(100.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Person,
-                        contentDescription = "头像",
-                        modifier = Modifier.size(80.dp)
-                    )
+                    val avatar = userProfile?.avatarUrl
+                    if (!avatar.isNullOrBlank()) {
+                        AsyncImage(
+                            model = avatar,
+                            contentDescription = "头像",
+                            modifier = Modifier.size(80.dp).clip(CircleShape).background(Color.LightGray.copy(alpha = 0.2f)),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Filled.Person,
+                            contentDescription = "头像",
+                            modifier = Modifier.size(80.dp)
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 TextButton(onClick = { }) {

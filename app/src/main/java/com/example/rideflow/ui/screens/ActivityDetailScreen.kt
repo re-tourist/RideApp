@@ -15,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,12 +32,64 @@ import androidx.navigation.NavController
 import com.example.rideflow.R
 import com.example.rideflow.navigation.AppRoutes
 import com.example.rideflow.ui.theme.RideFlowTheme
+import com.example.rideflow.backend.DatabaseHelper
+import android.os.Handler
+import android.os.Looper
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import coil.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActivityDetailScreen(navController: NavController, activityId: Int = 0, onBack: () -> Unit = { navController.popBackStack() }) {
-    // 控制联系主办方弹窗的显示
     var showContactDialog by remember { mutableStateOf(false) }
+    val handler = Handler(Looper.getMainLooper())
+    var eventTitle by remember { mutableStateOf("") }
+    var eventDateStr by remember { mutableStateOf("") }
+    var locationStr by remember { mutableStateOf("") }
+    var isOpen by remember { mutableStateOf(true) }
+    var coverImageUrl by remember { mutableStateOf<String?>(null) }
+    var description by remember { mutableStateOf("") }
+    var isFavorited by remember { mutableStateOf(false) }
+    LaunchedEffect(activityId) {
+        if (activityId > 0) {
+            Thread {
+                val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+                DatabaseHelper.processQuery(
+                    "SELECT title, event_date, location, is_open, cover_image_url, description FROM events WHERE event_id = ?",
+                    listOf(activityId)
+                ) { rs ->
+                    if (rs.next()) {
+                        val title = rs.getString(1) ?: ""
+                        val ts = rs.getTimestamp(2)
+                        val dateStr = if (ts != null) sdf.format(Date(ts.time)) else ""
+                        val location = rs.getString(3) ?: ""
+                        val open = (rs.getInt(4) == 1)
+                        val cover = rs.getString(5)
+                        val desc = rs.getString(6) ?: ""
+                        handler.post {
+                            eventTitle = title
+                            eventDateStr = dateStr
+                            locationStr = location
+                            isOpen = open
+                            coverImageUrl = cover
+                            description = desc
+                        }
+                    }
+                    Unit
+                }
+                DatabaseHelper.processQuery(
+                    "SELECT 1 FROM user_events WHERE user_id = ? AND event_id = ? AND relation = 'favorite' LIMIT 1",
+                    listOf(1, activityId)
+                ) { frs ->
+                    val fav = frs.next()
+                    handler.post { isFavorited = fav }
+                    Unit
+                }
+            }.start()
+        }
+    }
     
     Scaffold(
         topBar = {
@@ -51,10 +104,27 @@ fun ActivityDetailScreen(navController: NavController, activityId: Int = 0, onBa
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* 分享功能 */ }) {
+                    IconButton(onClick = {
+                        Thread {
+                            if (!isFavorited) {
+                                val result = DatabaseHelper.executeUpdate(
+                                    "INSERT INTO user_events (user_id, event_id, relation, status, notes) VALUES (?,?,?,?,?)",
+                                    listOf(1, activityId, "favorite", "upcoming", "收藏关注")
+                                )
+                                handler.post { if (result >= 0) isFavorited = true }
+                            } else {
+                                DatabaseHelper.executeUpdate(
+                                    "DELETE FROM user_events WHERE user_id = ? AND event_id = ? AND relation = 'favorite'",
+                                    listOf(1, activityId)
+                                )
+                                handler.post { isFavorited = false }
+                            }
+                        }.start()
+                    }) {
                         Icon(
                             imageVector = Icons.Filled.Star,
-                            contentDescription = "收藏"
+                            contentDescription = "收藏",
+                            tint = if (isFavorited) Color(0xFFFFC107) else Color.Gray
                         )
                     }
                 }
@@ -70,14 +140,25 @@ fun ActivityDetailScreen(navController: NavController, activityId: Int = 0, onBa
         ) {
             // 主图片展示区
             Box(modifier = Modifier.fillMaxWidth()) {
-                Image(
-                    painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                    contentDescription = "活动主图",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(240.dp)
-                )
+                if (!coverImageUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = coverImageUrl,
+                        contentDescription = "活动主图",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(240.dp)
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                        contentDescription = "活动主图",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(240.dp)
+                    )
+                }
                 
                 // 活动状态标签
                 Box(
@@ -88,7 +169,7 @@ fun ActivityDetailScreen(navController: NavController, activityId: Int = 0, onBa
                         .padding(8.dp)
                 ) {
                     Text(
-                        text = "报名中",
+                        text = if (isOpen) "报名中" else "已结束",
                         color = Color.White,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
@@ -100,7 +181,7 @@ fun ActivityDetailScreen(navController: NavController, activityId: Int = 0, onBa
             Column(modifier = Modifier.padding(16.dp)) {
                 // 活动标题
                 Text(
-                    text = "周末骑行休闲游",
+                    text = if (eventTitle.isNotBlank()) eventTitle else "活动",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 12.dp)
@@ -121,7 +202,7 @@ fun ActivityDetailScreen(navController: NavController, activityId: Int = 0, onBa
                             modifier = Modifier.size(16.dp)
                         )
                         Text(
-                            text = "2025-11-15 09:00",
+                            text = eventDateStr,
                             color = Color.Gray,
                             fontSize = 14.sp,
                             modifier = Modifier.padding(start = 4.dp)
@@ -138,7 +219,7 @@ fun ActivityDetailScreen(navController: NavController, activityId: Int = 0, onBa
                             modifier = Modifier.size(16.dp)
                         )
                         Text(
-                            text = "上海市浦东新区",
+                            text = if (locationStr.isNotBlank()) locationStr else "—",
                             color = Color.Gray,
                             fontSize = 14.sp,
                             modifier = Modifier.padding(start = 4.dp)
@@ -158,7 +239,7 @@ fun ActivityDetailScreen(navController: NavController, activityId: Int = 0, onBa
                 )
                 
                 Text(
-                    text = "这是一场轻松的周末骑行休闲活动，适合所有水平的骑行爱好者参加。我们将从市中心出发，沿着滨江大道骑行，欣赏美丽的城市风光。活动全程约30公里，中途会有休息点提供饮用水和小食。欢迎大家踊跃报名！",
+                    text = if (description.isNotBlank()) description else "",
                     fontSize = 14.sp,
                     lineHeight = 22.sp
                 )
