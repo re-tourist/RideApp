@@ -88,6 +88,7 @@ fun MyActivitiesScreen(navController: NavController, userId: String = "") {
         var completedCount by remember { mutableStateOf(0) }
         var inProgressCount by remember { mutableStateOf(0) }
         var upcomingCount by remember { mutableStateOf(0) }
+        var totalDistanceStr by remember { mutableStateOf("—") }
         LaunchedEffect(userId) {
             val uid = userId.toIntOrNull()
             if (uid != null) {
@@ -95,7 +96,7 @@ fun MyActivitiesScreen(navController: NavController, userId: String = "") {
                     val list = mutableListOf<ActivityItem>()
                     val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
                     DatabaseHelper.processQuery(
-                        "SELECT ue.user_event_id, e.title, e.event_date, e.location, e.event_type, ue.status FROM user_events ue JOIN events e ON ue.event_id = e.event_id WHERE ue.user_id = ? ORDER BY e.event_date DESC",
+                        "SELECT ue.user_event_id, e.title, e.event_date, e.location, e.event_type, ue.status, COALESCE(s.distance_km, 0), COALESCE(s.duration_seconds, 0) FROM user_events ue JOIN events e ON ue.event_id = e.event_id LEFT JOIN user_event_stats s ON s.user_id = ue.user_id AND s.event_id = ue.event_id WHERE ue.user_id = ? ORDER BY e.event_date DESC",
                         listOf(uid)
                     ) { rs ->
                         while (rs.next()) {
@@ -106,6 +107,8 @@ fun MyActivitiesScreen(navController: NavController, userId: String = "") {
                             val location = rs.getString(4) ?: ""
                             val eventType = rs.getString(5) ?: "其他"
                             val statusStr = rs.getString(6) ?: "upcoming"
+                            val distKm = rs.getDouble(7)
+                            val durSec = rs.getInt(8)
                             val type = when (eventType) {
                                 "骑行" -> ActivityType.CYCLE
                                 "越野跑" -> ActivityType.RUNNING
@@ -124,8 +127,8 @@ fun MyActivitiesScreen(navController: NavController, userId: String = "") {
                                     title = title,
                                     date = dateStr,
                                     location = location,
-                                    distance = "—",
-                                    duration = "—",
+                                    distance = if (distKm > 0.0) String.format(Locale.getDefault(), "%.2f km", distKm) else "—",
+                                    duration = formatDuration(durSec),
                                     type = type,
                                     status = status
                                 )
@@ -136,6 +139,10 @@ fun MyActivitiesScreen(navController: NavController, userId: String = "") {
                             completedCount = list.count { it.status == ActivityStatus.COMPLETED }
                             inProgressCount = list.count { it.status == ActivityStatus.IN_PROGRESS }
                             upcomingCount = list.count { it.status == ActivityStatus.UPCOMING }
+                            val total = list.filter { it.type == ActivityType.CYCLE && it.status == ActivityStatus.COMPLETED }
+                                .mapNotNull { runCatching { it.distance.replace("km", "").trim().toDouble() }.getOrNull() }
+                                .sum()
+                            totalDistanceStr = if (total > 0.0) String.format(Locale.getDefault(), "%.2f km", total) else "—"
                         }
                         Unit
                     }
@@ -144,7 +151,7 @@ fun MyActivitiesScreen(navController: NavController, userId: String = "") {
         }
         LazyColumn(modifier = Modifier.fillMaxSize().padding(innerPadding), contentPadding = PaddingValues(16.dp)) {
             item {
-                ActivityStatsCard(completed = completedCount.toString(), inProgress = inProgressCount.toString(), upcoming = upcomingCount.toString(), totalDistance = "—")
+                ActivityStatsCard(completed = completedCount.toString(), inProgress = inProgressCount.toString(), upcoming = upcomingCount.toString(), totalDistance = totalDistanceStr)
                 Spacer(modifier = Modifier.height(16.dp))
             }
             items(activities) { activity ->
@@ -153,6 +160,13 @@ fun MyActivitiesScreen(navController: NavController, userId: String = "") {
             }
         }
     }
+}
+
+private fun formatDuration(seconds: Int): String {
+    if (seconds <= 0) return "—"
+    val h = seconds / 3600
+    val m = (seconds % 3600) / 60
+    return if (h > 0) "${h}小时${m}分钟" else "${m}分钟"
 }
 
 @Composable

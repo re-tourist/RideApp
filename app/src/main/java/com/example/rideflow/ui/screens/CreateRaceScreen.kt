@@ -23,12 +23,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.rideflow.ui.components.ImageUploadComponent
 import com.example.rideflow.ui.theme.RideFlowTheme
+import com.example.rideflow.backend.DatabaseHelper
+import android.os.Handler
+import android.os.Looper
+import android.widget.Toast
+import java.text.SimpleDateFormat
+import java.util.Locale
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateRaceScreen(onBack: () -> Unit) {
     val context = LocalContext.current
+    val handler = Handler(Looper.getMainLooper())
     
     // 基本信息
     var raceTitle by remember { mutableStateOf("") }
@@ -186,7 +193,7 @@ fun CreateRaceScreen(onBack: () -> Unit) {
                         value = registrationTime,
                         onValueChange = { registrationTime = it },
                         label = { Text("报名时间段 *") },
-                        placeholder = { Text("请选择报名开始和结束时间") },
+                        placeholder = { Text("格式：yyyy-MM-dd HH:mm ~ yyyy-MM-dd HH:mm") },
                         modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
                         singleLine = true,
                         isError = registrationTime.isEmpty()
@@ -197,7 +204,7 @@ fun CreateRaceScreen(onBack: () -> Unit) {
                         value = raceTime,
                         onValueChange = { raceTime = it },
                         label = { Text("比赛时间段 *") },
-                        placeholder = { Text("请选择比赛开始和结束时间") },
+                        placeholder = { Text("格式：yyyy-MM-dd HH:mm ~ yyyy-MM-dd HH:mm") },
                         modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
                         singleLine = true,
                         isError = raceTime.isEmpty()
@@ -350,9 +357,34 @@ fun CreateRaceScreen(onBack: () -> Unit) {
                 // 创建按钮
                 Button(
                     onClick = {
-                        // 这里可以添加创建赛事的逻辑
-                        // 目前只是简单返回
-                        onBack()
+                        val regex = Regex("""\d{4}-\d{2}-\d{2} \d{2}:\d{2}""")
+                        val match = regex.find(raceTime)?.value
+                        if (match == null) {
+                            Toast.makeText(context, "请输入有效时间段：yyyy-MM-dd HH:mm ~ yyyy-MM-dd HH:mm", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Thread {
+                                val isOpen = 1
+                                val coverUrl: String? = null
+                                val insertId = DatabaseHelper.insertAndReturnId(
+                                    "INSERT INTO events (title, event_date, location, is_open, cover_image_url, description) VALUES (?,?,?,?,?,?)",
+                                    listOf<Any>(raceTitle, match, raceLocation, isOpen, coverUrl ?: "", raceDescription)
+                                )
+                                if (insertId != null) {
+                                    selectedTags.forEach { tag ->
+                                        DatabaseHelper.executeUpdate(
+                                            "INSERT INTO event_tags (event_id, tag_name) VALUES (?,?)",
+                                            listOf(insertId, tag)
+                                        )
+                                    }
+                                    handler.post {
+                                        Toast.makeText(context, "赛事已创建", Toast.LENGTH_SHORT).show()
+                                        onBack()
+                                    }
+                                } else {
+                                    handler.post { Toast.makeText(context, "创建失败，请稍后重试", Toast.LENGTH_SHORT).show() }
+                                }
+                            }.start()
+                        }
                     },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     enabled = raceTitle.isNotEmpty() && organizer.isNotEmpty() && 
