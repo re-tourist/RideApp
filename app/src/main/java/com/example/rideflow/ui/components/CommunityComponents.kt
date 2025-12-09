@@ -126,7 +126,8 @@ fun PostCard(
     post: Post,
     isFollowing: Boolean,
     onFollowToggle: (Int, Boolean) -> Unit,
-    showFollowButton: Boolean = true
+    showFollowButton: Boolean = true,
+    onAvatarClick: (Int) -> Unit = {} // 新增：头像点击回调
 ) {
     var isLiked by remember { mutableStateOf(post.initialIsLiked) }
     var showShareDialog by remember { mutableStateOf(false) }
@@ -150,10 +151,16 @@ fun PostCard(
                     .size(40.dp)
                     .clip(CircleShape)
                     .background(Color.LightGray)
+                    .clickable { onAvatarClick(post.userId) } // 修改：添加点击事件
             )
             Spacer(Modifier.width(8.dp))
             Column {
-                Text(post.userName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(
+                    text = post.userName,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    modifier = Modifier.clickable { onAvatarClick(post.userId) } // 昵称也可点击
+                )
                 Text(post.timeAgo, color = Color.Gray, fontSize = 12.sp)
             }
             Spacer(Modifier.weight(1f))
@@ -430,12 +437,13 @@ fun MessageInteractionDialog(onDismiss: () -> Unit) {
 // ------------------------------------
 @Composable
 fun ClubHeaderSection(onBackClick: () -> Unit, onMenuClick: () -> Unit, onShareClick: () -> Unit) {
+    // ... (保持不变)
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(220.dp)
     ) {
-        // 模拟背景图
+        // ... (保持不变)
         Box(
             modifier = Modifier
                 .fillMaxSize()

@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -13,24 +14,43 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import com.example.rideflow.backend.DatabaseHelper
 import com.example.rideflow.model.Post
 import com.example.rideflow.ui.components.*
 import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.Date
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Star
+
+// 用户详细信息数据类
+data class UserDetailInfo(
+    val userId: Int,
+    val nickname: String,
+    val bio: String,
+    val ridingAge: String,
+    val medals: List<String>
+)
 
 @Composable
 fun CommunityScreen(navController: NavController, userId: String = "") {
     val handler = Handler(Looper.getMainLooper())
     val allPosts = remember { mutableStateListOf<Post>() }
     val followingUserIds = remember { mutableStateOf(setOf<Int>()) }
+
+    // 用户弹窗状态
+    var showUserDetailDialog by remember { mutableStateOf(false) }
+    var selectedUserInfo by remember { mutableStateOf<UserDetailInfo?>(null) }
+    var isUserLoading by remember { mutableStateOf(false) }
 
     // 数据加载逻辑
     LaunchedEffect(userId) {
@@ -40,7 +60,6 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
             val commentsMap = mutableMapOf<Int, Int>()
 
             // 1. 注入"已加入俱乐部"的模拟动态数据
-            // [修改点]：为不同发帖者分配不同的 userId (9001, 9002, 9003)，避免点击一个关注导致全部关注
             val mockClubPosts = listOf(
                 Post(901, 9001, Icons.Default.DateRange, "飓风骑行俱乐部", "10分钟前", "本周日将举行环湖拉练活动，请各位队员准时在北门集合！ #俱乐部活动", "[活动海报]", 32, 5),
                 Post(902, 9002, Icons.Default.DateRange, "周末休闲骑", "2小时前", "上周的腐败骑行圆满结束，大家吃得开心吗？照片已上传相册。", "[聚餐合影]", 15, 8),
@@ -79,7 +98,6 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
                     val displayName = if (!clubName.isNullOrEmpty()) clubName else (nick ?: "未知用户")
                     nameMap[pid] = displayName
                 }
-                // 只更新那些名字为空的（即不是我们手动插入的模拟数据）
                 posts.replaceAll { p -> if (p.userName.isEmpty()) p.copy(userName = nameMap[p.id] ?: "未知用户") else p }
                 Unit
             }
@@ -102,7 +120,6 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
 
     // 页面状态
     val categories = remember { listOf("关注动态", "热门动态", "社区交易", "俱乐部") }
-    // 使用 rememberSaveable 保存选中的标签页
     var selectedCategory by rememberSaveable { mutableStateOf(categories[1]) }
     var showPublishDialog by remember { mutableStateOf(false) }
     var showMessageDialog by remember { mutableStateOf(false) }
@@ -115,6 +132,66 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
         } else {
             followingUserIds.value = followingUserIds.value - id
         }
+    }
+
+    // 处理头像点击，加载用户详细信息
+    val onAvatarClick: (Int) -> Unit = { targetUserId ->
+        isUserLoading = true
+        showUserDetailDialog = true
+        selectedUserInfo = null // Reset
+
+        Thread {
+            var nick = "未知用户"
+            var bio = "这个用户很懒，什么都没写"
+            var ridingAge = "1年"
+            val medals = mutableListOf<String>()
+
+            // 获取基本信息
+            DatabaseHelper.processQuery(
+                "SELECT nickname, bio, created_at FROM users WHERE user_id = ?",
+                listOf(targetUserId)
+            ) { rs ->
+                if (rs.next()) {
+                    nick = rs.getString(1) ?: nick
+                    bio = rs.getString(2) ?: bio
+                    val createdAt = rs.getTimestamp(3)
+                    if (createdAt != null) {
+                        val diff = Date().time - createdAt.time
+                        val years = diff / (1000L * 60 * 60 * 24 * 365)
+                        ridingAge = "${years + 1}年"
+                    }
+                }
+                Unit
+            }
+
+            // 如果是模拟的俱乐部账号(ID > 9000)，给一些特殊文案
+            if (targetUserId > 9000) {
+                nick = allPosts.find { it.userId == targetUserId }?.userName ?: "俱乐部官方"
+                bio = "官方账号，发布最新活动与资讯。"
+                ridingAge = "5年"
+            }
+
+            // 获取勋章
+            DatabaseHelper.processQuery(
+                "SELECT b.name FROM achievement_badges b JOIN user_achievement_progress uap ON b.badge_id = uap.badge_id WHERE uap.user_id = ? AND uap.is_unlocked = 1",
+                listOf(targetUserId)
+            ) { rs ->
+                while (rs.next()) {
+                    medals.add(rs.getString(1))
+                }
+                Unit
+            }
+            // 模拟勋章数据
+            if (medals.isEmpty()) {
+                medals.add("骑行新星")
+                if (targetUserId % 2 == 0) medals.add("百公里挑战")
+            }
+
+            handler.post {
+                selectedUserInfo = UserDetailInfo(targetUserId, nick, bio, ridingAge, medals)
+                isUserLoading = false
+            }
+        }.start()
     }
 
     Scaffold(
@@ -136,11 +213,11 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
             }
 
             when (selectedCategory) {
-                "关注动态" -> CommunityFollowingScreen(allPosts, followingUserIds.value, onFollowToggle)
-                "热门动态" -> CommunityHotScreen(allPosts, followingUserIds.value, onFollowToggle)
+                "关注动态" -> CommunityFollowingScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick)
+                "热门动态" -> CommunityHotScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick)
                 "社区交易" -> CommunityTradeScreen()
                 "俱乐部" -> CommunityClubPortalScreen(navController = navController, allPosts = allPosts)
-                else -> CommunityHotScreen(allPosts, followingUserIds.value, onFollowToggle)
+                else -> CommunityHotScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick)
             }
         }
     }
@@ -150,6 +227,153 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
     }
     if (showMessageDialog) {
         MessageInteractionDialog(onDismiss = { showMessageDialog = false })
+    }
+
+    // 用户详情弹窗
+    if (showUserDetailDialog) {
+        UserDetailInfoDialog(
+            userInfo = selectedUserInfo,
+            isLoading = isUserLoading,
+            isFollowing = selectedUserInfo?.let { followingUserIds.value.contains(it.userId) } ?: false,
+            onFollowClick = {
+                selectedUserInfo?.let { user ->
+                    onFollowToggle(user.userId, !followingUserIds.value.contains(user.userId))
+                }
+            },
+            onDismiss = { showUserDetailDialog = false }
+        )
+    }
+}
+
+@Composable
+fun UserDetailInfoDialog(
+    userInfo: UserDetailInfo?,
+    isLoading: Boolean,
+    isFollowing: Boolean,
+    onFollowClick: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                if (isLoading || userInfo == null) {
+                    CircularProgressIndicator()
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("加载用户信息...")
+                } else {
+                    // 头像
+                    Surface(
+                        modifier = Modifier.size(80.dp),
+                        shape = CircleShape,
+                        color = Color.LightGray
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = null,
+                                modifier = Modifier.size(40.dp),
+                                tint = Color.White
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // 昵称
+                    Text(
+                        text = userInfo.nickname,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // 骑行年龄
+                    Surface(
+                        color = Color(0xFFE3F2FD),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Text(
+                            text = "骑龄: ${userInfo.ridingAge}",
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                            color = Color(0xFF1976D2),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // 个人语录
+                    Text(
+                        text = userInfo.bio,
+                        fontSize = 14.sp,
+                        color = Color.Gray,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // 获得的奖章
+                    Text(
+                        text = "获得的奖章",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.align(Alignment.Start)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (userInfo.medals.isEmpty()) {
+                            Text("暂无奖章", fontSize = 12.sp, color = Color.Gray)
+                        } else {
+                            userInfo.medals.forEach { medal ->
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        imageVector = Icons.Default.Star,
+                                        contentDescription = null,
+                                        tint = Color(0xFFFFD700),
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Text(
+                                        text = medal,
+                                        fontSize = 10.sp,
+                                        color = Color.DarkGray
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    // 关注按钮
+                    Button(
+                        onClick = onFollowClick,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isFollowing) Color.Gray else Color.Red
+                        )
+                    ) {
+                        Text(if (isFollowing) "已关注" else "关注对方")
+                    }
+                }
+            }
+        }
     }
 }
 
