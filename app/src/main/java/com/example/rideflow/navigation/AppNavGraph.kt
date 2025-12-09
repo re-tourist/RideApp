@@ -58,18 +58,27 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
             RegisterScreen(navController = navController)
         }
 
-        // 主应用页面
+        // 主应用页面（支持可选tab参数）
+        composable(route = "${AppRoutes.MAIN}?tab={tab}", arguments = listOf(navArgument("tab") { type = NavType.StringType; defaultValue = "sport" })) { backStackEntry ->
+            val uid = when (authState) {
+                is AuthState.Authenticated -> (authState as AuthState.Authenticated).userData.userId
+                else -> ""
+            }
+            val startTab = backStackEntry.arguments?.getString("tab") ?: "sport"
+            MainScreen(navController = navController, userId = uid, startTab = startTab)
+        }
+        // 主应用页面（兼容旧路由）
         composable(AppRoutes.MAIN) {
             val uid = when (authState) {
                 is AuthState.Authenticated -> (authState as AuthState.Authenticated).userData.userId
                 else -> ""
             }
-            MainScreen(navController = navController, userId = uid)
+            MainScreen(navController = navController, userId = uid, startTab = "sport")
         }
         
         // 编辑资料页面
         composable(AppRoutes.EDIT_PROFILE) {
-            EditProfileScreen(onBackPress = { navController.popBackStack() })
+            EditProfileScreen(onBackPress = { navController.navigate("${AppRoutes.MAIN}?tab=profile") })
         }
         
         // 个人资料详情页面

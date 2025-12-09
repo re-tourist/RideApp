@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavController
 import com.example.rideflow.backend.DatabaseHelper
+import com.example.rideflow.navigation.AppRoutes
 import android.os.Handler
 import android.os.Looper
 import java.time.LocalDate
@@ -85,7 +86,7 @@ fun ExerciseCalendarScreen(navController: NavController, userId: String) {
             TopAppBar(
                 title = { Text(text = "运动日历") },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = { navController.navigate("${AppRoutes.MAIN}?tab=profile") }) {
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
                             contentDescription = "返回"

@@ -15,7 +15,7 @@ import androidx.navigation.NavController
 import com.example.rideflow.R
 
 @Composable
-fun MainScreen(navController: NavController, userId: String = "") {
+fun MainScreen(navController: NavController, userId: String = "", startTab: String = "sport") {
     val navItems = listOf(
         NavItem(
             title = "运动",
@@ -39,7 +39,15 @@ fun MainScreen(navController: NavController, userId: String = "") {
         )
     )
     
-    var currentIndex by remember { mutableStateOf(0) } // 默认选中运动页面
+    var currentIndex by remember { mutableStateOf(
+        when (startTab) {
+            "sport" -> 0
+            "discover" -> 1
+            "community" -> 2
+            "profile" -> 3
+            else -> 0
+        }
+    ) }
     
     Scaffold(
         modifier = Modifier,

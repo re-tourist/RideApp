@@ -338,7 +338,6 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
             }
         }
         
-        // 菜单项列表
         item {
             Card(
                 modifier = Modifier
@@ -347,144 +346,100 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
                 shape = RoundedCornerShape(12.dp),
                 elevation = CardDefaults.cardElevation(2.dp)
             ) {
-                // 骑行偏好
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .clickable { navController.navigate(AppRoutes.RIDE_PREFERENCE) },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = "骑行偏好",
-                            tint = Color(0xFF3498DB),
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Text(text = "骑行偏好", fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
-                    }
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "更多",
-                        tint = Color.Gray,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-                
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                
-                // 骑行记录
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .clickable { navController.navigate(AppRoutes.RIDE_RECORD) },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Home,
-                            contentDescription = "骑行记录",
-                            tint = Color(0xFF3498DB),
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Text(text = "骑行记录", fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
-                    }
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "更多",
-                        tint = Color.Gray,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-                
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .clickable { navController.navigate(com.example.rideflow.navigation.AppRoutes.EXERCISE_CALENDAR) },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .clickable { navController.navigate(AppRoutes.RIDE_PREFERENCE) },
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Menu,
-                                contentDescription = "运动日历",
-                                tint = Color(0xFF3498DB),
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Column(modifier = Modifier.padding(start = 12.dp)) {
-                                Text(text = "运动日历", fontSize = 16.sp)
-                            }
+                            Icon(imageVector = Icons.Default.Star, contentDescription = "骑行偏好", tint = Color(0xFF3498DB), modifier = Modifier.size(24.dp))
+                            Text(text = "骑行偏好", fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
                         }
+                        Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "更多", tint = Color.Gray, modifier = Modifier.size(24.dp))
                     }
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "更多",
-                        tint = Color.Gray,
-                        modifier = Modifier.size(24.dp)
-                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .clickable { navController.navigate(AppRoutes.RIDE_RECORD) },
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.Home, contentDescription = "骑行记录", tint = Color(0xFF3498DB), modifier = Modifier.size(24.dp))
+                            Text(text = "骑行记录", fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
+                        }
+                        Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "更多", tint = Color.Gray, modifier = Modifier.size(24.dp))
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .clickable { navController.navigate(AppRoutes.EXERCISE_CALENDAR) },
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.Menu, contentDescription = "运动日历", tint = Color(0xFF3498DB), modifier = Modifier.size(24.dp))
+                            Text(text = "运动日历", fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
+                        }
+                        Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "更多", tint = Color.Gray, modifier = Modifier.size(24.dp))
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .clickable { navController.navigate(AppRoutes.MY_ACTIVITIES) },
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.Home, contentDescription = "我的活动", tint = Color(0xFF3498DB), modifier = Modifier.size(24.dp))
+                            Text(text = "我的活动", fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
+                        }
+                        Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "更多", tint = Color.Gray, modifier = Modifier.size(24.dp))
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .clickable { showSettingsDialog = true },
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.Star, contentDescription = "系统设置", tint = Color(0xFF3498DB), modifier = Modifier.size(24.dp))
+                            Text(text = "系统设置", fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
+                        }
+                        Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "更多", tint = Color.Gray, modifier = Modifier.size(24.dp))
+                    }
                 }
-                
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .clickable { navController.navigate(com.example.rideflow.navigation.AppRoutes.MY_ACTIVITIES) },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+            }
+        }
+        item {
+            val authViewModel = org.koin.androidx.compose.koinViewModel<com.example.rideflow.auth.AuthViewModel>()
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Button(
+                    onClick = {
+                        authViewModel.logout()
+                        navController.navigate(AppRoutes.LOGIN) {
+                            popUpTo(AppRoutes.MAIN) { inclusive = true }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F), contentColor = Color.White)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Home,
-                            contentDescription = "我的活动",
-                            tint = Color(0xFF3498DB),
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Text(text = "我的活动", fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
-                    }
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "更多",
-                        tint = Color.Gray,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-
-                // 系统设置
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .clickable { showSettingsDialog = true },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = "系统设置",
-                            tint = Color(0xFF3498DB),
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Text(text = "系统设置", fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
-                    }
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "更多",
-                        tint = Color.Gray,
-                        modifier = Modifier.size(24.dp)
-                    )
+                    Text(text = "退出登录")
                 }
             }
         }

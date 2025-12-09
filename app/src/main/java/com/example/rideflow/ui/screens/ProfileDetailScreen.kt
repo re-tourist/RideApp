@@ -138,7 +138,7 @@ fun ProfileDetailScreen(navController: NavController) {
                         }
                         
                         OutlinedButton(
-                            onClick = { navController.popBackStack() },
+                            onClick = { navController.navigate("${com.example.rideflow.navigation.AppRoutes.MAIN}?tab=profile") },
                             modifier = Modifier.weight(1f)
                         ) {
                             Text(text = "关闭")

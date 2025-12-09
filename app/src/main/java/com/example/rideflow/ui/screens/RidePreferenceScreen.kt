@@ -101,13 +101,13 @@ fun RidePreferenceScreen(navController: NavController, userId: String) {
             TopAppBar(
                 title = { Text(text = "骑行偏好") },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = { navController.navigate("${com.example.rideflow.navigation.AppRoutes.MAIN}?tab=profile") }) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
                     }
                 },
                 actions = {
                     Button(
-                        onClick = { navController.popBackStack() },
+                    onClick = { navController.navigate("${com.example.rideflow.navigation.AppRoutes.MAIN}?tab=profile") },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = bg,
                             contentColor = Color.Black

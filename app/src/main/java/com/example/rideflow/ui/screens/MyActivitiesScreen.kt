@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.rideflow.backend.DatabaseHelper
+import com.example.rideflow.navigation.AppRoutes
 import android.os.Handler
 import android.os.Looper
 import java.text.SimpleDateFormat
@@ -72,7 +73,7 @@ fun MyActivitiesScreen(navController: NavController, userId: String = "") {
             TopAppBar(
                 title = { Text(text = "我的活动", fontSize = 18.sp, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = { navController.navigate("${AppRoutes.MAIN}?tab=profile") }) {
                         Icon(
                             imageVector = Icons.Filled.ArrowBack,
                             contentDescription = "返回"
