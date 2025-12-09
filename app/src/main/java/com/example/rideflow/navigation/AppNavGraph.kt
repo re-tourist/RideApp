@@ -1,8 +1,6 @@
 package com.example.rideflow.navigation
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -24,11 +22,12 @@ import com.example.rideflow.ui.screens.RaceRegistrationScreen
 import com.example.rideflow.ui.screens.AddRegistrationCardScreen
 import com.example.rideflow.ui.screens.ActivityRegistrationScreen
 import com.example.rideflow.ui.screens.ClubDetailScreen
-import com.example.rideflow.ui.screens.ClubScreen
+import com.example.rideflow.ui.screens.community.CommunityClubDetailScreen
 import com.example.rideflow.ui.screens.CreateClubScreen
 import com.example.rideflow.ui.screens.SetMainClubScreen
 import androidx.navigation.navArgument
 import androidx.navigation.NavType
+import com.example.rideflow.ui.screens.ClubScreen
 
 /**
  * 应用导航图
@@ -193,6 +192,17 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
         // 设置主俱乐部页面
         composable(route = AppRoutes.SET_MAIN_CLUB) {
             SetMainClubScreen(navController = navController)
+        }
+        composable(
+            route = "community_club_detail/{clubId}",
+            arguments = listOf(navArgument("clubId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val clubId = backStackEntry.arguments?.getInt("clubId") ?: 0
+            // 调用我们之前生成的详情页组件
+            com.example.rideflow.ui.screens.community.CommunityClubDetailScreen(
+                navController = navController,
+                clubId = clubId
+            )
         }
 
         // 注意：其他子页面（如发现等）的路由在MainScreen内部通过BottomNavigationBar管理
