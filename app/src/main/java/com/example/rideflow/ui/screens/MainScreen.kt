@@ -39,7 +39,7 @@ fun MainScreen(navController: NavController, userId: String = "") {
         )
     )
     
-    var currentIndex by remember { mutableStateOf(1) } // 默认选中发现页面
+    var currentIndex by remember { mutableStateOf(0) } // 默认选中运动页面
     
     Scaffold(
         modifier = Modifier,
