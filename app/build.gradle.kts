@@ -86,6 +86,7 @@ dependencies {
     // Coil图片加载库
     implementation("io.coil-kt:coil-compose:2.4.0")
     implementation("com.amap.api:map2d:latest.integration")
+    implementation("com.amap.api:search:latest.integration")
     
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

@@ -55,6 +55,12 @@ import androidx.core.content.ContextCompat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextButton
+import com.amap.api.services.help.Inputtips
+import com.amap.api.services.help.InputtipsQuery
+import com.amap.api.services.help.Tip
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationCallback
@@ -93,7 +99,8 @@ data class RideReport(
 private fun AMap2DContainer(
     modifier: Modifier = Modifier,
     myLocation: LatLng? = null,
-    routePoints: List<LatLng> = emptyList()
+    routePoints: List<LatLng> = emptyList(),
+    selectedLocation: LatLng? = null
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -122,6 +129,7 @@ private fun AMap2DContainer(
     val lastRoutePoints = remember { mutableStateOf<List<LatLng>>(emptyList()) }
     val isInitialSetup = remember { mutableStateOf(true) }
     val mapInitialized = remember { mutableStateOf(false) }
+    val lastSelectedLocation = remember { mutableStateOf<LatLng?>(null) }
     
     // 简化的AndroidView实现
     AndroidView(
@@ -161,6 +169,7 @@ private fun AMap2DContainer(
                 val defaultLocation = LatLng(30.311664, 120.394605) // 杭州坐标
                 val cameraUpdate = CameraUpdateFactory.newLatLngZoom(defaultLocation, 14f) // 14f适合显示城市区域
                 map.moveCamera(cameraUpdate)
+                mapInitialized.value = true
                 
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -179,7 +188,8 @@ private fun AMap2DContainer(
                 // 只在参数真正变化时更新，避免重复更新导致的闪烁
                 val locationChanged = myLocation != lastMyLocation.value
                 val routeChanged = routePoints != lastRoutePoints.value
-                val shouldUpdate = locationChanged || routeChanged || isInitialSetup.value
+                val selectedChanged = selectedLocation != lastSelectedLocation.value
+                val shouldUpdate = locationChanged || routeChanged || selectedChanged || isInitialSetup.value
                 
                 if (!shouldUpdate) return@AndroidView
                 
@@ -202,6 +212,18 @@ private fun AMap2DContainer(
                     if (isInitialSetup.value && routePoints.isEmpty()) {
                         // 没有路线时，以当前位置为中心显示
                         val cameraUpdate = CameraUpdateFactory.newLatLngZoom(myLocation, 14f) // 14f适合显示当前位置周围区域
+                        map.animateCamera(cameraUpdate)
+                    }
+                }
+
+                if (selectedLocation != null) {
+                    map.addMarker(
+                        MarkerOptions()
+                            .position(selectedLocation)
+                            .title("搜索地点")
+                    )
+                    if (selectedChanged && routePoints.isEmpty()) {
+                        val cameraUpdate = CameraUpdateFactory.newLatLngZoom(selectedLocation, 16f)
                         map.animateCamera(cameraUpdate)
                     }
                 }
@@ -246,6 +268,7 @@ private fun AMap2DContainer(
                 // 更新记住的值
                 lastMyLocation.value = myLocation
                 lastRoutePoints.value = routePoints
+                lastSelectedLocation.value = selectedLocation
                 if (isInitialSetup.value) {
                     isInitialSetup.value = false
                 }
@@ -603,6 +626,75 @@ fun NotStartedContent(
     onStartClick: () -> Unit,
     myLocation: LatLng?
 ) {
+    val context = LocalContext.current
+    var showSearchDialog by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    val searchResults = remember { mutableStateListOf<Tip>() }
+    val selectedPlace = remember { mutableStateOf<LatLng?>(null) }
+
+    LaunchedEffect(searchQuery) {
+        val q = searchQuery.trim()
+        if (q.isEmpty()) {
+            searchResults.clear()
+        } else {
+            delay(300)
+            val query = InputtipsQuery(q, "")
+            query.cityLimit = false
+            val inputtips = Inputtips(context, query)
+            inputtips.setInputtipsListener { tips, code ->
+                searchResults.clear()
+                if (code == 1000) {
+                    if (tips != null) searchResults.addAll(tips)
+                }
+            }
+            inputtips.requestInputtipsAsyn()
+        }
+    }
+
+    if (showSearchDialog) {
+        AlertDialog(
+            onDismissRequest = { showSearchDialog = false },
+            confirmButton = {
+                TextButton(onClick = { showSearchDialog = false }) { Text("关闭") }
+            },
+            title = { Text("地点查询") },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    TextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("输入关键词") }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LazyColumn(modifier = Modifier.fillMaxWidth().height(240.dp)) {
+                        items(searchResults) { tip ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        val p = tip.point
+                                        if (p != null) {
+                                            selectedPlace.value = LatLng(p.latitude, p.longitude)
+                                            showSearchDialog = false
+                                        }
+                                    }
+                                    .padding(vertical = 10.dp, horizontal = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    Text(tip.name)
+                                    val addr = (tip.district ?: "") + (tip.address ?: "")
+                                    Text(addr, fontSize = 12.sp, color = Color.Gray)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        )
+    }
+
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         item {
             Box(
@@ -613,7 +705,8 @@ fun NotStartedContent(
             ) {
                 AMap2DContainer(
                     modifier = Modifier.fillMaxSize(),
-                    myLocation = myLocation
+                    myLocation = myLocation,
+                    selectedLocation = selectedPlace.value
                 )
             }
         }
@@ -638,6 +731,15 @@ fun NotStartedContent(
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF007AFF))
             ) { Text("开始运动", fontSize = 18.sp, color = Color.White) }
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+        item {
+            Button(
+                onClick = { showSearchDialog = true },
+                modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF34C759))
+            ) { Text("查询", fontSize = 18.sp, color = Color.White) }
             Spacer(modifier = Modifier.height(24.dp))
         }
         item {
