@@ -11,7 +11,7 @@
  Target Server Version : 80044 (8.0.44-0ubuntu0.22.04.1)
  File Encoding         : 65001
 
- Date: 09/12/2025 20:45:48
+ Date: 09/12/2025 23:33:14
 */
 
 SET NAMES utf8mb4;
@@ -376,27 +376,6 @@ INSERT INTO `rider_profiles` VALUES (2, '北京市', '金牌骑客', 1, '2025-12
 INSERT INTO `rider_profiles` VALUES (3, '成都市', '菜鸟骑迹', 3, '2025-12-05 20:12:47');
 
 -- ----------------------------
--- Table structure for route_downloads
--- ----------------------------
-DROP TABLE IF EXISTS `route_downloads`;
-CREATE TABLE `route_downloads`  (
-  `route_id` int NOT NULL,
-  `user_id` int NOT NULL,
-  `downloaded_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`route_id`, `user_id`) USING BTREE,
-  INDEX `idx_route_downloads_user`(`user_id` ASC) USING BTREE,
-  CONSTRAINT `fk_route_downloads_route` FOREIGN KEY (`route_id`) REFERENCES `routes` (`route_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
-  CONSTRAINT `fk_route_downloads_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
-
--- ----------------------------
--- Records of route_downloads
--- ----------------------------
-INSERT INTO `route_downloads` VALUES (1, 1, '2025-12-05 08:30:00');
-INSERT INTO `route_downloads` VALUES (3, 1, '2025-12-05 08:45:00');
-INSERT INTO `route_downloads` VALUES (4, 1, '2025-12-09 20:45:16');
-
--- ----------------------------
 -- Table structure for route_favorites
 -- ----------------------------
 DROP TABLE IF EXISTS `route_favorites`;
@@ -405,7 +384,7 @@ CREATE TABLE `route_favorites`  (
   `user_id` int NOT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`route_id`, `user_id`) USING BTREE,
-  INDEX `user_id`(`user_id` ASC) USING BTREE,
+  INDEX `idx_rf_user`(`user_id` ASC) USING BTREE,
   CONSTRAINT `route_favorites_ibfk_1` FOREIGN KEY (`route_id`) REFERENCES `routes` (`route_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `route_favorites_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '路书收藏' ROW_FORMAT = Dynamic;
@@ -415,7 +394,6 @@ CREATE TABLE `route_favorites`  (
 -- ----------------------------
 INSERT INTO `route_favorites` VALUES (1, 1, '2025-12-04 23:00:55');
 INSERT INTO `route_favorites` VALUES (2, 2, '2025-12-04 23:00:55');
-INSERT INTO `route_favorites` VALUES (3, 1, '2025-12-05 09:00:00');
 
 -- ----------------------------
 -- Table structure for route_tags
@@ -425,6 +403,7 @@ CREATE TABLE `route_tags`  (
   `route_id` int NOT NULL,
   `tag_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`route_id`, `tag_name`) USING BTREE,
+  INDEX `idx_route_tags_event`(`route_id` ASC, `tag_name` ASC) USING BTREE,
   CONSTRAINT `route_tags_ibfk_1` FOREIGN KEY (`route_id`) REFERENCES `routes` (`route_id`) ON DELETE CASCADE ON UPDATE RESTRICT
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '路书标签' ROW_FORMAT = Dynamic;
 
@@ -716,13 +695,13 @@ CREATE TABLE `users`  (
 -- ----------------------------
 -- Records of users
 -- ----------------------------
-INSERT INTO `users` VALUES (1, 'testuser', 'test@example.com', '123456', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '222', 'female', '2025-12-03', '12345678900', 0, 1, '2025-12-09 20:45:06', '2025-11-27 20:58:42', '2025-12-09 20:45:06');
+INSERT INTO `users` VALUES (1, 'testuser', 'test@example.com', '123456', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '222', 'female', '2025-12-03', '12345678900', 0, 1, '2025-12-09 23:19:47', '2025-11-27 20:58:42', '2025-12-09 23:19:47');
 INSERT INTO `users` VALUES (2, 'admin', 'admin@example.com', 'admin123', NULL, NULL, 'other', NULL, NULL, 0, 1, NULL, '2025-11-27 20:58:42', '2025-11-27 20:58:42');
 INSERT INTO `users` VALUES (3, 'user1', 'user1@example.com', 'password1', NULL, NULL, 'other', NULL, NULL, 0, 1, NULL, '2025-11-27 20:58:42', '2025-11-27 20:58:42');
 INSERT INTO `users` VALUES (7, 'a', 'a@qq.com', 'aaaaaa', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-11-28 00:06:10', '2025-11-28 00:06:10', '2025-11-28 00:06:10');
-INSERT INTO `users` VALUES (8, '123456', '710963274@qq.com', '123456', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-12-09 20:10:08', '2025-12-02 12:09:25', '2025-12-09 20:10:08');
+INSERT INTO `users` VALUES (8, '123456', '710963274@qq.com', '123456', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-12-09 23:02:42', '2025-12-02 12:09:25', '2025-12-09 23:02:42');
 INSERT INTO `users` VALUES (9, 'ddd', 'aaa@gmail.com', 'sssssss', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-12-02 20:24:26', '2025-12-02 20:24:26', '2025-12-02 20:24:26');
 INSERT INTO `users` VALUES (10, '111', '111@gmail.com', '111111', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-12-09 19:17:45', '2025-12-02 20:48:47', '2025-12-09 19:17:45');
-INSERT INTO `users` VALUES (11, '1', '1@gmail.com', '123123', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-12-09 20:09:50', '2025-12-09 19:31:59', '2025-12-09 20:09:50');
+INSERT INTO `users` VALUES (11, '1', '1@gmail.com', '123123', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-12-09 22:28:51', '2025-12-09 19:31:59', '2025-12-09 22:28:51');
 
 SET FOREIGN_KEY_CHECKS = 1;

@@ -153,7 +153,14 @@ fun RouteBookDetailScreen(navController: NavController, routeId: Int) {
                     modifier = Modifier.fillMaxWidth().padding(12.dp),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    AssistChip(onClick = {}, label = { Text(text = difficulty) })
+                    AssistChip(
+                        onClick = {},
+                        label = { Text(text = difficulty) },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = Color(0xFFE8F5E9),
+                            labelColor = Color(0xFF2E7D32)
+                        )
+                    )
                 }
             }
             Column(modifier = Modifier.padding(16.dp)) {

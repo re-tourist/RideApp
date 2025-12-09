@@ -56,6 +56,7 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
     var showCalendarDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
     var showNotificationsDialog by remember { mutableStateOf(false) }
+    val authViewModel = org.koin.androidx.compose.koinViewModel<com.example.rideflow.auth.AuthViewModel>()
     var nickname by remember { mutableStateOf("") }
     var avatarUrl by remember { mutableStateOf("") }
     var badgeItems by remember { mutableStateOf<List<ProfileAchievementItem>>(emptyList()) }
@@ -424,25 +425,7 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
                 }
             }
         }
-        item {
-            val authViewModel = org.koin.androidx.compose.koinViewModel<com.example.rideflow.auth.AuthViewModel>()
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Button(
-                    onClick = {
-                        authViewModel.logout()
-                        navController.navigate(AppRoutes.LOGIN) {
-                            popUpTo(AppRoutes.MAIN) { inclusive = true }
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F), contentColor = Color.White)
-                ) {
-                    Text(text = "退出登录")
-                }
-            }
-        }
+        
     }
     
     // 成就徽章对话框
@@ -530,6 +513,20 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
                     SettingItem(label = "通知设置", icon = Icons.Default.Notifications)
                     SettingItem(label = "隐私设置", icon = Icons.Default.Lock)
                     SettingItem(label = "关于我们", icon = Icons.Default.Info)
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 12.dp))
+                    SettingItem(
+                        label = "退出登录",
+                        icon = Icons.Default.ExitToApp,
+                        onClick = {
+                            authViewModel.logout()
+                            navController.navigate(AppRoutes.LOGIN) {
+                                popUpTo(AppRoutes.MAIN) { inclusive = true }
+                            }
+                            showSettingsDialog = false
+                        },
+                        iconTint = Color(0xFFD32F2F),
+                        labelColor = Color(0xFFD32F2F)
+                    )
                 }
             },
             confirmButton = {
@@ -560,14 +557,26 @@ fun StatItem(label: String, value: String) {
 
 @Composable
 fun SettingItem(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    SettingItem(label = label, icon = icon, onClick = null, iconTint = Color.Unspecified, labelColor = Color.Unspecified)
+}
+
+@Composable
+fun SettingItem(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: (() -> Unit)? = null,
+    iconTint: Color = Color.Unspecified,
+    labelColor: Color = Color.Unspecified
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(12.dp),
+            .padding(12.dp)
+            .let { base -> if (onClick != null) base.clickable(onClick = onClick) else base },
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(imageVector = icon, contentDescription = label, modifier = Modifier.size(24.dp))
-        Text(text = label, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
+        Icon(imageVector = icon, contentDescription = label, modifier = Modifier.size(24.dp), tint = iconTint)
+        Text(text = label, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp), color = labelColor)
     }
 }
 

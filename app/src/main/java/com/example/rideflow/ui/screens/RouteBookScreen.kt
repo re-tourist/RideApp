@@ -170,7 +170,14 @@ fun RouteCard(route: RouteBook, onClick: () -> Unit) {
                         .padding(12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    AssistChip(onClick = {}, label = { Text(text = route.difficulty) })
+                    AssistChip(
+                        onClick = {},
+                        label = { Text(text = route.difficulty) },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = Color(0xFFE8F5E9),
+                            labelColor = Color(0xFF2E7D32)
+                        )
+                    )
                     Button(
                         onClick = {},
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF007AFF))

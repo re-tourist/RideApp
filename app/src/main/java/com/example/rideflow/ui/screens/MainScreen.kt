@@ -39,19 +39,6 @@ fun MainScreen(navController: NavController, userId: String = "", startTab: Stri
             screen = { ProfileScreen(navController = navController, userId = userId) }
         )
     )
-<<<<<<< HEAD
-    
-    var currentIndex by remember { mutableStateOf(
-        when (startTab) {
-            "sport" -> 0
-            "discover" -> 1
-            "community" -> 2
-            "profile" -> 3
-            else -> 0
-        }
-    )
-    ) }
-
     // 使用 rememberSaveable 保存选中状态，既支持路由初始tab，又防止返回时重置
     val initialIndex = when (startTab) {
         "sport" -> 0
