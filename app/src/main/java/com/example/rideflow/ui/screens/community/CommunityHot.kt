@@ -15,7 +15,8 @@ import com.example.rideflow.ui.components.PostCard
 fun CommunityHotScreen(
     allPosts: List<Post>,
     followingUserIds: Set<Int>,
-    onFollowToggle: (Int, Boolean) -> Unit
+    onFollowToggle: (Int, Boolean) -> Unit,
+    onAvatarClick: (Int) -> Unit // 新增参数
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -28,7 +29,8 @@ fun CommunityHotScreen(
             PostCard(
                 post = post,
                 isFollowing = isFollowing,
-                onFollowToggle = onFollowToggle
+                onFollowToggle = onFollowToggle,
+                onAvatarClick = onAvatarClick // 传递回调
             )
             Spacer(modifier = Modifier.height(8.dp).background(Color(0xFFF0F0F0)))
         }
