@@ -59,6 +59,9 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
     var nickname by remember { mutableStateOf("") }
     var avatarUrl by remember { mutableStateOf("") }
     var badgeItems by remember { mutableStateOf<List<ProfileAchievementItem>>(emptyList()) }
+    var monthlyDurationSec by remember { mutableStateOf(0) }
+    var monthlyDistanceKm by remember { mutableStateOf(0.0) }
+    var monthlyCalories by remember { mutableStateOf(0) }
     val handler = Handler(Looper.getMainLooper())
     LaunchedEffect(userId) {
         val uid = userId.toIntOrNull()
@@ -106,6 +109,32 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
                         )
                     }
                     handler.post { badgeItems = list }
+                    Unit
+                }
+                val cal = Calendar.getInstance()
+                cal.set(Calendar.DAY_OF_MONTH, 1)
+                cal.set(Calendar.HOUR_OF_DAY, 0)
+                cal.set(Calendar.MINUTE, 0)
+                cal.set(Calendar.SECOND, 0)
+                cal.set(Calendar.MILLISECOND, 0)
+                val startSdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                val startStr = startSdf.format(cal.time)
+                cal.add(Calendar.MONTH, 1)
+                val endStr = startSdf.format(cal.time)
+                DatabaseHelper.processQuery(
+                    "SELECT COALESCE(SUM(distance_km),0), COALESCE(SUM(duration_seconds),0), COALESCE(SUM(calories),0) FROM user_ride_records WHERE user_id = ? AND start_time >= ? AND start_time < ?",
+                    listOf(uid, startStr, endStr)
+                ) { srs ->
+                    if (srs.next()) {
+                        val dist = srs.getDouble(1)
+                        val dur = srs.getInt(2)
+                        val calo = srs.getInt(3)
+                        handler.post {
+                            monthlyDistanceKm = dist
+                            monthlyDurationSec = dur
+                            monthlyCalories = calo
+                        }
+                    }
                     Unit
                 }
             }.start()
@@ -251,7 +280,7 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "11月骑行",
+                        text = "本月骑行",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.Gray
@@ -264,7 +293,7 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = "00:00",
+                                text = String.format(Locale.getDefault(), "%02d:%02d", monthlyDurationSec / 3600, (monthlyDurationSec % 3600) / 60),
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.Black
@@ -278,7 +307,7 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = "0.0 KM",
+                                text = String.format(Locale.getDefault(), "%.1f KM", monthlyDistanceKm),
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF3498DB)
@@ -292,7 +321,7 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = "0",
+                                text = monthlyCalories.toString(),
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.Black

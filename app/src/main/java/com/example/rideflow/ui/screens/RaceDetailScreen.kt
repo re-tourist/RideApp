@@ -14,6 +14,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,12 +31,70 @@ import androidx.navigation.NavController
 import com.example.rideflow.R
 import com.example.rideflow.navigation.AppRoutes
 import com.example.rideflow.ui.theme.RideFlowTheme
+import com.example.rideflow.backend.DatabaseHelper
+import android.os.Handler
+import android.os.Looper
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import coil.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RaceDetailScreen(navController: NavController, raceId: Int = 0, onBack: () -> Unit = { navController.popBackStack() }) {
-    // 控制联系主办方弹窗的显示
     var showContactDialog by remember { mutableStateOf(false) }
+    val handler = Handler(Looper.getMainLooper())
+    var eventTitle by remember { mutableStateOf("") }
+    var eventDateStr by remember { mutableStateOf("") }
+    var locationStr by remember { mutableStateOf("") }
+    var eventTypeStr by remember { mutableStateOf("") }
+    var isOpen by remember { mutableStateOf(true) }
+    var coverImageUrl by remember { mutableStateOf<String?>(null) }
+    var description by remember { mutableStateOf("") }
+    var tags by remember { mutableStateOf<List<String>>(emptyList()) }
+    LaunchedEffect(raceId) {
+        if (raceId > 0) {
+            Thread {
+                val sdf = SimpleDateFormat("yyyy.MM.dd HH:mm", Locale.getDefault())
+                DatabaseHelper.processQuery(
+                    "SELECT title, event_date, location, event_type, is_open, cover_image_url, description FROM events WHERE event_id = ?",
+                    listOf(raceId)
+                ) { rs ->
+                    if (rs.next()) {
+                        val title = rs.getString(1) ?: ""
+                        val ts = rs.getTimestamp(2)
+                        val dateStr = if (ts != null) sdf.format(Date(ts.time)) else ""
+                        val location = rs.getString(3) ?: ""
+                        val eventType = rs.getString(4) ?: ""
+                        val open = (rs.getInt(5) == 1)
+                        val cover = rs.getString(6)
+                        val desc = rs.getString(7) ?: ""
+                        handler.post {
+                            eventTitle = title
+                            eventDateStr = dateStr
+                            locationStr = location
+                            eventTypeStr = eventType
+                            isOpen = open
+                            coverImageUrl = cover
+                            description = desc
+                        }
+                    }
+                    Unit
+                }
+                DatabaseHelper.processQuery(
+                    "SELECT tag_name FROM event_tags WHERE event_id = ?",
+                    listOf(raceId)
+                ) { trs ->
+                    val list = mutableListOf<String>()
+                    while (trs.next()) {
+                        list.add(trs.getString(1) ?: "")
+                    }
+                    handler.post { tags = list }
+                    Unit
+                }
+            }.start()
+        }
+    }
     
     Scaffold(
         topBar = {
@@ -60,15 +119,24 @@ fun RaceDetailScreen(navController: NavController, raceId: Int = 0, onBack: () -
             ) {
                 // 赛事主图片
                 Box(modifier = Modifier.height(200.dp)) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                        contentDescription = "赛事图片",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
+                    if (!coverImageUrl.isNullOrBlank()) {
+                        AsyncImage(
+                            model = coverImageUrl,
+                            contentDescription = "赛事图片",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                            contentDescription = "赛事图片",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                     // 赛事名称
                     Text(
-                            text = "BBR全国线上赛-复活吧，骑魂！",
+                            text = if (eventTitle.isNotBlank()) eventTitle else "赛事",
                             style = TextStyle(
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
@@ -83,7 +151,7 @@ fun RaceDetailScreen(navController: NavController, raceId: Int = 0, onBack: () -
                         )
                     // 报名状态
                     Text(
-                        text = "报名中",
+                        text = if (isOpen) "报名中" else "已结束",
                         style = TextStyle(
                             fontSize = 14.sp,
                             color = Color.White
@@ -101,53 +169,24 @@ fun RaceDetailScreen(navController: NavController, raceId: Int = 0, onBack: () -
                 Column(modifier = Modifier.padding(16.dp)) {
                     // 赛事标签
                     Row(modifier = Modifier.padding(bottom = 16.dp)) {
-                        OutlinedButton(
-                            onClick = {},
-                            modifier = Modifier.padding(end = 8.dp),
-                            shape = RoundedCornerShape(20.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                        ) {
-                            Text(text = "线上", fontSize = 12.sp)
-                        }
-                        OutlinedButton(
-                            onClick = {},
-                            modifier = Modifier.padding(end = 8.dp),
-                            shape = RoundedCornerShape(20.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                        ) {
-                            Text(text = "骑行", fontSize = 12.sp)
-                        }
-                        OutlinedButton(
-                            onClick = {},
-                            modifier = Modifier.padding(end = 8.dp),
-                            shape = RoundedCornerShape(20.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                        ) {
-                            Text(text = "竞速", fontSize = 12.sp)
-                        }
-                        OutlinedButton(
-                            onClick = {},
-                            modifier = Modifier.padding(end = 8.dp),
-                            shape = RoundedCornerShape(20.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                        ) {
-                            Text(text = "挑战", fontSize = 12.sp)
-                        }
-                        OutlinedButton(
-                            onClick = {},
-                            shape = RoundedCornerShape(20.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                        ) {
-                            Text(text = "长距离", fontSize = 12.sp)
+                        tags.forEachIndexed { index, tag ->
+                            OutlinedButton(
+                                onClick = {},
+                                modifier = Modifier.padding(end = 8.dp),
+                                shape = RoundedCornerShape(20.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                            ) {
+                                Text(text = tag, fontSize = 12.sp)
+                            }
                         }
                     }
 
                     // 赛事信息列表
-                    RaceInfoItem(label = "主办方", value = "乐体体育")
-                    RaceInfoItem(label = "比赛时间", value = "2025.11.22 00:00 ~ 2025.12.22 23:59")
-                    RaceInfoItem(label = "报名时间", value = "2025.11.22 00:00 ~ 2025.12.22 16:00")
-                    RaceInfoItem(label = "签到时间", value = "2025.11.22 00:00")
-                    RaceInfoItem(label = "签到地点", value = "全国任意地点")
+                    RaceInfoItem(label = "主办方", value = "—")
+                    RaceInfoItem(label = "比赛时间", value = eventDateStr)
+                    RaceInfoItem(label = "报名时间", value = "—")
+                    RaceInfoItem(label = "签到时间", value = "—")
+                    RaceInfoItem(label = "签到地点", value = if (locationStr.isNotBlank()) locationStr else "—")
                 }
 
                 // 标签页
@@ -173,7 +212,7 @@ fun RaceDetailScreen(navController: NavController, raceId: Int = 0, onBack: () -
                         0 -> {
                             // 赛事详情
                             Text(
-                                text = "BBR全国线上赛-复活吧，骑魂！",
+                                text = if (eventTitle.isNotBlank()) eventTitle else "赛事",
                                 style = TextStyle(
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold
@@ -181,21 +220,23 @@ fun RaceDetailScreen(navController: NavController, raceId: Int = 0, onBack: () -
                                 modifier = Modifier.padding(bottom = 8.dp)
                             )
                             Text(
-                                text = "这是一场全国性的线上骑行比赛，欢迎所有骑行爱好者参与！无论你是新手还是资深骑手，都能在这里找到适合自己的挑战。让我们一起骑出精彩，展现骑魂！",
+                                text = if (description.isNotBlank()) description else "",
                                 style = TextStyle(fontSize = 14.sp),
                                 modifier = Modifier.padding(bottom = 16.dp)
                             )
                             // 详情图片
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                                contentDescription = "赛事详情图片",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(200.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .padding(bottom = 16.dp)
-                            )
+                            if (!coverImageUrl.isNullOrBlank()) {
+                                AsyncImage(
+                                    model = coverImageUrl,
+                                    contentDescription = "赛事详情图片",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(200.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .padding(bottom = 16.dp)
+                                )
+                            }
                         }
                         1 -> {
                             // 赛事组别
@@ -279,9 +320,9 @@ fun RaceDetailScreen(navController: NavController, raceId: Int = 0, onBack: () -
                         title = { Text(text = "联系主办方") },
                         text = {
                             Column {
-                                RaceInfoItem(label = "主办方", value = "乐体体育")
-                                RaceInfoItem(label = "联系电话", value = "400-123-4567")
-                                RaceInfoItem(label = "邮箱", value = "contact@letisport.com")
+                                RaceInfoItem(label = "主办方", value = "—")
+                                RaceInfoItem(label = "联系电话", value = "—")
+                                RaceInfoItem(label = "邮箱", value = "—")
                             }
                         },
                         confirmButton = {
