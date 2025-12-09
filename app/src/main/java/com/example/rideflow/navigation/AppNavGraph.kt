@@ -86,7 +86,11 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
         }
 
         composable(AppRoutes.ACHIEVEMENTS) {
-            AchievementsScreen(navController = navController)
+            val uid = when (authState) {
+                is AuthState.Authenticated -> (authState as AuthState.Authenticated).userData.userId
+                else -> ""
+            }
+            AchievementsScreen(navController = navController, userId = uid)
         }
 
         composable(AppRoutes.EXERCISE_CALENDAR) {
