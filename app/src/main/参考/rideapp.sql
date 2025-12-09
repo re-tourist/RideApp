@@ -11,7 +11,7 @@
  Target Server Version : 80044 (8.0.44-0ubuntu0.22.04.1)
  File Encoding         : 65001
 
- Date: 09/12/2025 20:32:19
+ Date: 09/12/2025 20:45:48
 */
 
 SET NAMES utf8mb4;
@@ -177,6 +177,7 @@ CREATE TABLE `event_tags`  (
   `event_id` int NOT NULL,
   `tag_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`event_id`, `tag_name`) USING BTREE,
+  INDEX `idx_event_tags_event_tag`(`event_id` ASC, `tag_name` ASC) USING BTREE,
   CONSTRAINT `event_tags_ibfk_1` FOREIGN KEY (`event_id`) REFERENCES `events` (`event_id`) ON DELETE CASCADE ON UPDATE RESTRICT
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '活动标签' ROW_FORMAT = Dynamic;
 
@@ -189,6 +190,7 @@ INSERT INTO `event_tags` VALUES (1, '骑行');
 INSERT INTO `event_tags` VALUES (2, '竞速');
 INSERT INTO `event_tags` VALUES (2, '竞速赛');
 INSERT INTO `event_tags` VALUES (2, '骑行');
+INSERT INTO `event_tags` VALUES (3, '周末活动');
 INSERT INTO `event_tags` VALUES (3, '娱乐赛');
 INSERT INTO `event_tags` VALUES (3, '挑战');
 INSERT INTO `event_tags` VALUES (3, '越野跑');
@@ -392,6 +394,7 @@ CREATE TABLE `route_downloads`  (
 -- ----------------------------
 INSERT INTO `route_downloads` VALUES (1, 1, '2025-12-05 08:30:00');
 INSERT INTO `route_downloads` VALUES (3, 1, '2025-12-05 08:45:00');
+INSERT INTO `route_downloads` VALUES (4, 1, '2025-12-09 20:45:16');
 
 -- ----------------------------
 -- Table structure for route_favorites
@@ -589,6 +592,7 @@ CREATE TABLE `user_events`  (
   UNIQUE INDEX `unique_user_event_relation`(`user_id` ASC, `event_id` ASC, `relation` ASC) USING BTREE,
   INDEX `idx_user_events_user`(`user_id` ASC) USING BTREE,
   INDEX `idx_user_events_event`(`event_id` ASC) USING BTREE,
+  INDEX `idx_user_events_user_event`(`user_id` ASC, `event_id` ASC, `relation` ASC) USING BTREE,
   CONSTRAINT `fk_user_events_event` FOREIGN KEY (`event_id`) REFERENCES `events` (`event_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_user_events_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT
 ) ENGINE = InnoDB AUTO_INCREMENT = 9 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户与活动关系（我的活动）' ROW_FORMAT = Dynamic;
@@ -712,7 +716,7 @@ CREATE TABLE `users`  (
 -- ----------------------------
 -- Records of users
 -- ----------------------------
-INSERT INTO `users` VALUES (1, 'testuser', 'test@example.com', '123456', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '222', 'female', '2025-12-03', '12345678900', 0, 1, '2025-12-09 20:29:29', '2025-11-27 20:58:42', '2025-12-09 20:29:29');
+INSERT INTO `users` VALUES (1, 'testuser', 'test@example.com', '123456', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '222', 'female', '2025-12-03', '12345678900', 0, 1, '2025-12-09 20:45:06', '2025-11-27 20:58:42', '2025-12-09 20:45:06');
 INSERT INTO `users` VALUES (2, 'admin', 'admin@example.com', 'admin123', NULL, NULL, 'other', NULL, NULL, 0, 1, NULL, '2025-11-27 20:58:42', '2025-11-27 20:58:42');
 INSERT INTO `users` VALUES (3, 'user1', 'user1@example.com', 'password1', NULL, NULL, 'other', NULL, NULL, 0, 1, NULL, '2025-11-27 20:58:42', '2025-11-27 20:58:42');
 INSERT INTO `users` VALUES (7, 'a', 'a@qq.com', 'aaaaaa', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-11-28 00:06:10', '2025-11-28 00:06:10', '2025-11-28 00:06:10');

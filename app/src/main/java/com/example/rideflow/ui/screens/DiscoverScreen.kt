@@ -36,6 +36,7 @@ import android.os.Handler
 import android.os.Looper
 
 // 模拟数据类
+object DiscoverNavigatorState { var openRouteBook: Boolean = false }
 data class Article(
     val id: Int,
     val title: String,
@@ -69,6 +70,12 @@ private fun loadArticles(handler: Handler, onLoaded: (List<Article>) -> Unit) {
 @Composable
 fun DiscoverScreen(navController: androidx.navigation.NavController, userId: String = "") {
     var subPage by remember { mutableStateOf(DiscoverSubPage.Main) }
+    LaunchedEffect(Unit) {
+        if (DiscoverNavigatorState.openRouteBook) {
+            subPage = DiscoverSubPage.RouteBook
+            DiscoverNavigatorState.openRouteBook = false
+        }
+    }
     val handler = Handler(Looper.getMainLooper())
     var articles by remember { mutableStateOf<List<Article>>(emptyList()) }
     LaunchedEffect(Unit) { loadArticles(handler) { list -> articles = list } }
@@ -102,7 +109,8 @@ fun DiscoverScreen(navController: androidx.navigation.NavController, userId: Str
             RouteBookScreen(
                 onBack = { subPage = DiscoverSubPage.Main },
                 onOpenMyRouteBook = { subPage = DiscoverSubPage.MyRouteBook },
-                userId = userId
+                userId = userId,
+                navController = navController
             )
         }
         DiscoverSubPage.MyRouteBook -> {

@@ -181,6 +181,12 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
             ActivityRegistrationScreen(navController = navController, activityId = id)
         }
 
+        // 路书详情页面
+        composable("${AppRoutes.ROUTE_DETAIL}/{id}") { backStackEntry ->
+            val id = backStackEntry.arguments?.getString("id")?.toIntOrNull() ?: 0
+            com.example.rideflow.ui.screens.RouteBookDetailScreen(navController = navController, routeId = id)
+        }
+
         // 俱乐部详情页面
         composable(
             route = "${AppRoutes.CLUB_DETAIL}/{id}",
