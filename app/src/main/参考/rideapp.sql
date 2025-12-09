@@ -11,7 +11,7 @@
  Target Server Version : 80044 (8.0.44-0ubuntu0.22.04.1)
  File Encoding         : 65001
 
- Date: 09/12/2025 10:44:13
+ Date: 09/12/2025 20:32:19
 */
 
 SET NAMES utf8mb4;
@@ -183,12 +183,17 @@ CREATE TABLE `event_tags`  (
 -- ----------------------------
 -- Records of event_tags
 -- ----------------------------
+INSERT INTO `event_tags` VALUES (1, '娱乐赛');
 INSERT INTO `event_tags` VALUES (1, '挑战');
 INSERT INTO `event_tags` VALUES (1, '骑行');
 INSERT INTO `event_tags` VALUES (2, '竞速');
+INSERT INTO `event_tags` VALUES (2, '竞速赛');
 INSERT INTO `event_tags` VALUES (2, '骑行');
+INSERT INTO `event_tags` VALUES (3, '娱乐赛');
 INSERT INTO `event_tags` VALUES (3, '挑战');
 INSERT INTO `event_tags` VALUES (3, '越野跑');
+INSERT INTO `event_tags` VALUES (4, '娱乐赛');
+INSERT INTO `event_tags` VALUES (5, '娱乐赛');
 
 -- ----------------------------
 -- Table structure for events
@@ -208,7 +213,7 @@ CREATE TABLE `events`  (
   PRIMARY KEY (`event_id`) USING BTREE,
   INDEX `idx_events_date`(`event_date` ASC) USING BTREE,
   INDEX `idx_events_type`(`event_type` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '活动/赛事' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '活动/赛事' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of events
@@ -216,6 +221,8 @@ CREATE TABLE `events`  (
 INSERT INTO `events` VALUES (1, '迎风织金季·GBA青年自行车线上赛', '2025-11-08 09:00:00', '任意地点', '骑行', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '线上赛挑战', '2025-12-04 23:00:54', '2025-12-04 23:00:54');
 INSERT INTO `events` VALUES (2, '2025“环八娄”自行车爬坡联赛（娄城）', '2025-11-29 08:00:00', '浙江省娄城市', '骑行', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '爬坡联赛', '2025-12-04 23:00:54', '2025-12-04 23:00:54');
 INSERT INTO `events` VALUES (3, '越野跑周末挑战赛', '2025-12-01 08:30:00', '上海市郊区', '越野跑', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '周末越野跑挑战', '2025-12-04 23:00:54', '2025-12-04 23:00:54');
+INSERT INTO `events` VALUES (4, '111', '2025-11-11 11:11:00', '111', '骑行', 1, '', '', '2025-12-09 11:10:54', '2025-12-09 11:10:54');
+INSERT INTO `events` VALUES (5, '111', '2025-11-11 11:11:00', '111', '骑行', 1, '', '', '2025-12-09 11:11:21', '2025-12-09 11:11:21');
 
 -- ----------------------------
 -- Table structure for post_comments
@@ -584,14 +591,15 @@ CREATE TABLE `user_events`  (
   INDEX `idx_user_events_event`(`event_id` ASC) USING BTREE,
   CONSTRAINT `fk_user_events_event` FOREIGN KEY (`event_id`) REFERENCES `events` (`event_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_user_events_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户与活动关系（我的活动）' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 9 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户与活动关系（我的活动）' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of user_events
 -- ----------------------------
 INSERT INTO `user_events` VALUES (1, 1, 1, 'registered', 'completed', '2025-12-05 19:12:14', '已参加并完成');
 INSERT INTO `user_events` VALUES (2, 1, 2, 'registered', 'upcoming', '2025-12-05 19:12:14', '已报名，待开始');
-INSERT INTO `user_events` VALUES (3, 1, 3, 'favorite', 'upcoming', '2025-12-05 19:12:14', '收藏关注');
+INSERT INTO `user_events` VALUES (7, 1, 3, 'favorite', 'upcoming', '2025-12-09 11:19:41', '????');
+INSERT INTO `user_events` VALUES (8, 1, 5, 'favorite', 'upcoming', '2025-12-09 11:20:02', '????');
 
 -- ----------------------------
 -- Table structure for user_follows
@@ -699,18 +707,18 @@ CREATE TABLE `users`  (
   INDEX `idx_users_email`(`email` ASC) USING BTREE,
   INDEX `idx_users_nickname`(`nickname` ASC) USING BTREE,
   INDEX `idx_users_status`(`status` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 11 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 12 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of users
 -- ----------------------------
-INSERT INTO `users` VALUES (1, 'testuser', 'test@example.com', '123456', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '222', 'female', '2025-12-03', '12345678900', 0, 1, '2025-12-09 10:41:24', '2025-11-27 20:58:42', '2025-12-09 10:41:24');
+INSERT INTO `users` VALUES (1, 'testuser', 'test@example.com', '123456', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '222', 'female', '2025-12-03', '12345678900', 0, 1, '2025-12-09 20:29:29', '2025-11-27 20:58:42', '2025-12-09 20:29:29');
 INSERT INTO `users` VALUES (2, 'admin', 'admin@example.com', 'admin123', NULL, NULL, 'other', NULL, NULL, 0, 1, NULL, '2025-11-27 20:58:42', '2025-11-27 20:58:42');
 INSERT INTO `users` VALUES (3, 'user1', 'user1@example.com', 'password1', NULL, NULL, 'other', NULL, NULL, 0, 1, NULL, '2025-11-27 20:58:42', '2025-11-27 20:58:42');
-INSERT INTO `users` VALUES (6, '1', '111@qq.com', '111111', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-11-28 00:01:50', '2025-11-27 21:42:01', '2025-11-28 00:01:50');
 INSERT INTO `users` VALUES (7, 'a', 'a@qq.com', 'aaaaaa', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-11-28 00:06:10', '2025-11-28 00:06:10', '2025-11-28 00:06:10');
-INSERT INTO `users` VALUES (8, '123456', '710963274@qq.com', '123456', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-12-08 15:46:22', '2025-12-02 12:09:25', '2025-12-08 15:46:22');
+INSERT INTO `users` VALUES (8, '123456', '710963274@qq.com', '123456', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-12-09 20:10:08', '2025-12-02 12:09:25', '2025-12-09 20:10:08');
 INSERT INTO `users` VALUES (9, 'ddd', 'aaa@gmail.com', 'sssssss', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-12-02 20:24:26', '2025-12-02 20:24:26', '2025-12-02 20:24:26');
-INSERT INTO `users` VALUES (10, '111', '111@gmail.com', '111111', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-12-08 09:59:58', '2025-12-02 20:48:47', '2025-12-08 09:59:58');
+INSERT INTO `users` VALUES (10, '111', '111@gmail.com', '111111', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-12-09 19:17:45', '2025-12-02 20:48:47', '2025-12-09 19:17:45');
+INSERT INTO `users` VALUES (11, '1', '1@gmail.com', '123123', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-12-09 20:09:50', '2025-12-09 19:31:59', '2025-12-09 20:09:50');
 
 SET FOREIGN_KEY_CHECKS = 1;

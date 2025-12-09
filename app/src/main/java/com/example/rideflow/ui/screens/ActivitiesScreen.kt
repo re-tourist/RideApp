@@ -38,10 +38,11 @@ data class Activity(
     val tags: List<String>,
     val imageRes: Int,
     val imageUrl: String? = null,
-    val isOpen: Boolean
+    val isOpen: Boolean,
+    val isMine: Boolean
 )
 
-private val activityCategories = listOf("我的活动", "骑行活动", "跑步活动", "徒步活动", "其他活动")
+private val activityCategories = listOf("全部", "我的赛事", "亲子活动", "公益活动", "周末活动")
 
 private val mockActivitiesList = listOf(
     Activity(
@@ -51,7 +52,8 @@ private val mockActivitiesList = listOf(
         location = "地点：上海市浦东新区",
         tags = listOf("骑行", "休闲"),
         imageRes = R.drawable.ic_launcher_foreground,
-        isOpen = true
+        isOpen = true,
+        isMine = false
     ),
     Activity(
         id = 2,
@@ -60,7 +62,8 @@ private val mockActivitiesList = listOf(
         location = "地点：上海市黄浦区",
         tags = listOf("跑步", "夜跑"),
         imageRes = R.drawable.ic_launcher_foreground,
-        isOpen = true
+        isOpen = true,
+        isMine = false
     ),
     Activity(
         id = 3,
@@ -69,7 +72,8 @@ private val mockActivitiesList = listOf(
         location = "地点：上海市松江区",
         tags = listOf("徒步", "户外"),
         imageRes = R.drawable.ic_launcher_foreground,
-        isOpen = true
+        isOpen = true,
+        isMine = false
     ),
     Activity(
         id = 4,
@@ -78,7 +82,8 @@ private val mockActivitiesList = listOf(
         location = "地点：上海市宝山区",
         tags = listOf("骑行", "技术"),
         imageRes = R.drawable.ic_launcher_foreground,
-        isOpen = true
+        isOpen = true,
+        isMine = false
     ),
     Activity(
         id = 5,
@@ -87,7 +92,8 @@ private val mockActivitiesList = listOf(
         location = "地点：上海市闵行区",
         tags = listOf("户外", "亲子"),
         imageRes = R.drawable.ic_launcher_foreground,
-        isOpen = true
+        isOpen = true,
+        isMine = false
     )
 )
 
@@ -119,16 +125,25 @@ fun ActivitiesScreen(navController: NavController, onBack: () -> Unit, onCreateA
                         while (trs.next()) tags.add(trs.getString(1) ?: "")
                         Unit
                     }
-                    val item = Activity(
-                        id = id,
-                        title = title,
-                        date = "时间：" + (if (date.isNotEmpty()) date.substring(0, 16) else "待定"),
-                        location = "地点：" + loc,
-                        tags = if (tags.isEmpty()) listOf(type) else tags,
-                        imageRes = R.drawable.ic_launcher_foreground,
-                        imageUrl = coverUrl,
-                        isOpen = open
-                    )
+                var mine = false
+                DatabaseHelper.processQuery(
+                    "SELECT 1 FROM user_events WHERE user_id = ? AND event_id = ? AND relation IN ('registered','favorite') LIMIT 1",
+                    listOf(1, id)
+                ) { urs ->
+                    mine = urs.next()
+                    Unit
+                }
+                val item = Activity(
+                    id = id,
+                    title = title,
+                    date = "时间：" + (if (date.isNotEmpty()) date.substring(0, 16) else "待定"),
+                    location = "地点：" + loc,
+                    tags = if (tags.isEmpty()) listOf(type) else tags,
+                    imageRes = R.drawable.ic_launcher_foreground,
+                    imageUrl = coverUrl,
+                    isOpen = open,
+                    isMine = mine
+                )
                     list.add(item)
                 }
                 handler.post { dbActivities = list }
@@ -172,20 +187,20 @@ fun ActivitiesScreen(navController: NavController, onBack: () -> Unit, onCreateA
                     )
                 }
             }
-            val filteredActivities = remember(selectedCategory, dbActivities) {
+            val filtered = remember(selectedCategory, dbActivities) {
                 when (selectedCategory) {
-                    0 -> dbActivities.filter { it.isOpen }
-                    1 -> dbActivities.filter { it.tags.contains("骑行") }
-                    2 -> dbActivities.filter { it.tags.contains("越野跑") || it.tags.contains("跑步") }
-                    3 -> dbActivities.filter { it.tags.contains("徒步") }
-                    else -> dbActivities
+                    0 -> dbActivities
+                    1 -> dbActivities.filter { it.isMine }
+                    2 -> dbActivities.filter { it.tags.contains("亲子活动") }
+                    3 -> dbActivities.filter { it.tags.contains("公益活动") }
+                    else -> dbActivities.filter { it.tags.contains("周末活动") }
                 }
             }
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(12.dp)
             ) {
-                items(filteredActivities) { activity ->
+                items(filtered) { activity ->
                     ActivityItemCard(
                         activity = activity,
                         onClick = { navController.navigate("${AppRoutes.ACTIVITY_DETAIL}/${activity.id}") }
@@ -228,12 +243,8 @@ fun ActivityItemCard(activity: Activity, onClick: () -> Unit) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.End
                 ) {
-                    AssistChip(
-                        onClick = {},
-                        label = { Text(text = "活动报名") }
-                    )
                     if (activity.isOpen) {
                         Button(
                             onClick = {},
