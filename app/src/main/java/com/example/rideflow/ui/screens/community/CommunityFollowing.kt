@@ -19,7 +19,10 @@ fun CommunityFollowingScreen(
     followingUserIds: Set<Int>,
     onFollowToggle: (Int, Boolean) -> Unit,
     onAvatarClick: (Int) -> Unit,
-    onPostClick: (Int) -> Unit
+    onPostClick: (Int) -> Unit,
+    hasMore: Boolean = false,
+    isLoadingMore: Boolean = false,
+    onLoadMore: () -> Unit = {}
 ) {
     // 过滤出关注用户的帖子
     val posts = allPosts.filter { followingUserIds.contains(it.userId) }
@@ -45,6 +48,9 @@ fun CommunityFollowingScreen(
                 onPostClick = onPostClick
             )
             Spacer(modifier = Modifier.height(8.dp).background(Color(0xFFF0F0F0)))
+        }
+        item {
+            com.example.rideflow.ui.components.LoadMoreFooter(hasMore = hasMore, isLoadingMore = isLoadingMore, onLoadMore = onLoadMore)
         }
     }
 }

@@ -17,7 +17,10 @@ fun CommunityHotScreen(
     followingUserIds: Set<Int>,
     onFollowToggle: (Int, Boolean) -> Unit,
     onAvatarClick: (Int) -> Unit, // 头像点击
-    onPostClick: (Int) -> Unit
+    onPostClick: (Int) -> Unit,
+    hasMore: Boolean = false,
+    isLoadingMore: Boolean = false,
+    onLoadMore: () -> Unit = {}
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -35,6 +38,9 @@ fun CommunityHotScreen(
                 onPostClick = onPostClick
             )
             Spacer(modifier = Modifier.height(8.dp).background(Color(0xFFF0F0F0)))
+        }
+        item {
+            com.example.rideflow.ui.components.LoadMoreFooter(hasMore = hasMore, isLoadingMore = isLoadingMore, onLoadMore = onLoadMore)
         }
     }
 }
