@@ -2,9 +2,9 @@ package com.example.rideflow.ui.screens
 
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable // 引入 rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
@@ -12,10 +12,11 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Star
 import androidx.navigation.NavController
-import com.example.rideflow.R
+import androidx.navigation.compose.rememberNavController // 添加缺失的引用
+import com.example.rideflow.ui.screens.community.CommunityScreen
 
 @Composable
-fun MainScreen(navController: NavController) {
+fun MainScreen(navController: NavController, userId: String = "") {
     val navItems = listOf(
         NavItem(
             title = "运动",
@@ -25,22 +26,23 @@ fun MainScreen(navController: NavController) {
         NavItem(
             title = "发现",
             icon = Icons.Filled.Home,
-            screen = { DiscoverScreen(navController) }
+            screen = { DiscoverScreen(navController, userId = userId) }
         ),
         NavItem(
             title = "社区",
             icon = Icons.Filled.List,
-            screen = { CommunityScreen() }
+            screen = { CommunityScreen(navController = navController, userId = userId) }
         ),
         NavItem(
             title = "我的",
             icon = Icons.Filled.Person,
-            screen = { ProfileScreen(navController = navController) }
+            screen = { ProfileScreen(navController = navController, userId = userId) }
         )
     )
-    
-    var currentIndex by remember { mutableStateOf(1) } // 默认选中发现页面
-    
+
+    // 关键修改：使用 rememberSaveable 保存选中状态，防止返回时重置
+    var currentIndex by rememberSaveable { mutableIntStateOf(1) } // 默认选中发现页面
+
     Scaffold(
         modifier = Modifier,
         bottomBar = {
@@ -85,6 +87,5 @@ data class NavItem(
 @Preview(showBackground = true)
 @Composable
 fun MainScreenPreview() {
-    // 预览时使用默认参数
     MainScreen(navController = androidx.navigation.compose.rememberNavController())
 }

@@ -22,6 +22,13 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.rideflow.R
+import com.example.rideflow.backend.DatabaseHelper
+import android.os.Handler
+import android.os.Looper
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.time.YearMonth
 
 data class RideRecord(
     val id: Int,
@@ -61,7 +68,64 @@ private val mockRideRecords = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RideRecordScreen(navController: NavController) {
+fun RideRecordScreen(navController: NavController, userId: String) {
+    var dbRecords by remember { mutableStateOf<List<RideRecord>>(emptyList()) }
+    var monthlyDistanceKm by remember { mutableStateOf(0.0) }
+    var monthlyDurationSec by remember { mutableStateOf(0) }
+    val handler = Handler(Looper.getMainLooper())
+    LaunchedEffect(userId) {
+        val uid = userId.toIntOrNull()
+        if (uid != null) {
+            Thread {
+                val list = mutableListOf<RideRecord>()
+                val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+                DatabaseHelper.processQuery(
+                    "SELECT record_id, start_time, duration_sec, distance_km, avg_speed_kmh FROM user_ride_records WHERE user_id = ? ORDER BY start_time DESC",
+                    listOf(uid)
+                ) { rs ->
+                    while (rs.next()) {
+                        val id = rs.getInt(1)
+                        val ts = rs.getTimestamp(2)
+                        val durationSec = rs.getInt(3)
+                        val distanceKm = rs.getDouble(4)
+                        val avgSpeed = rs.getDouble(5)
+                        val dateStr = sdf.format(Date(ts.time))
+                        list.add(
+                            RideRecord(
+                                id = id,
+                                date = dateStr,
+                                distance = distanceKm,
+                                duration = formatDuration(durationSec),
+                                avgSpeed = avgSpeed,
+                                mapImage = R.drawable.ic_launcher_foreground
+                            )
+                        )
+                    }
+                    Unit
+                }
+                val ym = YearMonth.now()
+                val start = ym.atDay(1).toString() + " 00:00:00"
+                val end = ym.plusMonths(1).atDay(1).toString() + " 00:00:00"
+                DatabaseHelper.processQuery(
+                    "SELECT SUM(distance_km), SUM(duration_sec) FROM user_ride_records WHERE user_id = ? AND start_time >= ? AND start_time < ?",
+                    listOf(uid, start, end)
+                ) { rs ->
+                    var d = 0.0
+                    var t = 0
+                    if (rs.next()) {
+                        d = rs.getDouble(1)
+                        t = rs.getInt(2)
+                    }
+                    handler.post {
+                        dbRecords = list
+                        monthlyDistanceKm = d
+                        monthlyDurationSec = t
+                    }
+                    Unit
+                }
+            }.start()
+        }
+    }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -103,9 +167,9 @@ fun RideRecordScreen(navController: NavController) {
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        RideDataItem(label = "总里程", value = "15.8 km")
-                        RideDataItem(label = "总时长", value = "3.2 小时")
-                        RideDataItem(label = "平均速度", value = "12.5 km/h")
+                        RideDataItem(label = "总里程", value = String.format(Locale.getDefault(), "%.2f km", monthlyDistanceKm))
+                        RideDataItem(label = "总时长", value = String.format(Locale.getDefault(), "%.1f 小时", monthlyDurationSec / 3600.0))
+                        RideDataItem(label = "平均速度", value = String.format(Locale.getDefault(), "%.2f km/h", if (monthlyDurationSec > 0) monthlyDistanceKm / (monthlyDurationSec / 3600.0) else 0.0))
                     }
                 }
             }
@@ -120,7 +184,7 @@ fun RideRecordScreen(navController: NavController) {
                     .padding(bottom = 8.dp)
             )
             LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(mockRideRecords) {
+                items(dbRecords) {
                     RideHistoryItem(record = it)
                     Divider(modifier = Modifier.padding(horizontal = 16.dp))
                 }
@@ -170,5 +234,12 @@ fun RideHistoryItem(record: RideRecord) {
 @Composable
 fun RideRecordScreenPreview() {
     val navController = rememberNavController()
-    RideRecordScreen(navController = navController)
+    RideRecordScreen(navController = navController, userId = "1")
+}
+
+private fun formatDuration(sec: Int): String {
+    val h = sec / 3600
+    val m = (sec % 3600) / 60
+    val s = sec % 60
+    return String.format(Locale.getDefault(), "%02d:%02d:%02d", h, m, s)
 }

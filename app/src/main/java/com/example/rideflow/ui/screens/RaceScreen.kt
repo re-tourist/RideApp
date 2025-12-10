@@ -24,6 +24,10 @@ import com.example.rideflow.R
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.navigation.NavController
 import com.example.rideflow.navigation.AppRoutes
+import com.example.rideflow.backend.DatabaseHelper
+import android.os.Handler
+import android.os.Looper
+import coil.compose.AsyncImage
 
 data class Race(
     val id: Int,
@@ -32,21 +36,44 @@ data class Race(
     val location: String,
     val tags: List<String>,
     val imageRes: Int,
+    val imageUrl: String? = null,
     val isOpen: Boolean
 )
 
 private val raceCategories = listOf("我的赛事", "骑行", "越野跑", "徒步")
 
-private val mockRaces = listOf(
-    Race(1, "城市半程骑行公开赛", "时间：2025-12-01", "地点：上海市中心", listOf("骑行", "竞速"), R.drawable.ic_launcher_foreground, true),
-    Race(2, "越野跑挑战杯", "时间：2025-12-10", "地点：浙江省青山", listOf("越野跑", "挑战"), R.drawable.ic_launcher_foreground, true),
-    Race(3, "冬季徒步联赛", "时间：2025-12-20", "地点：上海市郊区", listOf("徒步", "休闲"), R.drawable.ic_launcher_foreground, true)
-)
+private fun loadRaces(handler: Handler, onLoaded: (List<Race>) -> Unit) {
+    Thread {
+        val list = mutableListOf<Race>()
+        DatabaseHelper.processQuery("SELECT event_id, title, event_date, location, event_type, is_open, cover_image_url FROM events ORDER BY event_date DESC LIMIT 100") { rs ->
+            while (rs.next()) {
+                val id = rs.getInt(1)
+                val title = rs.getString(2)
+                val date = rs.getTimestamp(3)?.toString() ?: ""
+                val loc = rs.getString(4) ?: ""
+                val type = rs.getString(5) ?: "骑行"
+                val open = rs.getBoolean(6)
+                val coverUrl = rs.getString(7) ?: "https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg"
+                val tags = mutableListOf<String>()
+                DatabaseHelper.processQuery("SELECT tag_name FROM event_tags WHERE event_id = ?", listOf(id)) { trs ->
+                    while (trs.next()) tags.add(trs.getString(1) ?: "")
+                    Unit
+                }
+                list.add(Race(id, title, "时间：" + (if (date.isNotEmpty()) date.substring(0, 10) else "待定"), "地点：" + loc, if (tags.isEmpty()) listOf(type) else tags, R.drawable.ic_launcher_foreground, coverUrl, open))
+            }
+            handler.post { onLoaded(list) }
+            Unit
+        }
+    }.start()
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RaceScreen(onBack: () -> Unit, onCreateRace: () -> Unit = {}, navController: NavController) {
     var selectedCategory by remember { mutableStateOf(0) }
+    val handler = Handler(Looper.getMainLooper())
+    var dbRaces by remember { mutableStateOf<List<Race>>(emptyList()) }
+    LaunchedEffect(Unit) { loadRaces(handler) { list -> dbRaces = list } }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -83,12 +110,12 @@ fun RaceScreen(onBack: () -> Unit, onCreateRace: () -> Unit = {}, navController:
                     )
                 }
             }
-            val filtered = remember(selectedCategory) {
+            val filtered = remember(selectedCategory, dbRaces) {
                 when (selectedCategory) {
-                    0 -> mockRaces.filter { it.isOpen }
-                    1 -> mockRaces.filter { it.tags.contains("骑行") }
-                    2 -> mockRaces.filter { it.tags.contains("越野跑") }
-                    else -> mockRaces.filter { it.tags.contains("徒步") }
+                    0 -> dbRaces.filter { it.isOpen }
+                    1 -> dbRaces.filter { it.tags.contains("骑行") }
+                    2 -> dbRaces.filter { it.tags.contains("越野跑") }
+                    else -> dbRaces.filter { it.tags.contains("徒步") }
                 }
             }
             LazyColumn(
@@ -116,12 +143,21 @@ fun RaceCard(race: Race, onClick: () -> Unit = {}) {
     ) {
         Column {
             Box(modifier = Modifier.height(160.dp)) {
-                Image(
-                    painter = painterResource(id = race.imageRes),
-                    contentDescription = race.title,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
+                if (race.imageUrl != null) {
+                    AsyncImage(
+                        model = race.imageUrl,
+                        contentDescription = race.title,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(id = race.imageRes),
+                        contentDescription = race.title,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()

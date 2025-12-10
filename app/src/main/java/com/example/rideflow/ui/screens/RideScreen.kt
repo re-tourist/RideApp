@@ -11,23 +11,30 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -283,6 +290,22 @@ private fun AMap2DContainer(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RideScreen(navController: androidx.navigation.NavController) {
+    // 状态控制：是否显示历史记录页面
+    var showHistoryScreen by remember { mutableStateOf(false) }
+
+    // 如果显示历史页面，则渲染历史页面，否则渲染主骑行页面
+    if (showHistoryScreen) {
+        RideHistoryScreen(onBack = { showHistoryScreen = false })
+    } else {
+        RideMainContent(
+            onShowHistory = { showHistoryScreen = true }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RideMainContent(onShowHistory: () -> Unit) {
     var rideStatus = remember { mutableStateOf<RideStatus>(RideStatus.NotStarted) }
     var elapsedSeconds by remember { mutableStateOf(0L) }
     val reportSeconds = remember { mutableStateOf(0L) }
@@ -554,7 +577,17 @@ fun RideScreen(navController: androidx.navigation.NavController) {
                         title = { Text("骑迹", color = Color.White) },
                         colors = TopAppBarDefaults.topAppBarColors(
                             containerColor = Color(0xFF007AFF)
-                        )
+                        ),
+                        // 添加右上角的历史记录按钮
+                        actions = {
+                            IconButton(onClick = onShowHistory) {
+                                Icon(
+                                    imageVector = Icons.Filled.DateRange, // 使用时钟/日历图标
+                                    contentDescription = "骑行记录",
+                                    tint = Color.White
+                                )
+                            }
+                        }
                     )
                 }
                 is RideStatus.InProgress -> {
@@ -592,7 +625,7 @@ fun RideScreen(navController: androidx.navigation.NavController) {
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
             when (rideStatus.value) {
-                RideStatus.NotStarted -> NotStartedContent(historyList = historyList, onStartClick = onStartClick, myLocation = currentLocation.value)
+                RideStatus.NotStarted -> NotStartedContent(onStartClick = onStartClick, myLocation = currentLocation.value)
                 RideStatus.InProgress -> InProgressContent(
                     duration = rideDurationText,
                     distance = rideDistance.value,
@@ -622,7 +655,6 @@ fun RideScreen(navController: androidx.navigation.NavController) {
 
 @Composable
 fun NotStartedContent(
-    historyList: List<RideHistory>,
     onStartClick: () -> Unit,
     myLocation: LatLng?
 ) {
@@ -631,6 +663,24 @@ fun NotStartedContent(
     var searchQuery by remember { mutableStateOf("") }
     val searchResults = remember { mutableStateListOf<Tip>() }
     val selectedPlace = remember { mutableStateOf<LatLng?>(null) }
+    val historyList = remember {
+        listOf(
+            RideHistory(
+                date = "2025-10-18 15:41",
+                duration = "00:08:08",
+                distance = "3.25 km",
+                avgSpeed = "24.1 km/h",
+                calories = "156 kcal"
+            ),
+            RideHistory(
+                date = "2025-10-17 22:33",
+                duration = "00:15:03",
+                distance = "5.67 km",
+                avgSpeed = "22.6 km/h",
+                calories = "210 kcal"
+            )
+        )
+    }
 
     LaunchedEffect(searchQuery) {
         val q = searchQuery.trim()
@@ -742,41 +792,6 @@ fun NotStartedContent(
             ) { Text("查询", fontSize = 18.sp, color = Color.White) }
             Spacer(modifier = Modifier.height(24.dp))
         }
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("最近的运动", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                Button(onClick = {}, colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent), elevation = ButtonDefaults.buttonElevation(0.dp)) { Text("查看全部", fontSize = 14.sp, color = Color(0xFF007AFF)) }
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-        }
-        items(historyList) { history ->
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
-                shape = RoundedCornerShape(8.dp),
-                elevation = CardDefaults.cardElevation(2.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(history.date, fontSize = 14.sp, color = Color.Gray)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Column {
-                            Text("用时: ${history.duration}", fontSize = 14.sp)
-                            Text("距离: ${history.distance}", fontSize = 14.sp)
-                            Text("均速: ${history.avgSpeed}", fontSize = 14.sp)
-                            Text("卡路里: ${history.calories}", fontSize = 14.sp)
-                        }
-                        Box(
-                            modifier = Modifier.size(60.dp).background(Color.LightGray.copy(alpha = 0.3f), RoundedCornerShape(4.dp)),
-                            contentAlignment = Alignment.Center
-                        ) { Text("路线", fontSize = 12.sp, color = Color.Gray) }
-                    }
-                }
-            }
-        }
         item { Spacer(modifier = Modifier.height(32.dp)) }
     }
 }
@@ -794,7 +809,6 @@ fun InProgressContent(
     routePoints: List<LatLng>
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
-        // 上半部分：骑行数据和地图
         Column(modifier = Modifier.fillMaxSize()) {
             Card(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -873,43 +887,154 @@ fun PausedContent(
     myLocation: LatLng?,
     routePoints: List<LatLng>
 ) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        Card(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            shape = RoundedCornerShape(12.dp),
-            elevation = CardDefaults.cardElevation(8.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(duration, fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF9500), modifier = Modifier.align(Alignment.CenterHorizontally))
-                Text("已暂停", fontSize = 16.sp, color = Color(0xFFFF9500), modifier = Modifier.align(Alignment.CenterHorizontally))
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(distance, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("距离(km)", fontSize = 12.sp, color = Color.Gray) }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(currentSpeed, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("速度(km/h)", fontSize = 12.sp, color = Color.Gray) }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(avgSpeed, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("均速(km/h)", fontSize = 12.sp, color = Color.Gray) }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(calories, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("卡路里", fontSize = 12.sp, color = Color.Gray) }
+    // 将布局改为LazyColumn以支持滚动
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                shape = RoundedCornerShape(12.dp),
+                elevation = CardDefaults.cardElevation(8.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(duration, fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF9500), modifier = Modifier.align(Alignment.CenterHorizontally))
+                    Text("已暂停", fontSize = 16.sp, color = Color(0xFFFF9500), modifier = Modifier.align(Alignment.CenterHorizontally))
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(distance, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("距离(km)", fontSize = 12.sp, color = Color.Gray) }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(currentSpeed, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("速度(km/h)", fontSize = 12.sp, color = Color.Gray) }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(avgSpeed, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("均速(km/h)", fontSize = 12.sp, color = Color.Gray) }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(calories, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("卡路里", fontSize = 12.sp, color = Color.Gray) }
+                    }
                 }
             }
         }
-        // 使用固定高度的Box而不是weight，避免Compose重计算导致的闪烁
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(280.dp) // 固定高度
-                .background(Color.LightGray.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
-                .padding(8.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            AMap2DContainer(
+
+        item {
+            // 地图区域改为固定高度，不再使用weight
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp)
+                    .padding(horizontal = 16.dp)
+            ) {
+                AMap2DContainer(
                     modifier = Modifier.fillMaxSize(),
                     myLocation = myLocation,
                     routePoints = routePoints
                 )
+            }
         }
-        Row(modifier = Modifier.fillMaxWidth().padding(24.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-            Button(onClick = onResumeClick, modifier = Modifier.size(64.dp), shape = RoundedCornerShape(50), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF34C759))) { Text("继续", color = Color.White, fontSize = 14.sp) }
-            Spacer(modifier = Modifier.width(40.dp))
-            Button(onClick = onStopClick, modifier = Modifier.size(64.dp), shape = RoundedCornerShape(50), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF3B30))) { Text("结束", color = Color.White, fontSize = 14.sp) }
+
+        item {
+            Row(modifier = Modifier.fillMaxWidth().padding(24.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                Button(onClick = onResumeClick, modifier = Modifier.size(64.dp), shape = RoundedCornerShape(50), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF34C759))) { Text("继续", color = Color.White, fontSize = 14.sp) }
+                Spacer(modifier = Modifier.width(40.dp))
+                Button(onClick = onStopClick, modifier = Modifier.size(64.dp), shape = RoundedCornerShape(50), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF3B30))) { Text("结束", color = Color.White, fontSize = 14.sp) }
+            }
         }
+
+        // 增加此处的留白高度，防止被底部导航栏遮挡，允许用户上滑
+        item {
+            Spacer(modifier = Modifier.height(120.dp))
+        }
+    }
+}
+
+// ------------------------------
+// 骑行记录页面
+// ------------------------------
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RideHistoryScreen(onBack: () -> Unit) {
+    // 编造的骑行历史数据
+    val historyData = listOf(
+        RideHistory("2025-10-18 15:41", "00:08:08", "3.25 km", "24.1 km/h", "156 kcal"),
+        RideHistory("2025-10-17 22:33", "00:15:03", "5.67 km", "22.6 km/h", "210 kcal"),
+        RideHistory("2025-10-16 07:12", "00:45:20", "15.2 km", "20.5 km/h", "520 kcal"),
+        RideHistory("2025-10-14 18:30", "01:02:15", "22.8 km", "21.8 km/h", "890 kcal"),
+        RideHistory("2025-10-12 16:20", "00:30:10", "10.5 km", "19.5 km/h", "350 kcal"),
+        RideHistory("2025-10-10 09:00", "02:15:00", "50.2 km", "25.0 km/h", "1800 kcal"),
+        RideHistory("2025-10-08 20:15", "00:22:45", "8.3 km", "18.5 km/h", "310 kcal"),
+        RideHistory("2025-10-05 14:00", "00:12:30", "4.1 km", "15.2 km/h", "145 kcal")
+    )
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("骑行记录") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "返回"
+                        )
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .background(Color(0xFFF5F5F5))
+        ) {
+            items(historyData) { history ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    elevation = CardDefaults.cardElevation(2.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = history.date,
+                            fontSize = 14.sp,
+                            color = Color.Gray,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                RideDataRow("用时", history.duration)
+                                RideDataRow("距离", history.distance)
+                            }
+                            Column {
+                                RideDataRow("均速", history.avgSpeed)
+                                RideDataRow("消耗", history.calories)
+                            }
+                            // 模拟路线缩略图区域
+                            Box(
+                                modifier = Modifier
+                                    .size(60.dp)
+                                    .background(
+                                        Color.LightGray.copy(alpha = 0.3f),
+                                        RoundedCornerShape(4.dp)
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("路线", fontSize = 12.sp, color = Color.Gray)
+                            }
+                        }
+                    }
+                }
+            }
+            // 底部留白
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+        }
+    }
+}
+
+@Composable
+fun RideDataRow(label: String, value: String) {
+    Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(bottom = 4.dp)) {
+        Text(text = "$label: ", fontSize = 14.sp, color = Color.Gray)
+        Text(text = value, fontSize = 14.sp, color = Color.Black, fontWeight = FontWeight.SemiBold)
     }
 }

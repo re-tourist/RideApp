@@ -22,6 +22,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.rideflow.R
 import androidx.compose.material3.ExperimentalMaterial3Api
+import com.example.rideflow.backend.DatabaseHelper
+import android.os.Handler
+import android.os.Looper
 
 data class Club(
     val id: Int,
@@ -29,29 +32,36 @@ data class Club(
     val city: String,
     val members: Int,
     val heat: Int,
-    val logoRes: Int
+    val logoRes: Int,
+    val logoUrl: String? = null
 )
 
-private val localHotClubs = listOf(
-    Club(1, "北京狂魔车队", "北京市", 1943, 429, R.drawable.ic_launcher_foreground),
-    Club(2, "CAPU行者", "北京市", 1258, 246, R.drawable.ic_launcher_foreground),
-    Club(3, "北京骑行上班俱乐部", "北京市", 1960, 95, R.drawable.ic_launcher_foreground)
-)
-
-private val nearbyClubs = listOf(
-    Club(4, "逸骑颠", "厦门市", 2, 0, R.drawable.ic_launcher_foreground),
-    Club(5, "马家龙老年俱乐部", "深圳市", 4, 0, R.drawable.ic_launcher_foreground)
-)
-
-private val nationalHotClubs = listOf(
-    Club(6, "【成都骑行吧】", "成都市", 1880, 232, R.drawable.ic_launcher_foreground),
-    Club(7, "辽宁省朝阳市龙之单车俱乐部", "朝阳市", 1941, 485, R.drawable.ic_launcher_foreground)
-)
+private fun loadClubs(handler: Handler, onLoaded: (List<Club>) -> Unit) {
+    Thread {
+        val list = mutableListOf<Club>()
+        DatabaseHelper.processQuery("SELECT club_id, name, city, logo_url, members_count, heat FROM clubs ORDER BY heat DESC LIMIT 100") { rs ->
+            while (rs.next()) {
+                val id = rs.getInt(1)
+                val name = rs.getString(2)
+                val city = rs.getString(3) ?: ""
+                val logo = rs.getString(4)
+                val members = rs.getInt(5)
+                val heat = rs.getInt(6)
+                list.add(Club(id, name, city, members, heat, R.drawable.ic_launcher_foreground, logo))
+            }
+            handler.post { onLoaded(list) }
+            Unit
+        }
+    }.start()
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClubScreen(onBack: () -> Unit, navController: androidx.navigation.NavController) {
     var search by remember { mutableStateOf("") }
+    val handler = Handler(Looper.getMainLooper())
+    var clubs by remember { mutableStateOf<List<Club>>(emptyList()) }
+    LaunchedEffect(Unit) { loadClubs(handler) { list -> clubs = list } }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -92,18 +102,8 @@ fun ClubScreen(onBack: () -> Unit, navController: androidx.navigation.NavControl
                 )
                 Spacer(modifier = Modifier.height(12.dp))
             }
-            item { SectionTitle(text = "本地热门俱乐部") }
-            items(localHotClubs) { club ->
-                ClubRow(club) { navController.navigate("club_detail/${club.id}") }
-                Divider()
-            }
-            item { SectionTitle(text = "附近俱乐部") }
-            items(nearbyClubs) { club ->
-                ClubRow(club) { navController.navigate("club_detail/${club.id}") }
-                Divider()
-            }
-            item { SectionTitle(text = "全国热门俱乐部") }
-            items(nationalHotClubs) { club ->
+            item { SectionTitle(text = "热门俱乐部") }
+            items(clubs) { club ->
                 ClubRow(club) { navController.navigate("club_detail/${club.id}") }
                 Divider()
             }
@@ -136,12 +136,21 @@ private fun ClubRow(club: Club, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Image(
-                painter = painterResource(id = club.logoRes),
-                contentDescription = club.name,
-                modifier = Modifier.size(48.dp),
-                contentScale = ContentScale.Crop
-            )
+            if (club.logoUrl != null) {
+                coil.compose.AsyncImage(
+                    model = club.logoUrl,
+                    contentDescription = club.name,
+                    modifier = Modifier.size(48.dp),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Image(
+                    painter = painterResource(id = club.logoRes),
+                    contentDescription = club.name,
+                    modifier = Modifier.size(48.dp),
+                    contentScale = ContentScale.Crop
+                )
+            }
             Column(modifier = Modifier.padding(start = 12.dp)) {
                 Text(text = club.name, fontSize = 16.sp, fontWeight = FontWeight.Medium)
                 Row {

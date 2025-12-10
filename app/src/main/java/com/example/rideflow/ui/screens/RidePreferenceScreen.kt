@@ -29,8 +29,8 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -41,19 +41,60 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import android.os.Handler
+import android.os.Looper
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+import com.example.rideflow.backend.DatabaseHelper
+
+data class OptionItem(val id: Int, val name: String)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RidePreferenceScreen(navController: NavController) {
+fun RidePreferenceScreen(navController: NavController, userId: String) {
     val bg = Color(0xFFE8F5E9)
-    val sections = listOf(
-        "骑行类型" to listOf("公路骑行", "山地骑行", "通勤骑行", "休闲骑行", "长途骑行", "竞赛骑行"),
-        "骑行装备" to listOf("公路车", "山地车", "城市车", "头盔", "骑行服", "骑行鞋", "手套", "护具"),
-        "骑行路线" to listOf("城市道路", "山间小路", "沿海公路", "乡村道路", "专业赛道", "公园绿道"),
-        "骑行技巧" to listOf("爬坡技巧", "下坡安全", "过弯技术", "长途骑行", "编队骑行", "维修保养"),
-        "骑行社区" to listOf("本地骑友", "品牌粉丝", "装备交流", "路线分享", "赛事讨论", "二手交易")
-    )
-    val selected = remember { mutableStateMapOf<String, SnapshotStateList<String>>() }
+    val sections = remember { mutableStateListOf<Pair<String, List<OptionItem>>>() }
+    val selected = remember { mutableStateMapOf<String, SnapshotStateList<OptionItem>>() }
+    val context = LocalContext.current
+    val handler = Handler(Looper.getMainLooper())
+    Thread {
+        val map = linkedMapOf<String, MutableList<OptionItem>>()
+        DatabaseHelper.processQuery(
+            "SELECT c.category_name, o.option_id, o.option_name FROM ride_preference_options o JOIN ride_preference_categories c ON o.category_id = c.category_id ORDER BY c.display_order, o.display_order"
+        ) { rs ->
+            while (rs.next()) {
+                val cn = rs.getString(1)
+                val oid = rs.getInt(2)
+                val on = rs.getString(3)
+                val list = map.getOrPut(cn) { mutableListOf() }
+                list.add(OptionItem(oid, on))
+            }
+            Unit
+        }
+        val uid = userId.toIntOrNull()
+        val pre = mutableSetOf<Int>()
+        if (uid != null) {
+            DatabaseHelper.processQuery(
+                "SELECT option_id FROM user_ride_preferences WHERE user_id = ?",
+                listOf(uid)
+            ) { rs ->
+                while (rs.next()) {
+                    pre.add(rs.getInt(1))
+                }
+                Unit
+            }
+        }
+        handler.post {
+            sections.clear()
+            map.forEach { (k, v) ->
+                sections.add(k to v)
+                val list = selected.getOrPut(k) { mutableStateListOf() }
+                if (pre.isNotEmpty()) {
+                    v.forEach { if (pre.contains(it.id)) list.add(it) }
+                }
+            }
+        }
+    }.start()
 
     Scaffold(
         topBar = {
@@ -86,7 +127,28 @@ fun RidePreferenceScreen(navController: NavController) {
             ) {
                 val count = selected.values.sumOf { it.size }
                 Button(
-                    onClick = { navController.popBackStack() },
+                    onClick = {
+                        val uid = userId.toIntOrNull()
+                        if (uid == null) {
+                            Toast.makeText(context, "用户ID无效", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Thread {
+                                DatabaseHelper.executeUpdate(
+                                    "DELETE FROM user_ride_preferences WHERE user_id = ?",
+                                    listOf(uid)
+                                )
+                                selected.values.forEach { list ->
+                                    list.forEach { opt ->
+                                        DatabaseHelper.executeUpdate(
+                                            "INSERT IGNORE INTO user_ride_preferences(user_id, option_id) VALUES (?, ?)",
+                                            listOf(uid, opt.id)
+                                        )
+                                    }
+                                }
+                                handler.post { navController.popBackStack() }
+                            }.start()
+                        }
+                    },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF66BB6A)),
                     contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
                 ) {
@@ -127,7 +189,7 @@ fun RidePreferenceScreen(navController: NavController) {
 
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
-private fun FlowRowSection(labels: List<String>, selected: SnapshotStateList<String>) {
+private fun FlowRowSection(labels: List<OptionItem>, selected: SnapshotStateList<OptionItem>) {
     androidx.compose.foundation.layout.FlowRow(
         modifier = Modifier
             .fillMaxWidth()
@@ -145,7 +207,7 @@ private fun FlowRowSection(labels: List<String>, selected: SnapshotStateList<Str
                 leadingIcon = if (isSelected) {
                     { Icon(imageVector = Icons.Filled.Check, contentDescription = null, tint = Color.White) }
                 } else null,
-                label = { Text(text = label) },
+                label = { Text(text = label.name) },
                 colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
                     containerColor = Color(0xFFF1F8E9),
                     labelColor = Color.Black,

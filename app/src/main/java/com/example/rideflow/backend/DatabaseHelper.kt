@@ -189,6 +189,39 @@ object DatabaseHelper {
         }
     }
 
+    fun insertAndReturnId(sql: String, params: List<Any> = emptyList()): Int? {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var keys: ResultSet? = null
+
+        return try {
+            connection = getConnection()
+            if (connection == null) return null
+            statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)
+            params.forEachIndexed { index, param ->
+                when {
+                    param == null -> statement.setNull(index + 1, java.sql.Types.NULL)
+                    param is Int -> statement.setInt(index + 1, param)
+                    param is String -> statement.setString(index + 1, param)
+                    param is Double -> statement.setDouble(index + 1, param)
+                    param is Float -> statement.setFloat(index + 1, param)
+                    param is Long -> statement.setLong(index + 1, param)
+                    param is Boolean -> statement.setBoolean(index + 1, param)
+                    else -> statement.setObject(index + 1, param)
+                }
+            }
+            val affected = statement.executeUpdate()
+            if (affected <= 0) return null
+            keys = statement.generatedKeys
+            if (keys != null && keys!!.next()) keys!!.getInt(1) else null
+        } catch (e: Exception) {
+            Log.e(TAG, "插入返回ID失败: ${e.message}")
+            null
+        } finally {
+            closeResources(connection, statement, keys)
+        }
+    }
+
     /**
      * 执行批量更新操作
      * @param sql SQL语句
