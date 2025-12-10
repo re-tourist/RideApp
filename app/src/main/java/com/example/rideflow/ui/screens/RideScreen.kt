@@ -110,7 +110,7 @@ data class RideReport(
 )
 
 @Composable
-private fun AMap2DContainer(
+fun AMap2DContainer(
     modifier: Modifier = Modifier,
     myLocation: LatLng? = null,
     routePoints: List<LatLng> = emptyList(),
@@ -297,22 +297,36 @@ private fun AMap2DContainer(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RideScreen(navController: androidx.navigation.NavController) {
-    // 状态控制：是否显示历史记录页面
+    // 状态控制：是否显示历史记录、路书页面
     var showHistoryScreen by remember { mutableStateOf(false) }
+    var showRouteBookScreen by remember { mutableStateOf(false) }
+    var pendingAutoStart by remember { mutableStateOf(false) }
 
-    // 如果显示历史页面，则渲染历史页面，否则渲染主骑行页面
+    // 根据状态切换页面
     if (showHistoryScreen) {
         RideHistoryScreen(onBack = { showHistoryScreen = false })
+    } else if (showRouteBookScreen) {
+        RouteBookScreen(
+            onBackToMain = { showRouteBookScreen = false },
+            onShowHistory = { showHistoryScreen = true },
+            onStartRide = {
+                pendingAutoStart = true
+                showRouteBookScreen = false
+            }
+        )
     } else {
         RideMainContent(
-            onShowHistory = { showHistoryScreen = true }
+            onShowHistory = { showHistoryScreen = true },
+            onShowRouteBook = { showRouteBookScreen = true },
+            shouldAutoStart = pendingAutoStart,
+            onAutoStartConsumed = { pendingAutoStart = false }
         )
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RideMainContent(onShowHistory: () -> Unit) {
+fun RideMainContent(onShowHistory: () -> Unit, onShowRouteBook: () -> Unit, shouldAutoStart: Boolean, onAutoStartConsumed: () -> Unit) {
     val authViewModel: com.example.rideflow.auth.AuthViewModel = org.koin.androidx.compose.koinViewModel()
     val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
     var rideStatus = remember { mutableStateOf<RideStatus>(RideStatus.NotStarted) }
@@ -509,8 +523,7 @@ fun RideMainContent(onShowHistory: () -> Unit) {
         elevation = "${elevation.value} m"
     )
 
-    val onStartClick = { 
-        // 重置轨迹点和统计数据
+    fun startRide() {
         trackPoints.clear()
         startTime.value = System.currentTimeMillis()
         totalDistance.value = 0.0
@@ -524,6 +537,7 @@ fun RideMainContent(onShowHistory: () -> Unit) {
         elevation.value = "0"
         rideStatus.value = RideStatus.InProgress 
     }
+    val onStartClick = { startRide() }
     val onPauseClick = { rideStatus.value = RideStatus.Paused }
     val onResumeClick = { rideStatus.value = RideStatus.InProgress }
     val onStopClick: () -> Unit = {
@@ -603,6 +617,13 @@ fun RideMainContent(onShowHistory: () -> Unit) {
         }
     }
 
+    LaunchedEffect(shouldAutoStart) {
+        if (shouldAutoStart && rideStatus.value is RideStatus.NotStarted) {
+            startRide()
+            onAutoStartConsumed()
+        }
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -613,15 +634,16 @@ fun RideMainContent(onShowHistory: () -> Unit) {
                         colors = TopAppBarDefaults.topAppBarColors(
                             containerColor = Color(0xFF007AFF)
                         ),
-                        // 添加右上角的历史记录按钮
+                        // 顶部右侧按钮：历史记录 + 路书
                         actions = {
                             IconButton(onClick = onShowHistory) {
                                 Icon(
-                                    imageVector = Icons.Filled.DateRange, // 使用时钟/日历图标
+                                    imageVector = Icons.Filled.DateRange,
                                     contentDescription = "骑行记录",
                                     tint = Color.White
                                 )
                             }
+                            ModeToggle(activeIsSport = true, onClick = onShowRouteBook)
                         }
                     )
                 }
@@ -780,54 +802,50 @@ fun NotStartedContent(
         )
     }
 
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
-        item {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp)
-                    .padding(horizontal = 16.dp)
-            ) {
-                AMap2DContainer(
-                    modifier = Modifier.fillMaxSize(),
-                    myLocation = myLocation,
-                    selectedLocation = selectedPlace.value
-                )
-            }
-        }
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                shape = RoundedCornerShape(12.dp),
-                elevation = CardDefaults.cardElevation(4.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("经度: ${myLocation?.longitude?.let { String.format("%.6f", it) } ?: "定位中"}", fontSize = 14.sp, color = Color.Gray)
-                    Text("纬度: ${myLocation?.latitude?.let { String.format("%.6f", it) } ?: "定位中"}", fontSize = 14.sp, color = Color.Gray)
-                    Text("精度: 30.0m", fontSize = 14.sp, color = Color.Gray)
-                    Text("浙江省杭州市钱塘区2号大街48-64号靠近工商大学云滨(地铁站)", fontSize = 14.sp, color = Color.Black, modifier = Modifier.padding(top = 4.dp))
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(440.dp)
+                        .padding(horizontal = 16.dp)
+                ) {
+                    AMap2DContainer(
+                        modifier = Modifier.fillMaxSize(),
+                        myLocation = myLocation,
+                        selectedLocation = selectedPlace.value
+                    )
                 }
             }
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    elevation = CardDefaults.cardElevation(4.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("经度: ${myLocation?.longitude?.let { String.format("%.6f", it) } ?: "定位中"}", fontSize = 14.sp, color = Color.Gray)
+                        Text("纬度: ${myLocation?.latitude?.let { String.format("%.6f", it) } ?: "定位中"}", fontSize = 14.sp, color = Color.Gray)
+                        Text("精度: 30.0m", fontSize = 14.sp, color = Color.Gray)
+                        Text("浙江省杭州市钱塘区2号大街48-64号靠近工商大学云滨(地铁站)", fontSize = 14.sp, color = Color.Black, modifier = Modifier.padding(top = 4.dp))
+                    }
+                }
+            }
+            item { Spacer(modifier = Modifier.height(120.dp)) }
         }
-        item {
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 84.dp)
+        ) {
             Button(
                 onClick = onStartClick,
-                modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.size(width = 240.dp, height = 56.dp),
+                shape = RoundedCornerShape(28.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF007AFF))
             ) { Text("开始运动", fontSize = 18.sp, color = Color.White) }
-            Spacer(modifier = Modifier.height(12.dp))
         }
-        item {
-            Button(
-                onClick = { showSearchDialog = true },
-                modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF34C759))
-            ) { Text("查询", fontSize = 18.sp, color = Color.White) }
-            Spacer(modifier = Modifier.height(24.dp))
-        }
-        item { Spacer(modifier = Modifier.height(32.dp)) }
     }
 }
 
@@ -866,7 +884,7 @@ fun InProgressContent(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(220.dp)
+                    .height(440.dp)
                     .padding(horizontal = 16.dp)
             ) {
                 AMap2DContainer(
@@ -881,31 +899,14 @@ fun InProgressContent(
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 100.dp)
+                .padding(bottom = 84.dp)
         ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 24.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Button(
-                    onClick = onPauseClick,
-                    modifier = Modifier.size(80.dp, 50.dp),
-                    shape = RoundedCornerShape(25.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9500))
-                ) {
-                    Text("暂停", color = Color.White, fontSize = 14.sp)
-                }
-                Spacer(modifier = Modifier.width(40.dp))
-                Button(
-                    onClick = onStopClick,
-                    modifier = Modifier.size(80.dp, 50.dp),
-                    shape = RoundedCornerShape(25.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF3B30))
-                ) {
-                    Text("结束", color = Color.White, fontSize = 14.sp)
-                }
-            }
+            ControlButtons(
+                leftText = "暂停",
+                rightText = "结束",
+                onLeftClick = onPauseClick,
+                onRightClick = onStopClick
+            )
         }
     }
 }
@@ -922,55 +923,86 @@ fun PausedContent(
     myLocation: LatLng?,
     routePoints: List<LatLng>
 ) {
-    // 将布局改为LazyColumn以支持滚动
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                shape = RoundedCornerShape(12.dp),
-                elevation = CardDefaults.cardElevation(8.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(duration, fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF9500), modifier = Modifier.align(Alignment.CenterHorizontally))
-                    Text("已暂停", fontSize = 16.sp, color = Color(0xFFFF9500), modifier = Modifier.align(Alignment.CenterHorizontally))
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(distance, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("距离(km)", fontSize = 12.sp, color = Color.Gray) }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(currentSpeed, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("速度(km/h)", fontSize = 12.sp, color = Color.Gray) }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(avgSpeed, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("均速(km/h)", fontSize = 12.sp, color = Color.Gray) }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(calories, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("卡路里", fontSize = 12.sp, color = Color.Gray) }
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    elevation = CardDefaults.cardElevation(8.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.align(Alignment.CenterHorizontally),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = duration,
+                                fontSize = 32.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFFF9500)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))   // 可选：让两个字之间空一点
+                            Text(
+                                text = "已暂停",
+                                fontSize = 14.sp,                      // 比原来再小一点
+                                color = Color(0xFFFF9500)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceAround
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(distance, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                Text("距离(km)", fontSize = 12.sp, color = Color.Gray)
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(currentSpeed, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                Text("速度(km/h)", fontSize = 12.sp, color = Color.Gray)
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(avgSpeed, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                Text("均速(km/h)", fontSize = 12.sp, color = Color.Gray)
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(calories, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                Text("卡路里", fontSize = 12.sp, color = Color.Gray)
+                            }
+                        }
                     }
                 }
             }
-        }
-
-        item {
-            // 地图区域改为固定高度，不再使用weight
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp)
-                    .padding(horizontal = 16.dp)
-            ) {
-                AMap2DContainer(
-                    modifier = Modifier.fillMaxSize(),
-                    myLocation = myLocation,
-                    routePoints = routePoints
-                )
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(440.dp)
+                        .padding(horizontal = 16.dp)
+                ) {
+                    AMap2DContainer(
+                        modifier = Modifier.fillMaxSize(),
+                        myLocation = myLocation,
+                        routePoints = routePoints
+                    )
+                }
             }
+            item { Spacer(modifier = Modifier.height(120.dp)) }
         }
-
-        item {
-            Row(modifier = Modifier.fillMaxWidth().padding(24.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                Button(onClick = onResumeClick, modifier = Modifier.size(64.dp), shape = RoundedCornerShape(50), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF34C759))) { Text("继续", color = Color.White, fontSize = 14.sp) }
-                Spacer(modifier = Modifier.width(40.dp))
-                Button(onClick = onStopClick, modifier = Modifier.size(64.dp), shape = RoundedCornerShape(50), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF3B30))) { Text("结束", color = Color.White, fontSize = 14.sp) }
-            }
-        }
-
-        // 增加此处的留白高度，防止被底部导航栏遮挡，允许用户上滑
-        item {
-            Spacer(modifier = Modifier.height(120.dp))
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 84.dp)
+        ) {
+            ControlButtons(
+                leftText = "继续",
+                rightText = "结束",
+                onLeftClick = onResumeClick,
+                onRightClick = onStopClick
+            )
         }
     }
 }
@@ -1081,3 +1113,51 @@ fun RideDataRow(label: String, value: String) {
         Text(text = value, fontSize = 14.sp, color = Color.Black, fontWeight = FontWeight.SemiBold)
     }
 }
+
+@Composable
+fun ModeToggle(activeIsSport: Boolean, onClick: () -> Unit) {
+    TextButton(onClick = onClick) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "运动",
+                color = Color.White,
+                fontSize = if (activeIsSport) 16.sp else 13.sp
+            )
+            Text(text = "/", color = Color.White, modifier = Modifier.padding(horizontal = 4.dp))
+            Text(
+                text = "导航",
+                color = Color.White,
+                fontSize = if (activeIsSport) 13.sp else 16.sp
+            )
+        }
+    }
+}
+
+@Composable
+fun ControlButtons(
+    leftText: String,
+    rightText: String,
+    onLeftClick: () -> Unit,
+    onRightClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier.padding(horizontal = 24.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Button(
+            onClick = onLeftClick,
+            modifier = Modifier.size(90.dp, 50.dp),
+            shape = RoundedCornerShape(25.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9500))
+        ) { Text(leftText, color = Color.White, fontSize = 14.sp) }
+        Spacer(modifier = Modifier.width(40.dp))
+        Button(
+            onClick = onRightClick,
+            modifier = Modifier.size(90.dp, 50.dp),
+            shape = RoundedCornerShape(25.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF3B30))
+        ) { Text(rightText, color = Color.White, fontSize = 14.sp) }
+    }
+}
+
