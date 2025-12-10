@@ -44,6 +44,17 @@ class MainActivity : ComponentActivity() {
         // 测试数据库连接
         testDatabaseConnection()
 
+        // 初始化高德地图SDK
+        try {
+            // 高德地图SDK会自动读取AndroidManifest中的API密钥
+            // 这里可以添加一些全局的地图配置
+            com.amap.api.maps2d.model.TextOptions()
+            android.util.Log.d("AMap", "✅ 高德地图SDK初始化完成")
+        } catch (e: Exception) {
+            android.util.Log.e("AMap", "❌ 高德地图SDK初始化失败: ${e.message}")
+            e.printStackTrace()
+        }
+
         setContent {
             RideFlowTheme {
                 // 使用导航图代替直接使用MainScreen
