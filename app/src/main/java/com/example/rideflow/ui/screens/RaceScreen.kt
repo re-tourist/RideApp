@@ -37,10 +37,11 @@ data class Race(
     val tags: List<String>,
     val imageRes: Int,
     val imageUrl: String? = null,
-    val isOpen: Boolean
+    val isOpen: Boolean,
+    val isMine: Boolean
 )
 
-private val raceCategories = listOf("我的赛事", "骑行", "越野跑", "徒步")
+private val raceCategories = listOf("全部", "我的赛事", "娱乐赛", "竞速赛")
 
 private fun loadRaces(handler: Handler, onLoaded: (List<Race>) -> Unit) {
     Thread {
@@ -59,7 +60,15 @@ private fun loadRaces(handler: Handler, onLoaded: (List<Race>) -> Unit) {
                     while (trs.next()) tags.add(trs.getString(1) ?: "")
                     Unit
                 }
-                list.add(Race(id, title, "时间：" + (if (date.isNotEmpty()) date.substring(0, 10) else "待定"), "地点：" + loc, if (tags.isEmpty()) listOf(type) else tags, R.drawable.ic_launcher_foreground, coverUrl, open))
+                var mine = false
+                DatabaseHelper.processQuery(
+                    "SELECT 1 FROM user_events WHERE user_id = ? AND event_id = ? AND relation IN ('registered','favorite') LIMIT 1",
+                    listOf(1, id)
+                ) { urs ->
+                    mine = urs.next()
+                    Unit
+                }
+                list.add(Race(id, title, "时间：" + (if (date.isNotEmpty()) date.substring(0, 10) else "待定"), "地点：" + loc, if (tags.isEmpty()) listOf(type) else tags, R.drawable.ic_launcher_foreground, coverUrl, open, mine))
             }
             handler.post { onLoaded(list) }
             Unit
@@ -112,10 +121,10 @@ fun RaceScreen(onBack: () -> Unit, onCreateRace: () -> Unit = {}, navController:
             }
             val filtered = remember(selectedCategory, dbRaces) {
                 when (selectedCategory) {
-                    0 -> dbRaces.filter { it.isOpen }
-                    1 -> dbRaces.filter { it.tags.contains("骑行") }
-                    2 -> dbRaces.filter { it.tags.contains("越野跑") }
-                    else -> dbRaces.filter { it.tags.contains("徒步") }
+                    0 -> dbRaces
+                    1 -> dbRaces.filter { it.isMine }
+                    2 -> dbRaces.filter { it.tags.contains("娱乐赛") }
+                    else -> dbRaces.filter { it.tags.contains("竞速赛") }
                 }
             }
             LazyColumn(
@@ -162,9 +171,8 @@ fun RaceCard(race: Race, onClick: () -> Unit = {}) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.End
                 ) {
-                    AssistChip(onClick = {}, label = { Text(text = "赛事报名") })
                     if (race.isOpen) {
                         Button(
                             onClick = {},

@@ -136,9 +136,6 @@ fun LoginScreen(navController: NavController? = null) {
                 leadingIcon = {
                     Icon(imageVector = Icons.Filled.Lock, contentDescription = null)
                 },
-                trailingIcon = {
-                    Icon(imageVector = Icons.Filled.Lock, contentDescription = "密码")
-                },
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 modifier = Modifier
@@ -173,10 +170,14 @@ fun LoginScreen(navController: NavController? = null) {
             }
 
             // 注册链接
-            Row(modifier = Modifier.padding(top = 16.dp)) {
-                Text(text = "没有账号？")
-                TextButton(onClick = { navController?.navigate(AppRoutes.REGISTER) }) {
-                    Text(text = "立即注册")
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = "没有账号？", fontSize = 14.sp)
+                TextButton(onClick = { navController?.navigate(AppRoutes.REGISTER) }, contentPadding = PaddingValues(0.dp)) {
+                    Text(text = "立即注册", fontSize = 14.sp)
                 }
             }
         }

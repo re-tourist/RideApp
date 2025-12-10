@@ -16,7 +16,7 @@ import androidx.navigation.compose.rememberNavController // 添加缺失的引�
 import com.example.rideflow.ui.screens.community.CommunityScreen
 
 @Composable
-fun MainScreen(navController: NavController, userId: String = "") {
+fun MainScreen(navController: NavController, userId: String = "", startTab: String = "sport") {
     val navItems = listOf(
         NavItem(
             title = "运动",
@@ -39,10 +39,15 @@ fun MainScreen(navController: NavController, userId: String = "") {
             screen = { ProfileScreen(navController = navController, userId = userId) }
         )
     )
-
-    // 关键修改：使用 rememberSaveable 保存选中状态，防止返回时重置
-    var currentIndex by rememberSaveable { mutableIntStateOf(1) } // 默认选中发现页面
-
+    // 使用 rememberSaveable 保存选中状态，既支持路由初始tab，又防止返回时重置
+    val initialIndex = when (startTab) {
+        "sport" -> 0
+        "discover" -> 1
+        "community" -> 2
+        "profile" -> 3
+        else -> 0
+    }
+    var currentIndex by rememberSaveable(startTab) { mutableIntStateOf(initialIndex) }
     Scaffold(
         modifier = Modifier,
         bottomBar = {

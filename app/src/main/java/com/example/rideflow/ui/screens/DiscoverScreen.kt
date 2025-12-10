@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
@@ -36,6 +37,7 @@ import android.os.Handler
 import android.os.Looper
 
 // 模拟数据类
+object DiscoverNavigatorState { var openRouteBook: Boolean = false }
 data class Article(
     val id: Int,
     val title: String,
@@ -69,17 +71,35 @@ private fun loadArticles(handler: Handler, onLoaded: (List<Article>) -> Unit) {
 @Composable
 fun DiscoverScreen(navController: androidx.navigation.NavController, userId: String = "") {
     var subPage by remember { mutableStateOf(DiscoverSubPage.Main) }
+    LaunchedEffect(Unit) {
+        if (DiscoverNavigatorState.openRouteBook) {
+            subPage = DiscoverSubPage.RouteBook
+            DiscoverNavigatorState.openRouteBook = false
+        }
+    }
     val handler = Handler(Looper.getMainLooper())
-    var articles by remember { mutableStateOf<List<Article>>(emptyList()) }
-    LaunchedEffect(Unit) { loadArticles(handler) { list -> articles = list } }
+    var banners by remember { mutableStateOf<List<String>>(emptyList()) }
+    var recommendedRaces by remember { mutableStateOf<List<Race>>(emptyList()) }
+    var recommendedActivities by remember { mutableStateOf<List<Activity>>(emptyList()) }
+    var recommendedClubs by remember { mutableStateOf<List<Club>>(emptyList()) }
+    LaunchedEffect(Unit) {
+        banners = listOf(
+            "https://rideapp.oss-cn-hangzhou.aliyuncs.com/recommend/22de9d074c1216b8b16d2bb448665a5f.jpg",
+            "https://rideapp.oss-cn-hangzhou.aliyuncs.com/recommend/2f84ddd2eb35ad0e9cd155533388df8e.jpg",
+            "https://rideapp.oss-cn-hangzhou.aliyuncs.com/recommend/4a3941c35bb891a6bc108405f498837b.jpg"
+        )
+        Thread { loadRecommendedRaces(handler) { list -> recommendedRaces = list } }.start()
+        Thread { loadRecommendedActivities(handler) { list -> recommendedActivities = list } }.start()
+        Thread { loadRecommendedClubs(handler) { list -> recommendedClubs = list } }.start()
+    }
     when (subPage) {
         DiscoverSubPage.Main -> {
             LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp)
+                modifier = Modifier.fillMaxSize().padding(top = 8.dp),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 96.dp)
             ) {
                 item {
-                    BannerSection()
+                    PromoCarousel(images = banners)
                     Spacer(modifier = Modifier.height(16.dp))
                 }
                 item {
@@ -91,9 +111,43 @@ fun DiscoverScreen(navController: androidx.navigation.NavController, userId: Str
         )
                     Spacer(modifier = Modifier.height(24.dp))
                 }
-                items(articles) {
-                    ArticleCard(article = it)
-                    Spacer(modifier = Modifier.height(16.dp))
+                item {
+                    Text(text = "推荐的赛事：", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    LazyRow(contentPadding = PaddingValues(horizontal = 4.dp)) {
+                        items(recommendedRaces) { race ->
+                            RaceHorizontalCard(race = race) {
+                                navController.navigate("${AppRoutes.RACE_DETAIL}/${race.id}")
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+                item {
+                    Text(text = "推荐的活动：", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    LazyRow(contentPadding = PaddingValues(horizontal = 4.dp)) {
+                        items(recommendedActivities) { activity ->
+                            ActivityHorizontalCard(activity = activity) {
+                                navController.navigate("${AppRoutes.ACTIVITY_DETAIL}/${activity.id}")
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+                item {
+                    Text(text = "推荐的俱乐部：", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    LazyRow(contentPadding = PaddingValues(horizontal = 4.dp)) {
+                        items(recommendedClubs) { club ->
+                            ClubHorizontalCard(club = club) {
+                                navController.navigate("club_detail/${club.id}")
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                        }
+                    }
                 }
             }
         }
@@ -102,7 +156,8 @@ fun DiscoverScreen(navController: androidx.navigation.NavController, userId: Str
             RouteBookScreen(
                 onBack = { subPage = DiscoverSubPage.Main },
                 onOpenMyRouteBook = { subPage = DiscoverSubPage.MyRouteBook },
-                userId = userId
+                userId = userId,
+                navController = navController
             )
         }
         DiscoverSubPage.MyRouteBook -> {
@@ -127,54 +182,23 @@ fun DiscoverScreen(navController: androidx.navigation.NavController, userId: Str
 }
 
 @Composable
-fun BannerSection() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Box(modifier = Modifier.height(180.dp)) {
-            // 这里应该是一个实际的广告图片
-            Image(
-                painter = painterResource(id = R.drawable.ic_launcher_background),
-                contentDescription = "Banner",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
-            Box(
+fun PromoCarousel(images: List<String>) {
+    LazyRow(modifier = Modifier.fillMaxWidth()) {
+        items(images) { url ->
+            Card(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .drawBehind {
-                        drawRect(color = Color.Black.copy(alpha = 0.2f))
-                    }
-            )
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.Center
+                    .width(320.dp)
+                    .height(180.dp)
+                    .padding(end = 12.dp),
+                shape = MaterialTheme.shapes.large,
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
-                Text(
-                    text = "和美海岛-上海后花园",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
+                coil.compose.AsyncImage(
+                    model = url,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
                 )
-                Text(
-                    text = """奔跑吧，庙镇""" + "定向骑行线上赛",
-                    fontSize = 16.sp,
-                    color = Color.White,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-                Button(
-                    onClick = { /* 报名按钮点击事件 */ },
-                    modifier = Modifier
-                        .padding(top = 16.dp)
-                        .align(alignment = androidx.compose.ui.Alignment.Start),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Green)
-                ) {
-                    Text(text = "立即报名")
-                }
             }
         }
     }
@@ -292,6 +316,167 @@ fun ArticleCard(article: Article) {
                 fontSize = 12.sp,
                 color = Color.Gray
             )
+        }
+    }
+}
+
+private fun loadRecommendedRaces(handler: Handler, onLoaded: (List<Race>) -> Unit) {
+    Thread {
+        val list = mutableListOf<Race>()
+        DatabaseHelper.processQuery("SELECT event_id, title, event_date, location, event_type, is_open, cover_image_url FROM events ORDER BY event_date DESC LIMIT 30") { rs ->
+            while (rs.next()) {
+                val id = rs.getInt(1)
+                val title = rs.getString(2)
+                val date = rs.getTimestamp(3)?.toString() ?: ""
+                val loc = rs.getString(4) ?: ""
+                val type = rs.getString(5) ?: "娱乐赛"
+                val open = rs.getBoolean(6)
+                val coverUrl = rs.getString(7)
+                val tags = mutableListOf<String>()
+                DatabaseHelper.processQuery("SELECT tag_name FROM event_tags WHERE event_id = ?", listOf(id)) { trs ->
+                    while (trs.next()) tags.add(trs.getString(1) ?: "")
+                    Unit
+                }
+                val isRace = type in listOf("娱乐赛", "竞速赛") || tags.any { it in listOf("娱乐赛", "竞速赛") }
+                if (isRace) {
+                    list.add(Race(id, title, "时间：" + (if (date.isNotEmpty()) date.substring(0, 10) else "待定"), "地点：" + loc, if (tags.isEmpty()) listOf(type) else tags, R.drawable.ic_launcher_foreground, coverUrl, open, false))
+                }
+            }
+            handler.post { onLoaded(list.take(10)) }
+            Unit
+        }
+    }.start()
+}
+
+private fun loadRecommendedActivities(handler: Handler, onLoaded: (List<Activity>) -> Unit) {
+    Thread {
+        val list = mutableListOf<Activity>()
+        DatabaseHelper.processQuery("SELECT event_id, title, event_date, location, event_type, is_open, cover_image_url FROM events ORDER BY event_date DESC LIMIT 30") { rs ->
+            while (rs.next()) {
+                val id = rs.getInt(1)
+                val title = rs.getString(2)
+                val date = rs.getTimestamp(3)?.toString() ?: ""
+                val loc = rs.getString(4) ?: ""
+                val type = rs.getString(5) ?: "周末活动"
+                val open = rs.getBoolean(6)
+                val coverUrl = rs.getString(7)
+                val tags = mutableListOf<String>()
+                DatabaseHelper.processQuery("SELECT tag_name FROM event_tags WHERE event_id = ?", listOf(id)) { trs ->
+                    while (trs.next()) tags.add(trs.getString(1) ?: "")
+                    Unit
+                }
+                val isActivity = tags.any { it in listOf("亲子活动", "公益活动", "周末活动") }
+                if (isActivity) {
+                    list.add(Activity(id, title, "时间：" + (if (date.isNotEmpty()) date.substring(0, 16) else "待定"), "地点：" + loc, if (tags.isEmpty()) listOf(type) else tags, R.drawable.ic_launcher_foreground, coverUrl, open, false))
+                }
+            }
+            handler.post { onLoaded(list.take(10)) }
+            Unit
+        }
+    }.start()
+}
+
+private fun loadRecommendedClubs(handler: Handler, onLoaded: (List<Club>) -> Unit) {
+    Thread {
+        val list = mutableListOf<Club>()
+        DatabaseHelper.processQuery("SELECT club_id, name, city, logo_url, members_count, heat FROM clubs ORDER BY heat DESC LIMIT 20") { rs ->
+            while (rs.next()) {
+                val id = rs.getInt(1)
+                val name = rs.getString(2)
+                val city = rs.getString(3) ?: ""
+                val logo = rs.getString(4)
+                val members = rs.getInt(5)
+                val heat = rs.getInt(6)
+                list.add(Club(id, name, city, members, heat, R.drawable.ic_launcher_foreground, logo))
+            }
+            handler.post { onLoaded(list.take(10)) }
+            Unit
+        }
+    }.start()
+}
+
+@Composable
+fun RaceHorizontalCard(race: Race, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier.width(280.dp).height(220.dp).clickable { onClick() },
+        shape = MaterialTheme.shapes.medium,
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+    ) {
+        Column {
+            Box(modifier = Modifier.height(140.dp)) {
+                val url = race.imageUrl
+                if (url != null) {
+                    coil.compose.AsyncImage(model = url, contentDescription = race.title, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                } else {
+                    Image(painter = painterResource(id = race.imageRes), contentDescription = race.title, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                }
+                Row(modifier = Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.End) {
+                    if (race.isOpen) {
+                        Button(onClick = {}, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853))) { Text(text = "报名中") }
+                    }
+                }
+            }
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(text = race.title, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text(text = race.date, fontSize = 12.sp, color = Color.Gray)
+            }
+        }
+    }
+}
+
+@Composable
+fun ActivityHorizontalCard(activity: Activity, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier.width(280.dp).clickable { onClick() },
+        shape = MaterialTheme.shapes.medium,
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+    ) {
+        Column {
+            Box(modifier = Modifier.height(140.dp)) {
+                val url = activity.imageUrl
+                if (url != null) {
+                    coil.compose.AsyncImage(model = url, contentDescription = activity.title, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                } else {
+                    Image(painter = painterResource(id = activity.imageRes), contentDescription = activity.title, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                }
+                Row(modifier = Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.End) {
+                    if (activity.isOpen) {
+                        Button(onClick = {}, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF007AFF))) { Text(text = "报名中") }
+                    }
+                }
+            }
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(text = activity.title, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text(text = activity.date, fontSize = 12.sp, color = Color.Gray)
+            }
+        }
+    }
+}
+
+@Composable
+fun ClubHorizontalCard(club: Club, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier.width(260.dp).height(120.dp).clickable { onClick() },
+        shape = MaterialTheme.shapes.medium,
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (club.logoUrl != null) {
+                    coil.compose.AsyncImage(model = club.logoUrl, contentDescription = club.name, modifier = Modifier.size(56.dp), contentScale = ContentScale.Crop)
+                } else {
+                    Image(painter = painterResource(id = club.logoRes), contentDescription = club.name, modifier = Modifier.size(56.dp), contentScale = ContentScale.Crop)
+                }
+                Column(modifier = Modifier.padding(start = 12.dp)) {
+                    Text(text = club.name, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                    Text(text = club.city, fontSize = 12.sp, color = Color.Gray)
+                }
+            }
+            Row(modifier = Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(text = "成员 ${club.members}", fontSize = 12.sp, color = Color.Gray)
+                Spacer(modifier = Modifier.width(24.dp))
+                Text(text = "热度 ${club.heat}", fontSize = 12.sp, color = Color.Gray)
+            }
         }
     }
 }

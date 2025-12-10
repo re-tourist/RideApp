@@ -19,11 +19,13 @@ import androidx.navigation.NavController
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.ui.layout.ContentScale
 import com.example.rideflow.navigation.AppRoutes
 import com.example.rideflow.profile.ProfileViewModel
 import com.example.rideflow.ui.theme.RideFlowTheme
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.koin.androidx.compose.koinViewModel
+import coil.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 
@@ -92,13 +94,23 @@ fun ProfileDetailScreen(navController: NavController) {
                         shape = CircleShape,
                         color = Color.LightGray
                     ) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Filled.Person,
+                        val avatar = userProfile?.avatarUrl
+                        if (!avatar.isNullOrBlank()) {
+                            AsyncImage(
+                                model = avatar,
                                 contentDescription = "用户头像",
-                                modifier = Modifier.size(60.dp),
-                                tint = Color.DarkGray
+                                modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                contentScale = ContentScale.Crop
                             )
+                        } else {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Filled.Person,
+                                    contentDescription = "用户头像",
+                                    modifier = Modifier.size(60.dp),
+                                    tint = Color.DarkGray
+                                )
+                            }
                         }
                     }
                     
@@ -138,7 +150,7 @@ fun ProfileDetailScreen(navController: NavController) {
                         }
                         
                         OutlinedButton(
-                            onClick = { navController.popBackStack() },
+                            onClick = { navController.navigate("${com.example.rideflow.navigation.AppRoutes.MAIN}?tab=profile") },
                             modifier = Modifier.weight(1f)
                         ) {
                             Text(text = "关闭")

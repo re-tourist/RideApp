@@ -1,6 +1,7 @@
 package com.example.rideflow.ui.screens
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -20,6 +21,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.rideflow.R
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.navigation.NavController
+import com.example.rideflow.navigation.AppRoutes
 import com.example.rideflow.backend.DatabaseHelper
 import android.os.Handler
 import android.os.Looper
@@ -42,7 +45,7 @@ private val routeCategories = listOf("热门", "周边", "长距离", "爬坡", 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RouteBookScreen(onBack: () -> Unit, onOpenMyRouteBook: () -> Unit = {}, userId: String = "") {
+fun RouteBookScreen(onBack: () -> Unit, onOpenMyRouteBook: () -> Unit = {}, userId: String = "", navController: NavController? = null) {
     var selectedCategory by remember { mutableStateOf(0) }
     val handler = Handler(Looper.getMainLooper())
     var routes by remember { mutableStateOf<List<RouteBook>>(emptyList()) }
@@ -126,16 +129,8 @@ fun RouteBookScreen(onBack: () -> Unit, onOpenMyRouteBook: () -> Unit = {}, user
                 contentPadding = PaddingValues(12.dp)
             ) {
                 items(filteredRoutes) { route ->
-                    RouteCard(route = route, onDownload = { routeId ->
-                        val uid = userId.toIntOrNull()
-                        if (uid != null) {
-                            Thread {
-                                DatabaseHelper.executeUpdate(
-                                    "INSERT IGNORE INTO route_downloads (route_id, user_id, downloaded_at) VALUES (?, ?, CURRENT_TIMESTAMP)",
-                                    listOf(routeId, uid)
-                                )
-                            }.start()
-                        }
+                    RouteCard(route = route, onClick = {
+                        navController?.navigate("${AppRoutes.ROUTE_DETAIL}/${route.id}")
                     })
                     Spacer(modifier = Modifier.height(12.dp))
                 }
@@ -146,9 +141,9 @@ fun RouteBookScreen(onBack: () -> Unit, onOpenMyRouteBook: () -> Unit = {}, user
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RouteCard(route: RouteBook, onDownload: (Int) -> Unit) {
+fun RouteCard(route: RouteBook, onClick: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
         shape = MaterialTheme.shapes.medium,
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
@@ -175,7 +170,14 @@ fun RouteCard(route: RouteBook, onDownload: (Int) -> Unit) {
                         .padding(12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    AssistChip(onClick = {}, label = { Text(text = route.difficulty) })
+                    AssistChip(
+                        onClick = {},
+                        label = { Text(text = route.difficulty) },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = Color(0xFFE8F5E9),
+                            labelColor = Color(0xFF2E7D32)
+                        )
+                    )
                     Button(
                         onClick = {},
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF007AFF))
@@ -213,10 +215,9 @@ fun RouteCard(route: RouteBook, onDownload: (Int) -> Unit) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    OutlinedButton(onClick = { onDownload(route.id) }) { Text(text = "下载GPX") }
                     Text(text = "已收藏 ${route.favoriteCount}", fontSize = 12.sp, color = Color.Gray)
                 }
             }

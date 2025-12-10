@@ -33,6 +33,9 @@ object AppRoutes {
     
     // 活动详情路由
     const val ACTIVITY_DETAIL = "activity_detail"
+
+    // 路书详情路由
+    const val ROUTE_DETAIL = "route_detail"
     
     // 俱乐部相关路由
 const val CLUB_SCREEN = "club_screen"
