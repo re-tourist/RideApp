@@ -18,6 +18,9 @@ object AppRoutes {
     // 功能页面路由
     const val EDIT_PROFILE = "edit_profile"
     const val PROFILE_DETAIL = "profile_detail"
+    const val USER_PROFILE_DETAIL = "user_profile_detail"
+    const val CHAT = "chat"
+    const val POST_DETAIL = "post_detail"
     const val RIDE_PREFERENCE = "ride_preference"
     const val ACHIEVEMENTS = "achievements"
     const val EXERCISE_CALENDAR = "exercise_calendar"

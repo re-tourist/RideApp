@@ -176,7 +176,7 @@ fun DiscoverScreen(navController: androidx.navigation.NavController, userId: Str
         }
         // 骑友子页面
         DiscoverSubPage.Rider -> {
-            RiderScreen(onBack = { subPage = DiscoverSubPage.Main }, userId = userId)
+            RiderScreen(onBack = { subPage = DiscoverSubPage.Main }, userId = userId, navController = navController)
         }
     }
 }

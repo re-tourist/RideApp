@@ -47,10 +47,7 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
     val allPosts = remember { mutableStateListOf<Post>() }
     val followingUserIds = remember { mutableStateOf(setOf<Int>()) }
 
-    // 用户弹窗状态
-    var showUserDetailDialog by remember { mutableStateOf(false) }
-    var selectedUserInfo by remember { mutableStateOf<UserDetailInfo?>(null) }
-    var isUserLoading by remember { mutableStateOf(false) }
+    // 统一跳转到个人主页；不再使用社区小卡片
 
     // 数据加载逻辑
     LaunchedEffect(userId) {
@@ -136,62 +133,11 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
 
     // 处理头像点击，加载用户详细信息
     val onAvatarClick: (Int) -> Unit = { targetUserId ->
-        isUserLoading = true
-        showUserDetailDialog = true
-        selectedUserInfo = null // Reset
+        navController.navigate("${com.example.rideflow.navigation.AppRoutes.USER_PROFILE_DETAIL}/$targetUserId")
+    }
 
-        Thread {
-            var nick = "未知用户"
-            var bio = "这个用户很懒，什么都没写"
-            var ridingAge = "1年"
-            val medals = mutableListOf<String>()
-
-            // 获取基本信息
-            DatabaseHelper.processQuery(
-                "SELECT nickname, bio, created_at FROM users WHERE user_id = ?",
-                listOf(targetUserId)
-            ) { rs ->
-                if (rs.next()) {
-                    nick = rs.getString(1) ?: nick
-                    bio = rs.getString(2) ?: bio
-                    val createdAt = rs.getTimestamp(3)
-                    if (createdAt != null) {
-                        val diff = Date().time - createdAt.time
-                        val years = diff / (1000L * 60 * 60 * 24 * 365)
-                        ridingAge = "${years + 1}年"
-                    }
-                }
-                Unit
-            }
-
-            // 如果是模拟的俱乐部账号(ID > 9000)，给一些特殊文案
-            if (targetUserId > 9000) {
-                nick = allPosts.find { it.userId == targetUserId }?.userName ?: "俱乐部官方"
-                bio = "官方账号，发布最新活动与资讯。"
-                ridingAge = "5年"
-            }
-
-            // 获取勋章
-            DatabaseHelper.processQuery(
-                "SELECT b.name FROM achievement_badges b JOIN user_achievement_progress uap ON b.badge_id = uap.badge_id WHERE uap.user_id = ? AND uap.is_unlocked = 1",
-                listOf(targetUserId)
-            ) { rs ->
-                while (rs.next()) {
-                    medals.add(rs.getString(1))
-                }
-                Unit
-            }
-            // 模拟勋章数据
-            if (medals.isEmpty()) {
-                medals.add("骑行新星")
-                if (targetUserId % 2 == 0) medals.add("百公里挑战")
-            }
-
-            handler.post {
-                selectedUserInfo = UserDetailInfo(targetUserId, nick, bio, ridingAge, medals)
-                isUserLoading = false
-            }
-        }.start()
+    val onPostClick: (Int) -> Unit = { postId ->
+        navController.navigate("${com.example.rideflow.navigation.AppRoutes.POST_DETAIL}/$postId")
     }
 
     Scaffold(
@@ -213,11 +159,11 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
             }
 
             when (selectedCategory) {
-                "关注动态" -> CommunityFollowingScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick)
-                "热门动态" -> CommunityHotScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick)
+                "关注动态" -> CommunityFollowingScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick, onPostClick)
+                "热门动态" -> CommunityHotScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick, onPostClick)
                 "社区交易" -> CommunityTradeScreen()
                 "俱乐部" -> CommunityClubPortalScreen(navController = navController, allPosts = allPosts)
-                else -> CommunityHotScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick)
+                else -> CommunityHotScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick, onPostClick)
             }
         }
     }
@@ -229,20 +175,7 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
         MessageInteractionDialog(onDismiss = { showMessageDialog = false })
     }
 
-    // 用户详情弹窗
-    if (showUserDetailDialog) {
-        UserDetailInfoDialog(
-            userInfo = selectedUserInfo,
-            isLoading = isUserLoading,
-            isFollowing = selectedUserInfo?.let { followingUserIds.value.contains(it.userId) } ?: false,
-            onFollowClick = {
-                selectedUserInfo?.let { user ->
-                    onFollowToggle(user.userId, !followingUserIds.value.contains(user.userId))
-                }
-            },
-            onDismiss = { showUserDetailDialog = false }
-        )
-    }
+    // 统一使用个人主页，不再弹出用户小卡片
 }
 
 @Composable
