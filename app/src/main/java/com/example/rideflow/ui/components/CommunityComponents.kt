@@ -127,7 +127,8 @@ fun PostCard(
     isFollowing: Boolean,
     onFollowToggle: (Int, Boolean) -> Unit,
     showFollowButton: Boolean = true,
-    onAvatarClick: (Int) -> Unit = {} // 新增：头像点击回调
+    onAvatarClick: (Int) -> Unit = {}, // 头像点击
+    onPostClick: (Int) -> Unit = {} // 动态点击
 ) {
     var isLiked by remember { mutableStateOf(post.initialIsLiked) }
     var showShareDialog by remember { mutableStateOf(false) }
@@ -180,7 +181,7 @@ fun PostCard(
         Spacer(Modifier.height(8.dp))
 
         // 内容
-        Text(post.content, modifier = Modifier.fillMaxWidth())
+        Text(post.content, modifier = Modifier.fillMaxWidth().clickable { onPostClick(post.id) })
         Spacer(Modifier.height(8.dp))
 
         // 图片占位符
@@ -192,7 +193,11 @@ fun PostCard(
                 .background(Color.DarkGray.copy(alpha = 0.1f)),
             contentAlignment = Alignment.Center
         ) {
-            Text(post.imagePlaceholder, color = Color.Gray)
+            Box(modifier = Modifier.fillMaxSize().clickable { onPostClick(post.id) }) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(post.imagePlaceholder, color = Color.Gray)
+                }
+            }
         }
 
         Spacer(Modifier.height(16.dp))

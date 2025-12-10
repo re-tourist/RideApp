@@ -11,6 +11,9 @@ import com.example.rideflow.ui.screens.LoginScreen
 import com.example.rideflow.ui.screens.RegisterScreen
 import com.example.rideflow.ui.screens.MainScreen
 import com.example.rideflow.ui.screens.ProfileDetailScreen
+import com.example.rideflow.ui.screens.UserProfileDetailScreen
+import com.example.rideflow.ui.screens.ChatScreen
+import com.example.rideflow.ui.screens.community.CommunityPostDetailScreen
 import com.example.rideflow.ui.screens.AchievementsScreen
 import com.example.rideflow.ui.screens.ExerciseCalendarScreen
 import com.example.rideflow.ui.screens.MyActivitiesScreen
@@ -83,6 +86,28 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
         // 个人资料详情页面
         composable(AppRoutes.PROFILE_DETAIL) {
             ProfileDetailScreen(navController = navController)
+        }
+
+        // 他人个人主页（带用户ID）
+        composable(route = "${AppRoutes.USER_PROFILE_DETAIL}/{userId}", arguments = listOf(navArgument("userId") { type = NavType.IntType })) { backStackEntry ->
+            val targetUserId = backStackEntry.arguments?.getInt("userId") ?: 0
+            UserProfileDetailScreen(navController = navController, userId = targetUserId)
+        }
+
+        // 私聊页面
+        composable(route = "${AppRoutes.CHAT}/{targetUserId}", arguments = listOf(navArgument("targetUserId") { type = NavType.IntType })) { backStackEntry ->
+            val targetUserId = backStackEntry.arguments?.getInt("targetUserId") ?: 0
+            val currentUserId = when (authState) {
+                is AuthState.Authenticated -> ((authState as AuthState.Authenticated).userData.userId.toIntOrNull() ?: 0)
+                else -> 0
+            }
+            ChatScreen(navController = navController, targetUserId = targetUserId, currentUserId = currentUserId)
+        }
+
+        // 动态详情页面
+        composable(route = "${AppRoutes.POST_DETAIL}/{postId}", arguments = listOf(navArgument("postId") { type = NavType.IntType })) { backStackEntry ->
+            val postId = backStackEntry.arguments?.getInt("postId") ?: 0
+            CommunityPostDetailScreen(navController = navController, postId = postId)
         }
 
         composable(AppRoutes.RIDE_PREFERENCE) {

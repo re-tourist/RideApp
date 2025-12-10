@@ -16,7 +16,8 @@ fun CommunityHotScreen(
     allPosts: List<Post>,
     followingUserIds: Set<Int>,
     onFollowToggle: (Int, Boolean) -> Unit,
-    onAvatarClick: (Int) -> Unit // 新增参数
+    onAvatarClick: (Int) -> Unit, // 头像点击
+    onPostClick: (Int) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -30,7 +31,8 @@ fun CommunityHotScreen(
                 post = post,
                 isFollowing = isFollowing,
                 onFollowToggle = onFollowToggle,
-                onAvatarClick = onAvatarClick // 传递回调
+                onAvatarClick = onAvatarClick,
+                onPostClick = onPostClick
             )
             Spacer(modifier = Modifier.height(8.dp).background(Color(0xFFF0F0F0)))
         }
