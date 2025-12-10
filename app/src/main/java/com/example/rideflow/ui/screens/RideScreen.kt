@@ -78,6 +78,13 @@ import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.getValue   // for by
 import androidx.compose.runtime.setValue   // for by
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import org.koin.androidx.compose.koinViewModel
+import com.example.rideflow.auth.AuthViewModel
+import com.example.rideflow.backend.RideRecordDatabaseHelper
+ 
 
 sealed class RideStatus {
     object NotStarted : RideStatus()
@@ -306,6 +313,8 @@ fun RideScreen(navController: androidx.navigation.NavController) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RideMainContent(onShowHistory: () -> Unit) {
+    val authViewModel: com.example.rideflow.auth.AuthViewModel = org.koin.androidx.compose.koinViewModel()
+    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
     var rideStatus = remember { mutableStateOf<RideStatus>(RideStatus.NotStarted) }
     var elapsedSeconds by remember { mutableStateOf(0L) }
     val reportSeconds = remember { mutableStateOf(0L) }
@@ -517,12 +526,38 @@ fun RideMainContent(onShowHistory: () -> Unit) {
     }
     val onPauseClick = { rideStatus.value = RideStatus.Paused }
     val onResumeClick = { rideStatus.value = RideStatus.InProgress }
-    val onStopClick = {
+    val onStopClick: () -> Unit = {
         reportSeconds.value = elapsedSeconds      // 先记住
         elapsedSeconds = 0                        // 再清零
         startTime.value = null
         rideStatus.value = RideStatus.NotStarted
         showReportDialog.value = true
+        val userId = authViewModel.getCurrentUser()?.userId?.toIntOrNull() ?: 0
+        val startMillis = startTime.value ?: System.currentTimeMillis()
+        val durationSec = reportSeconds.value.toInt()
+        val distanceKm = totalDistance.value / 1000.0
+        val avg = avgSpeed.value.toDoubleOrNull() ?: run {
+            val hours = getRideDurationHours()
+            if (hours > 0) (totalDistance.value / 1000.0) / hours else 0.0
+        }
+        val caloriesVal = calories.value.toIntOrNull() ?: ((totalDistance.value / 1000.0) * 50).toInt()
+        val climbVal = elevation.value.toIntOrNull() ?: 0
+        val maxVal = maxSpeedValue.value
+        val recordId = com.example.rideflow.backend.RideRecordDatabaseHelper.generateRecordId(userId)
+        coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            com.example.rideflow.backend.RideRecordDatabaseHelper.insertUserRideRecord(
+                recordId = recordId,
+                userId = userId,
+                startTimeMillis = startMillis,
+                durationSec = durationSec,
+                distanceKm = distanceKm,
+                avgSpeedKmh = avg,
+                calories = caloriesVal,
+                climb = climbVal,
+                maxSpeedKmh = maxVal
+            )
+        }
+        Unit
     }
     val onCloseReport = { showReportDialog.value = false }
 
@@ -947,17 +982,25 @@ fun PausedContent(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RideHistoryScreen(onBack: () -> Unit) {
-    // 编造的骑行历史数据
-    val historyData = listOf(
-        RideHistory("2025-10-18 15:41", "00:08:08", "3.25 km", "24.1 km/h", "156 kcal"),
-        RideHistory("2025-10-17 22:33", "00:15:03", "5.67 km", "22.6 km/h", "210 kcal"),
-        RideHistory("2025-10-16 07:12", "00:45:20", "15.2 km", "20.5 km/h", "520 kcal"),
-        RideHistory("2025-10-14 18:30", "01:02:15", "22.8 km", "21.8 km/h", "890 kcal"),
-        RideHistory("2025-10-12 16:20", "00:30:10", "10.5 km", "19.5 km/h", "350 kcal"),
-        RideHistory("2025-10-10 09:00", "02:15:00", "50.2 km", "25.0 km/h", "1800 kcal"),
-        RideHistory("2025-10-08 20:15", "00:22:45", "8.3 km", "18.5 km/h", "310 kcal"),
-        RideHistory("2025-10-05 14:00", "00:12:30", "4.1 km", "15.2 km/h", "145 kcal")
-    )
+    
+    val authViewModel: com.example.rideflow.auth.AuthViewModel = org.koin.androidx.compose.koinViewModel()
+    val records = remember { mutableStateListOf<com.example.rideflow.backend.RideRecordDatabaseHelper.UserRideRecord>() }
+    fun formatDuration(seconds: Int): String {
+        val h = seconds / 3600
+        val m = (seconds % 3600) / 60
+        val s = seconds % 60
+        return String.format("%02d:%02d:%02d", h, m, s)
+    }
+    LaunchedEffect(Unit) {
+        val id = authViewModel.getCurrentUser()?.userId?.toIntOrNull()
+        if (id != null && id > 0) {
+            val list = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                com.example.rideflow.backend.RideRecordDatabaseHelper.getUserRideRecords(id)
+            }
+            records.clear()
+            records.addAll(list)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -980,7 +1023,7 @@ fun RideHistoryScreen(onBack: () -> Unit) {
                 .padding(padding)
                 .background(Color(0xFFF5F5F5))
         ) {
-            items(historyData) { history ->
+            items(records) { r ->
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -991,7 +1034,7 @@ fun RideHistoryScreen(onBack: () -> Unit) {
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = history.date,
+                            text = r.startTime,
                             fontSize = 14.sp,
                             color = Color.Gray,
                             fontWeight = FontWeight.Medium
@@ -1002,12 +1045,12 @@ fun RideHistoryScreen(onBack: () -> Unit) {
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Column {
-                                RideDataRow("用时", history.duration)
-                                RideDataRow("距离", history.distance)
+                                RideDataRow("用时", formatDuration(r.durationSec))
+                                RideDataRow("距离", String.format("%.2f km", r.distanceKm))
                             }
                             Column {
-                                RideDataRow("均速", history.avgSpeed)
-                                RideDataRow("消耗", history.calories)
+                                RideDataRow("均速", String.format("%.2f km/h", r.avgSpeedKmh))
+                                RideDataRow("消耗", String.format("%d kcal", r.calories))
                             }
                             // 模拟路线缩略图区域
                             Box(
