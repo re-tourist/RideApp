@@ -1,6 +1,7 @@
 package com.example.rideflow.ui.screens
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,12 +20,15 @@ import androidx.compose.ui.unit.sp
 import com.example.rideflow.R
 import androidx.compose.material3.ExperimentalMaterial3Api
 import com.example.rideflow.backend.DatabaseHelper
-import android.os.Handler
-import android.os.Looper
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import coil.compose.AsyncImage
 import androidx.compose.foundation.clickable
 import androidx.navigation.NavController
 import com.example.rideflow.navigation.AppRoutes
+import android.util.Log
 
 data class Rider(
     val id: Int,
@@ -37,33 +41,42 @@ data class Rider(
 
 @Composable
 private fun loadRiders(userId: String): Pair<List<Rider>, List<Rider>> {
-    val handler = Handler(Looper.getMainLooper())
     var nearby by remember { mutableStateOf<List<Rider>>(emptyList()) }
     var mine by remember { mutableStateOf<List<Rider>>(emptyList()) }
     LaunchedEffect(userId) {
-        Thread {
-            val nlist = mutableListOf<Rider>()
+        val nlist = withContext(Dispatchers.IO) {
             DatabaseHelper.processQuery(
                 "SELECT u.user_id, u.nickname, rp.city, rp.level, u.avatar_url, rp.main_club_id FROM rider_profiles rp JOIN users u ON rp.user_id = u.user_id ORDER BY u.user_id"
             ) { rs ->
-                val clubMap = mutableMapOf<Int, Int>()
+                val local = mutableListOf<Rider>()
                 while (rs.next()) {
                     val id = rs.getInt(1)
                     val name = rs.getString(2)
                     val city = rs.getString(3) ?: ""
                     val level = rs.getString(4) ?: "普通"
                     val avatar = rs.getString(5)
-                    val clubId = rs.getInt(6)
-                    clubMap[id] = clubId
-                    nlist.add(Rider(id, name, city, level, R.drawable.ic_launcher_foreground, avatar))
+                    local.add(Rider(id, name, city, level, R.drawable.ic_launcher_foreground, avatar))
                 }
-                val uid = userId.toIntOrNull()
-                val myClub = if (uid != null) clubMap[uid] else null
-                val mlist = if (myClub != null && myClub > 0) nlist.filter { rider -> clubMap[rider.id] == myClub } else nlist.filter { rider -> rider.id.toString() == userId }
-                handler.post { nearby = nlist; mine = mlist }
+                local
+            } ?: emptyList()
+        }
+        val uid = userId.toIntOrNull()
+        val clubMap = withContext(Dispatchers.IO) {
+            val map = mutableMapOf<Int, Int>()
+            DatabaseHelper.processQuery(
+                "SELECT u.user_id, rp.main_club_id FROM rider_profiles rp JOIN users u ON rp.user_id = u.user_id"
+            ) { rs ->
+                while (rs.next()) {
+                    map[rs.getInt(1)] = rs.getInt(2)
+                }
                 Unit
             }
-        }.start()
+            map
+        }
+        val myClub = if (uid != null) clubMap[uid] else null
+        val mlist = if (myClub != null && myClub > 0) nlist.filter { rider -> clubMap[rider.id] == myClub } else nlist.filter { rider -> rider.id.toString() == userId }
+        nearby = nlist
+        mine = mlist
     }
     return Pair(nearby, mine)
 }
@@ -73,43 +86,50 @@ private fun loadRiders(userId: String): Pair<List<Rider>, List<Rider>> {
 fun RiderScreen(onBack: () -> Unit, userId: String = "", navController: NavController? = null) {
     var selectedTab by remember { mutableStateOf(0) }
     val (nearbyRiders, myRiders) = loadRiders(userId)
-    val handler = Handler(Looper.getMainLooper())
     var followingIds by remember { mutableStateOf(setOf<Int>()) }
+    val scope = rememberCoroutineScope()
+    val pageStart = remember { System.currentTimeMillis() }
 
     LaunchedEffect(userId) {
         val uid = userId.toIntOrNull()
         if (uid != null) {
-            Thread {
-                val set = mutableSetOf<Int>()
+            val set = withContext(Dispatchers.IO) {
+                val s = mutableSetOf<Int>()
                 DatabaseHelper.processQuery(
                     "SELECT followed_user_id FROM user_follows WHERE follower_user_id = ?",
                     listOf(uid)
                 ) { rs ->
-                    while (rs.next()) set.add(rs.getInt(1))
+                    while (rs.next()) s.add(rs.getInt(1))
                     Unit
                 }
-                handler.post { followingIds = set }
-            }.start()
+                s
+            }
+            followingIds = set
+            Log.d("Perf", "RiderScreen RequestEnd: ${System.currentTimeMillis() - pageStart} ms")
         }
     }
 
     val onFollowToggle: (Int, Boolean) -> Unit = { targetUserId, shouldFollow ->
         userId.toIntOrNull()?.let { uid ->
-            Thread {
+            // 乐观更新，后台写库
+            if (shouldFollow) {
+                followingIds = followingIds + targetUserId
+            } else {
+                followingIds = followingIds - targetUserId
+            }
+            scope.launch(Dispatchers.IO) {
                 if (shouldFollow) {
                     DatabaseHelper.executeUpdate(
                         "INSERT IGNORE INTO user_follows (follower_user_id, followed_user_id) VALUES (?, ?)",
                         listOf(uid, targetUserId)
                     )
-                    handler.post { followingIds = followingIds + targetUserId }
                 } else {
                     DatabaseHelper.executeUpdate(
                         "DELETE FROM user_follows WHERE follower_user_id = ? AND followed_user_id = ?",
                         listOf(uid, targetUserId)
                     )
-                    handler.post { followingIds = followingIds - targetUserId }
                 }
-            }.start()
+            }
         }
     }
     Scaffold(
@@ -134,19 +154,27 @@ fun RiderScreen(onBack: () -> Unit, userId: String = "", navController: NavContr
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(12.dp)
             ) {
-                items(data) { rider ->
-                    val isSelf = rider.id.toString() == userId
-                    val isFollowing = followingIds.contains(rider.id)
-                    RiderRow(
-                        rider = rider,
-                        showFollow = !isSelf,
-                        isFollowing = isFollowing,
-                        onFollowClick = { onFollowToggle(rider.id, !isFollowing) },
-                        onAvatarClick = {
-                            navController?.navigate("${AppRoutes.USER_PROFILE_DETAIL}/${rider.id}")
-                        }
-                    )
-                    Divider()
+                if (data.isEmpty()) {
+                    items(8) {
+                        RiderSkeletonRow()
+                        Divider()
+                    }
+                } else {
+                    Log.d("Perf", "RiderScreen UIRender: ${System.currentTimeMillis() - pageStart} ms")
+                    items(data) { rider ->
+                        val isSelf = rider.id.toString() == userId
+                        val isFollowing = followingIds.contains(rider.id)
+                        RiderRow(
+                            rider = rider,
+                            showFollow = !isSelf,
+                            isFollowing = isFollowing,
+                            onFollowClick = { onFollowToggle(rider.id, !isFollowing) },
+                            onAvatarClick = {
+                                navController?.navigate("${AppRoutes.USER_PROFILE_DETAIL}/${rider.id}")
+                            }
+                        )
+                        Divider()
+                    }
                 }
             }
         }
@@ -198,9 +226,29 @@ private fun RiderRow(
     }
 }
 
+@Composable
+private fun RiderSkeletonRow() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(modifier = Modifier.size(48.dp).background(Color.LightGray.copy(alpha = 0.5f)))
+            Column(modifier = Modifier.padding(start = 12.dp)) {
+                Box(modifier = Modifier.width(120.dp).height(14.dp).background(Color.LightGray.copy(alpha = 0.5f)))
+                Spacer(modifier = Modifier.height(6.dp))
+                Box(modifier = Modifier.width(180.dp).height(12.dp).background(Color.LightGray.copy(alpha = 0.4f)))
+            }
+        }
+        Box(modifier = Modifier.width(60.dp).height(32.dp).background(Color.LightGray.copy(alpha = 0.5f)))
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 fun RiderScreenPreview() {
     RiderScreen(onBack = {})
 }
-

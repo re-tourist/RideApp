@@ -1,7 +1,9 @@
 package com.example.rideflow.ui.screens.community
 
-import android.os.Handler
-import android.os.Looper
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -31,6 +33,9 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Star
+import android.util.Log
+import android.util.Base64
+import androidx.compose.ui.platform.LocalContext
 
 // 用户详细信息数据类
 data class UserDetailInfo(
@@ -43,15 +48,26 @@ data class UserDetailInfo(
 
 @Composable
 fun CommunityScreen(navController: NavController, userId: String = "") {
-    val handler = Handler(Looper.getMainLooper())
     val allPosts = remember { mutableStateListOf<Post>() }
     val followingUserIds = remember { mutableStateOf(setOf<Int>()) }
+    var isLoading by remember { mutableStateOf(true) }
+    val scope = rememberCoroutineScope()
+    val pageStart = remember { System.currentTimeMillis() }
+    val context = LocalContext.current
+    var currentPage by rememberSaveable { mutableStateOf(0) }
+    val pageSize = 20
+    var hasMore by rememberSaveable { mutableStateOf(true) }
+    var isLoadingMore by remember { mutableStateOf(false) }
 
     // 统一跳转到个人主页；不再使用社区小卡片
 
     // 数据加载逻辑
     LaunchedEffect(userId) {
-        Thread {
+        val cached = loadCacheFirstPage(context)
+        if (cached.isNotEmpty()) {
+            allPosts.clear(); allPosts.addAll(cached)
+        }
+        val merged = withContext(Dispatchers.IO) {
             val posts = mutableListOf<Post>()
             val likesMap = mutableMapOf<Int, Int>()
             val commentsMap = mutableMapOf<Int, Int>()
@@ -67,7 +83,8 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
 
             // 2. 加载数据库中的帖子
             DatabaseHelper.processQuery(
-                "SELECT post_id, author_user_id, content_text, image_url, created_at FROM community_posts ORDER BY created_at DESC LIMIT 200"
+                "SELECT post_id, author_user_id, content_text, image_url, created_at FROM community_posts ORDER BY created_at DESC LIMIT ? OFFSET ?",
+                listOf(pageSize, currentPage * pageSize)
             ) { rs ->
                 while (rs.next()) {
                     val pid = rs.getInt(1)
@@ -98,21 +115,27 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
                 posts.replaceAll { p -> if (p.userName.isEmpty()) p.copy(userName = nameMap[p.id] ?: "未知用户") else p }
                 Unit
             }
-
-            val merged = posts.map { p -> p.copy(likes = likesMap[p.id] ?: p.likes, comments = commentsMap[p.id] ?: p.comments) }
-            handler.post { allPosts.clear(); allPosts.addAll(merged) }
-
-            // 加载关注列表
-            val uid = userId.toIntOrNull()
-            if (uid != null) {
-                val follows = mutableSetOf<Int>()
+            posts.map { p -> p.copy(likes = likesMap[p.id] ?: p.likes, comments = commentsMap[p.id] ?: p.comments) }
+        }
+        allPosts.clear(); allPosts.addAll(merged)
+        isLoading = false
+        hasMore = merged.size >= pageSize
+        Log.d("Perf", "CommunityScreen RequestEnd: ${System.currentTimeMillis() - pageStart} ms")
+        if (currentPage == 0 && merged.isNotEmpty()) {
+            saveCacheFirstPage(context, merged)
+        }
+        val uid = userId.toIntOrNull()
+        if (uid != null) {
+            val follows = withContext(Dispatchers.IO) {
+                val f = mutableSetOf<Int>()
                 DatabaseHelper.processQuery("SELECT followed_user_id FROM user_follows WHERE follower_user_id = ?", listOf(uid)) { frs ->
-                    while (frs.next()) follows.add(frs.getInt(1))
+                    while (frs.next()) f.add(frs.getInt(1))
                     Unit
                 }
-                handler.post { followingUserIds.value = follows }
+                f
             }
-        }.start()
+            followingUserIds.value = follows
+        }
     }
 
     // 页面状态
@@ -158,12 +181,50 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
                 )
             }
 
-            when (selectedCategory) {
-                "关注动态" -> CommunityFollowingScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick, onPostClick)
-                "热门动态" -> CommunityHotScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick, onPostClick)
+            if (isLoading && allPosts.isEmpty()) {
+                PostListSkeleton()
+            } else {
+                Log.d("Perf", "CommunityScreen UIRender: ${System.currentTimeMillis() - pageStart} ms")
+                when (selectedCategory) {
+                "关注动态" -> CommunityFollowingScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick, onPostClick, hasMore, isLoadingMore, onLoadMore = {
+                    if (hasMore && !isLoadingMore) {
+                        scope.launch {
+                            isLoadingMore = true
+                            currentPage += 1
+                            val next = withContext(Dispatchers.IO) { loadPage(currentPage, pageSize) }
+                            allPosts.addAll(next)
+                            hasMore = next.size >= pageSize
+                            isLoadingMore = false
+                        }
+                    }
+                })
+                "热门动态" -> CommunityHotScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick, onPostClick, hasMore, isLoadingMore, onLoadMore = {
+                    if (hasMore && !isLoadingMore) {
+                        scope.launch {
+                            isLoadingMore = true
+                            currentPage += 1
+                            val next = withContext(Dispatchers.IO) { loadPage(currentPage, pageSize) }
+                            allPosts.addAll(next)
+                            hasMore = next.size >= pageSize
+                            isLoadingMore = false
+                        }
+                    }
+                })
                 "社区交易" -> CommunityTradeScreen()
                 "俱乐部" -> CommunityClubPortalScreen(navController = navController, allPosts = allPosts)
-                else -> CommunityHotScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick, onPostClick)
+                else -> CommunityHotScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick, onPostClick, hasMore, isLoadingMore, onLoadMore = {
+                    if (hasMore && !isLoadingMore) {
+                        scope.launch {
+                            isLoadingMore = true
+                            currentPage += 1
+                            val next = withContext(Dispatchers.IO) { loadPage(currentPage, pageSize) }
+                            allPosts.addAll(next)
+                            hasMore = next.size >= pageSize
+                            isLoadingMore = false
+                        }
+                    }
+                })
+                }
             }
         }
     }
@@ -177,6 +238,82 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
 
     // 统一使用个人主页，不再弹出用户小卡片
 }
+
+private suspend fun loadPage(page: Int, pageSize: Int): List<Post> {
+    val posts = mutableListOf<Post>()
+    DatabaseHelper.processQuery(
+        "SELECT post_id, author_user_id, content_text, image_url, created_at FROM community_posts ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        listOf(pageSize, page * pageSize)
+    ) { rs ->
+        while (rs.next()) {
+            val pid = rs.getInt(1)
+            val uid = rs.getInt(2)
+            val content = rs.getString(3) ?: ""
+            val img = rs.getString(4) ?: "[图片]"
+            val created = rs.getTimestamp(5)
+            val timeStr = if (created != null) SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(created) else ""
+            posts.add(Post(pid, uid, Icons.Default.Person, "", timeStr, content, img, 0, 0))
+        }
+        Unit
+    }
+    val nameMap = mutableMapOf<Int, String>()
+    DatabaseHelper.processQuery(
+        "SELECT p.post_id, u.nickname, c.name FROM community_posts p LEFT JOIN users u ON p.author_user_id = u.user_id LEFT JOIN clubs c ON p.club_id = c.club_id LIMIT ? OFFSET ?",
+        listOf(pageSize, page * pageSize)
+    ) { rs ->
+        while (rs.next()) {
+            val pid = rs.getInt(1)
+            val nick = rs.getString(2)
+            val clubName = rs.getString(3)
+            val displayName = if (!clubName.isNullOrEmpty()) clubName else (nick ?: "未知用户")
+            nameMap[pid] = displayName
+        }
+        Unit
+    }
+    return posts.map { p -> if (p.userName.isEmpty()) p.copy(userName = nameMap[p.id] ?: "未知用户") else p }
+}
+
+private fun saveCacheFirstPage(context: android.content.Context, posts: List<Post>) {
+    val sp = context.getSharedPreferences("rideflow_cache", android.content.Context.MODE_PRIVATE)
+    val lines = posts.take(40).joinToString("\n") { p ->
+        listOf(
+            p.id.toString(),
+            p.userId.toString(),
+            enc(p.userName),
+            enc(p.timeAgo),
+            enc(p.content),
+            enc(p.imagePlaceholder),
+            p.likes.toString(),
+            p.comments.toString()
+        ).joinToString("|")
+    }
+    sp.edit().putString("community_first_page", lines).apply()
+}
+
+private fun loadCacheFirstPage(context: android.content.Context): List<Post> {
+    val sp = context.getSharedPreferences("rideflow_cache", android.content.Context.MODE_PRIVATE)
+    val s = sp.getString("community_first_page", null) ?: return emptyList()
+    return s.lines().mapNotNull { line ->
+        val parts = line.split("|")
+        if (parts.size < 8) return@mapNotNull null
+        try {
+            val id = parts[0].toInt()
+            val uid = parts[1].toInt()
+            val userName = dec(parts[2])
+            val timeAgo = dec(parts[3])
+            val content = dec(parts[4])
+            val imagePH = dec(parts[5])
+            val likes = parts[6].toInt()
+            val comments = parts[7].toInt()
+            Post(id, uid, Icons.Default.Person, userName, timeAgo, content, imagePH, likes, comments)
+        } catch (e: Exception) {
+            null
+        }
+    }
+}
+
+private fun enc(s: String): String = Base64.encodeToString(s.toByteArray(), Base64.NO_WRAP)
+private fun dec(s: String): String = String(Base64.decode(s, Base64.NO_WRAP))
 
 @Composable
 fun UserDetailInfoDialog(

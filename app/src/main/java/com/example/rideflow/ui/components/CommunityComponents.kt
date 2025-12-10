@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import com.example.rideflow.model.*
+import androidx.compose.ui.draw.clip
 
 // ------------------------------------
 // 1. 顶部搜索栏
@@ -74,6 +75,54 @@ fun TopSearchBar(isSearching: Boolean, onSearchToggle: (Boolean) -> Unit) {
         }
     }
     HorizontalDivider(color = Color(0xFFF0F0F0))
+}
+
+@Composable
+fun PostListSkeleton(count: Int = 6) {
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        repeat(count) {
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.LightGray.copy(alpha = 0.5f)))
+                        Spacer(Modifier.width(8.dp))
+                        Column {
+                            Box(modifier = Modifier.width(120.dp).height(12.dp).background(Color.LightGray.copy(alpha = 0.5f)))
+                            Spacer(Modifier.height(6.dp))
+                            Box(modifier = Modifier.width(80.dp).height(10.dp).background(Color.LightGray.copy(alpha = 0.4f)))
+                        }
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Box(modifier = Modifier.fillMaxWidth().height(16.dp).background(Color.LightGray.copy(alpha = 0.5f)))
+                    Spacer(Modifier.height(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(160.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.LightGray.copy(alpha = 0.3f))
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun LoadMoreFooter(hasMore: Boolean, isLoadingMore: Boolean, onLoadMore: () -> Unit) {
+    Column(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        if (hasMore) {
+            Button(onClick = onLoadMore, enabled = !isLoadingMore) {
+                Text(if (isLoadingMore) "正在加载..." else "加载更多")
+            }
+        } else {
+            Text("没有更多了", color = Color.Gray)
+        }
+    }
 }
 
 // ------------------------------------

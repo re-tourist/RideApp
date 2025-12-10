@@ -1,6 +1,7 @@
 package com.example.rideflow.ui.screens
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -33,8 +34,12 @@ import androidx.compose.ui.unit.sp
 import com.example.rideflow.R
 import com.example.rideflow.navigation.AppRoutes
 import com.example.rideflow.backend.DatabaseHelper
-import android.os.Handler
-import android.os.Looper
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalContext
+import android.util.Base64
+import android.util.Log
 
 // 模拟数据类
 object DiscoverNavigatorState { var openRouteBook: Boolean = false }
@@ -47,8 +52,8 @@ data class Article(
     val views: Int
 )
 
-private fun loadArticles(handler: Handler, onLoaded: (List<Article>) -> Unit) {
-    Thread {
+private suspend fun loadArticlesIO(): List<Article> {
+    return withContext(Dispatchers.IO) {
         val list = mutableListOf<Article>()
         DatabaseHelper.processQuery(
             "SELECT a.article_id, a.title, u.nickname, a.publish_date, a.views, a.image_url FROM articles a JOIN users u ON a.author_id = u.user_id ORDER BY a.publish_date DESC LIMIT 20"
@@ -62,10 +67,10 @@ private fun loadArticles(handler: Handler, onLoaded: (List<Article>) -> Unit) {
                 val img = rs.getString(6) ?: "https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg"
                 list.add(Article(id, title, author, img, date, views))
             }
-            handler.post { onLoaded(list) }
             Unit
         }
-    }.start()
+        list
+    }
 }
 
 @Composable
@@ -77,20 +82,36 @@ fun DiscoverScreen(navController: androidx.navigation.NavController, userId: Str
             DiscoverNavigatorState.openRouteBook = false
         }
     }
-    val handler = Handler(Looper.getMainLooper())
+    val context = LocalContext.current
     var banners by remember { mutableStateOf<List<String>>(emptyList()) }
     var recommendedRaces by remember { mutableStateOf<List<Race>>(emptyList()) }
     var recommendedActivities by remember { mutableStateOf<List<Activity>>(emptyList()) }
     var recommendedClubs by remember { mutableStateOf<List<Club>>(emptyList()) }
+    var isLoadingRaces by remember { mutableStateOf(true) }
+    var isLoadingActivities by remember { mutableStateOf(true) }
+    var isLoadingClubs by remember { mutableStateOf(true) }
+    val pageStart = remember { System.currentTimeMillis() }
     LaunchedEffect(Unit) {
         banners = listOf(
             "https://rideapp.oss-cn-hangzhou.aliyuncs.com/recommend/22de9d074c1216b8b16d2bb448665a5f.jpg",
             "https://rideapp.oss-cn-hangzhou.aliyuncs.com/recommend/2f84ddd2eb35ad0e9cd155533388df8e.jpg",
             "https://rideapp.oss-cn-hangzhou.aliyuncs.com/recommend/4a3941c35bb891a6bc108405f498837b.jpg"
         )
-        Thread { loadRecommendedRaces(handler) { list -> recommendedRaces = list } }.start()
-        Thread { loadRecommendedActivities(handler) { list -> recommendedActivities = list } }.start()
-        Thread { loadRecommendedClubs(handler) { list -> recommendedClubs = list } }.start()
+        val cache = loadDiscoverCache(context)
+        if (cache.first.isNotEmpty()) recommendedRaces = cache.first
+        if (cache.second.isNotEmpty()) recommendedActivities = cache.second
+        if (cache.third.isNotEmpty()) recommendedClubs = cache.third
+        val races = loadRecommendedRacesIO()
+        recommendedRaces = races
+        isLoadingRaces = false
+        val activities = loadRecommendedActivitiesIO()
+        recommendedActivities = activities
+        isLoadingActivities = false
+        val clubs = loadRecommendedClubsIO()
+        recommendedClubs = clubs
+        isLoadingClubs = false
+        saveDiscoverCache(context, races, activities, clubs)
+        Log.d("Perf", "DiscoverScreen RequestEnd: ${System.currentTimeMillis() - pageStart} ms")
     }
     when (subPage) {
         DiscoverSubPage.Main -> {
@@ -115,11 +136,18 @@ fun DiscoverScreen(navController: androidx.navigation.NavController, userId: Str
                     Text(text = "推荐的赛事：", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(12.dp))
                     LazyRow(contentPadding = PaddingValues(horizontal = 4.dp)) {
-                        items(recommendedRaces) { race ->
-                            RaceHorizontalCard(race = race) {
-                                navController.navigate("${AppRoutes.RACE_DETAIL}/${race.id}")
+                        if (recommendedRaces.isEmpty() && isLoadingRaces) {
+                            items(3) {
+                                RaceCardSkeleton()
+                                Spacer(modifier = Modifier.width(12.dp))
                             }
-                            Spacer(modifier = Modifier.width(12.dp))
+                        } else {
+                            items(recommendedRaces) { race ->
+                                RaceHorizontalCard(race = race) {
+                                    navController.navigate("${AppRoutes.RACE_DETAIL}/${race.id}")
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                            }
                         }
                     }
                     Spacer(modifier = Modifier.height(24.dp))
@@ -128,11 +156,18 @@ fun DiscoverScreen(navController: androidx.navigation.NavController, userId: Str
                     Text(text = "推荐的活动：", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(12.dp))
                     LazyRow(contentPadding = PaddingValues(horizontal = 4.dp)) {
-                        items(recommendedActivities) { activity ->
-                            ActivityHorizontalCard(activity = activity) {
-                                navController.navigate("${AppRoutes.ACTIVITY_DETAIL}/${activity.id}")
+                        if (recommendedActivities.isEmpty() && isLoadingActivities) {
+                            items(3) {
+                                ActivityCardSkeleton()
+                                Spacer(modifier = Modifier.width(12.dp))
                             }
-                            Spacer(modifier = Modifier.width(12.dp))
+                        } else {
+                            items(recommendedActivities) { activity ->
+                                ActivityHorizontalCard(activity = activity) {
+                                    navController.navigate("${AppRoutes.ACTIVITY_DETAIL}/${activity.id}")
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                            }
                         }
                     }
                     Spacer(modifier = Modifier.height(24.dp))
@@ -141,11 +176,18 @@ fun DiscoverScreen(navController: androidx.navigation.NavController, userId: Str
                     Text(text = "推荐的俱乐部：", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(12.dp))
                     LazyRow(contentPadding = PaddingValues(horizontal = 4.dp)) {
-                        items(recommendedClubs) { club ->
-                            ClubHorizontalCard(club = club) {
-                                navController.navigate("club_detail/${club.id}")
+                        if (recommendedClubs.isEmpty() && isLoadingClubs) {
+                            items(3) {
+                                ClubCardSkeleton()
+                                Spacer(modifier = Modifier.width(12.dp))
                             }
-                            Spacer(modifier = Modifier.width(12.dp))
+                        } else {
+                            items(recommendedClubs) { club ->
+                                ClubHorizontalCard(club = club) {
+                                    navController.navigate("club_detail/${club.id}")
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                            }
                         }
                     }
                 }
@@ -320,8 +362,8 @@ fun ArticleCard(article: Article) {
     }
 }
 
-private fun loadRecommendedRaces(handler: Handler, onLoaded: (List<Race>) -> Unit) {
-    Thread {
+private suspend fun loadRecommendedRacesIO(): List<Race> {
+    return withContext(Dispatchers.IO) {
         val list = mutableListOf<Race>()
         DatabaseHelper.processQuery("SELECT event_id, title, event_date, location, event_type, is_open, cover_image_url FROM events ORDER BY event_date DESC LIMIT 30") { rs ->
             while (rs.next()) {
@@ -342,14 +384,14 @@ private fun loadRecommendedRaces(handler: Handler, onLoaded: (List<Race>) -> Uni
                     list.add(Race(id, title, "时间：" + (if (date.isNotEmpty()) date.substring(0, 10) else "待定"), "地点：" + loc, if (tags.isEmpty()) listOf(type) else tags, R.drawable.ic_launcher_foreground, coverUrl, open, false))
                 }
             }
-            handler.post { onLoaded(list.take(10)) }
             Unit
         }
-    }.start()
+        list.take(10)
+    }
 }
 
-private fun loadRecommendedActivities(handler: Handler, onLoaded: (List<Activity>) -> Unit) {
-    Thread {
+private suspend fun loadRecommendedActivitiesIO(): List<Activity> {
+    return withContext(Dispatchers.IO) {
         val list = mutableListOf<Activity>()
         DatabaseHelper.processQuery("SELECT event_id, title, event_date, location, event_type, is_open, cover_image_url FROM events ORDER BY event_date DESC LIMIT 30") { rs ->
             while (rs.next()) {
@@ -370,14 +412,14 @@ private fun loadRecommendedActivities(handler: Handler, onLoaded: (List<Activity
                     list.add(Activity(id, title, "时间：" + (if (date.isNotEmpty()) date.substring(0, 16) else "待定"), "地点：" + loc, if (tags.isEmpty()) listOf(type) else tags, R.drawable.ic_launcher_foreground, coverUrl, open, false))
                 }
             }
-            handler.post { onLoaded(list.take(10)) }
             Unit
         }
-    }.start()
+        list.take(10)
+    }
 }
 
-private fun loadRecommendedClubs(handler: Handler, onLoaded: (List<Club>) -> Unit) {
-    Thread {
+private suspend fun loadRecommendedClubsIO(): List<Club> {
+    return withContext(Dispatchers.IO) {
         val list = mutableListOf<Club>()
         DatabaseHelper.processQuery("SELECT club_id, name, city, logo_url, members_count, heat FROM clubs ORDER BY heat DESC LIMIT 20") { rs ->
             while (rs.next()) {
@@ -389,10 +431,93 @@ private fun loadRecommendedClubs(handler: Handler, onLoaded: (List<Club>) -> Uni
                 val heat = rs.getInt(6)
                 list.add(Club(id, name, city, members, heat, R.drawable.ic_launcher_foreground, logo))
             }
-            handler.post { onLoaded(list.take(10)) }
             Unit
         }
-    }.start()
+        list.take(10)
+    }
+}
+
+@Composable
+fun RaceCardSkeleton() {
+    Card(modifier = Modifier.width(280.dp).height(220.dp)) {
+        Column {
+            Box(modifier = Modifier.height(140.dp).fillMaxWidth().background(Color.LightGray.copy(alpha = 0.3f)))
+            Column(modifier = Modifier.padding(12.dp)) {
+                Box(modifier = Modifier.width(160.dp).height(16.dp).background(Color.LightGray.copy(alpha = 0.5f)))
+                Spacer(modifier = Modifier.height(8.dp))
+                Box(modifier = Modifier.width(120.dp).height(12.dp).background(Color.LightGray.copy(alpha = 0.4f)))
+            }
+        }
+    }
+}
+
+@Composable
+fun ActivityCardSkeleton() {
+    Card(modifier = Modifier.width(280.dp).height(220.dp)) {
+        Column {
+            Box(modifier = Modifier.height(140.dp).fillMaxWidth().background(Color.LightGray.copy(alpha = 0.3f)))
+            Column(modifier = Modifier.padding(12.dp)) {
+                Box(modifier = Modifier.width(160.dp).height(16.dp).background(Color.LightGray.copy(alpha = 0.5f)))
+                Spacer(modifier = Modifier.height(8.dp))
+                Box(modifier = Modifier.width(120.dp).height(12.dp).background(Color.LightGray.copy(alpha = 0.4f)))
+            }
+        }
+    }
+}
+
+@Composable
+fun ClubCardSkeleton() {
+    Card(modifier = Modifier.width(260.dp).height(120.dp)) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(modifier = Modifier.size(56.dp).background(Color.LightGray.copy(alpha = 0.3f)))
+                Column(modifier = Modifier.padding(start = 12.dp)) {
+                    Box(modifier = Modifier.width(120.dp).height(16.dp).background(Color.LightGray.copy(alpha = 0.5f)))
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Box(modifier = Modifier.width(80.dp).height(12.dp).background(Color.LightGray.copy(alpha = 0.4f)))
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(modifier = Modifier.width(60.dp).height(12.dp).background(Color.LightGray.copy(alpha = 0.3f)))
+                Spacer(modifier = Modifier.width(24.dp))
+                Box(modifier = Modifier.width(60.dp).height(12.dp).background(Color.LightGray.copy(alpha = 0.3f)))
+            }
+        }
+    }
+}
+
+private fun saveDiscoverCache(context: android.content.Context, races: List<Race>, activities: List<Activity>, clubs: List<Club>) {
+    val sp = context.getSharedPreferences("rideflow_cache", android.content.Context.MODE_PRIVATE)
+    fun enc(s: String) = Base64.encodeToString(s.toByteArray(), Base64.NO_WRAP)
+    val r = races.take(10).joinToString("\n") { x -> listOf(x.id.toString(), enc(x.title), enc(x.date), enc(x.imageUrl ?: ""), enc(x.location)).joinToString("|") }
+    val a = activities.take(10).joinToString("\n") { x -> listOf(x.id.toString(), enc(x.title), enc(x.date), enc(x.imageUrl ?: ""), enc(x.location)).joinToString("|") }
+    val c = clubs.take(10).joinToString("\n") { x -> listOf(x.id.toString(), enc(x.name), enc(x.city), enc(x.logoUrl ?: ""), x.members.toString(), x.heat.toString()).joinToString("|") }
+    sp.edit().putString("discover_races_first", r).putString("discover_activities_first", a).putString("discover_clubs_first", c).apply()
+}
+
+private fun loadDiscoverCache(context: android.content.Context): Triple<List<Race>, List<Activity>, List<Club>> {
+    val sp = context.getSharedPreferences("rideflow_cache", android.content.Context.MODE_PRIVATE)
+    fun dec(s: String) = String(Base64.decode(s, Base64.NO_WRAP))
+    val r = sp.getString("discover_races_first", null)?.lines()?.mapNotNull { line ->
+        val p = line.split("|")
+        if (p.size < 5) null else try {
+            Race(p[0].toInt(), dec(p[1]), dec(p[2]), dec(p[4]), emptyList(), R.drawable.ic_launcher_foreground, dec(p[3]).ifEmpty { null }, false, false)
+        } catch (e: Exception) { null }
+    } ?: emptyList()
+    val a = sp.getString("discover_activities_first", null)?.lines()?.mapNotNull { line ->
+        val p = line.split("|")
+        if (p.size < 5) null else try {
+            Activity(p[0].toInt(), dec(p[1]), dec(p[2]), dec(p[4]), emptyList(), R.drawable.ic_launcher_foreground, dec(p[3]).ifEmpty { null }, false, false)
+        } catch (e: Exception) { null }
+    } ?: emptyList()
+    val c = sp.getString("discover_clubs_first", null)?.lines()?.mapNotNull { line ->
+        val p = line.split("|")
+        if (p.size < 6) null else try {
+            Club(p[0].toInt(), dec(p[1]), dec(p[2]), p[4].toInt(), p[5].toInt(), R.drawable.ic_launcher_foreground, dec(p[3]).ifEmpty { null })
+        } catch (e: Exception) { null }
+    } ?: emptyList()
+    return Triple(r, a, c)
 }
 
 @Composable
