@@ -168,6 +168,9 @@ fun RegisterScreen(navController: NavController? = null, authViewModel: AuthView
                 leadingIcon = {
                     Icon(imageVector = Icons.Filled.Lock, contentDescription = null)
                 },
+                trailingIcon = {
+                    Icon(imageVector = Icons.Filled.Lock, contentDescription = "密码")
+                },
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 modifier = Modifier
@@ -183,6 +186,9 @@ fun RegisterScreen(navController: NavController? = null, authViewModel: AuthView
                 label = { Text("确认密码") },
                 leadingIcon = {
                     Icon(imageVector = Icons.Filled.Lock, contentDescription = null)
+                },
+                trailingIcon = {
+                    Icon(imageVector = Icons.Filled.Lock, contentDescription = "确认密码")
                 },
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -218,14 +224,10 @@ fun RegisterScreen(navController: NavController? = null, authViewModel: AuthView
             }
 
             // 登录链接
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(text = "已有账号？", fontSize = 14.sp)
-                TextButton(onClick = { navController?.navigate(AppRoutes.LOGIN) }, contentPadding = PaddingValues(0.dp)) {
-                    Text(text = "立即登录", fontSize = 14.sp)
+            Row(modifier = Modifier.padding(top = 16.dp)) {
+                Text(text = "已有账号？")
+                TextButton(onClick = { navController?.navigate(AppRoutes.LOGIN) }) {
+                    Text(text = "立即登录")
                 }
             }
         }

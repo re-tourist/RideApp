@@ -2,9 +2,9 @@ package com.example.rideflow.ui.screens
 
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable // 引入 rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
@@ -12,42 +12,35 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Star
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController // 添加缺失的引用
-import com.example.rideflow.ui.screens.community.CommunityScreen
+import com.example.rideflow.R
 
 @Composable
-fun MainScreen(navController: NavController, userId: String = "", startTab: String = "sport") {
+fun MainScreen(navController: NavController) {
     val navItems = listOf(
         NavItem(
             title = "运动",
             icon = Icons.Filled.Star,
-            screen = { RideScreen(navController) }
+            screen = { RideScreen() }
         ),
         NavItem(
             title = "发现",
             icon = Icons.Filled.Home,
-            screen = { DiscoverScreen(navController, userId = userId) }
+            screen = { DiscoverScreen() }
         ),
         NavItem(
             title = "社区",
             icon = Icons.Filled.List,
-            screen = { CommunityScreen(navController = navController, userId = userId) }
+            screen = { CommunityScreen() }
         ),
         NavItem(
             title = "我的",
             icon = Icons.Filled.Person,
-            screen = { ProfileScreen(navController = navController, userId = userId) }
+            screen = { ProfileScreen(navController = navController) }
         )
     )
-    // 使用 rememberSaveable 保存选中状态，既支持路由初始tab，又防止返回时重置
-    val initialIndex = when (startTab) {
-        "sport" -> 0
-        "discover" -> 1
-        "community" -> 2
-        "profile" -> 3
-        else -> 0
-    }
-    var currentIndex by rememberSaveable(startTab) { mutableIntStateOf(initialIndex) }
+    
+    var currentIndex by remember { mutableStateOf(1) } // 默认选中发现页面
+    
     Scaffold(
         modifier = Modifier,
         bottomBar = {
@@ -79,18 +72,19 @@ fun MainScreen(navController: NavController, userId: String = "", startTab: Stri
             }
         }
     ) {
-        navItems[currentIndex].screen(navController)
+        navItems[currentIndex].screen()
     }
 }
 
 data class NavItem(
     val title: String,
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
-    val screen: @Composable (NavController) -> Unit
+    val screen: @Composable () -> Unit
 )
 
 @Preview(showBackground = true)
 @Composable
 fun MainScreenPreview() {
+    // 预览时使用默认参数
     MainScreen(navController = androidx.navigation.compose.rememberNavController())
 }

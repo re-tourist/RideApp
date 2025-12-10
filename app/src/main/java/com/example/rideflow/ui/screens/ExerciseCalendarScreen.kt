@@ -12,9 +12,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,10 +22,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavController
-import com.example.rideflow.backend.DatabaseHelper
-import com.example.rideflow.navigation.AppRoutes
-import android.os.Handler
-import android.os.Looper
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.TextStyle
@@ -36,49 +29,17 @@ import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExerciseCalendarScreen(navController: NavController, userId: String) {
+fun ExerciseCalendarScreen(navController: NavController) {
     // 当前显示的月份
     val currentMonth = remember { mutableStateOf(YearMonth.now()) }
-    val exerciseDates = remember { mutableStateOf(setOf<LocalDate>()) }
-    var totalDistanceKm by remember { mutableStateOf(0.0) }
-    var totalDurationSec by remember { mutableStateOf(0) }
-    var totalCount by remember { mutableStateOf(0) }
-    val handler = Handler(Looper.getMainLooper())
-    LaunchedEffect(currentMonth.value, userId) {
-        val uid = userId.toIntOrNull()
-        if (uid != null) {
-            Thread {
-                val ym = currentMonth.value
-                val start = ym.atDay(1).toString() + " 00:00:00"
-                val end = ym.plusMonths(1).atDay(1).toString() + " 00:00:00"
-                val days = mutableSetOf<LocalDate>()
-                var sumDist = 0.0
-                var sumDur = 0
-                var cnt = 0
-                DatabaseHelper.processQuery(
-                    "SELECT DATE(start_time) AS d, SUM(distance_km), SUM(duration_sec), COUNT(*) FROM user_ride_records WHERE user_id = ? AND start_time >= ? AND start_time < ? GROUP BY d",
-                    listOf(uid, start, end)
-                ) { rs ->
-                    while (rs.next()) {
-                        val d = LocalDate.parse(rs.getString(1))
-                        val dist = rs.getDouble(2)
-                        val dur = rs.getInt(3)
-                        val c = rs.getInt(4)
-                        days.add(d)
-                        sumDist += dist
-                        sumDur += dur
-                        cnt += c
-                    }
-                    handler.post {
-                        exerciseDates.value = days
-                        totalDistanceKm = sumDist
-                        totalDurationSec = sumDur
-                        totalCount = cnt
-                    }
-                    Unit
-                }
-            }.start()
-        }
+    // 模拟有运动记录的日期
+    val exerciseDates = remember {
+        mutableStateOf(setOf(
+            LocalDate.of(2025, 11, 5),
+            LocalDate.of(2025, 11, 12),
+            LocalDate.of(2025, 11, 18),
+            LocalDate.of(2025, 11, 24)
+        ))
     }
 
     Scaffold(
@@ -86,7 +47,7 @@ fun ExerciseCalendarScreen(navController: NavController, userId: String) {
             TopAppBar(
                 title = { Text(text = "运动日历") },
                 navigationIcon = {
-                    IconButton(onClick = { navController.navigate("${AppRoutes.MAIN}?tab=profile") }) {
+                    IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
                             contentDescription = "返回"
@@ -136,10 +97,10 @@ fun ExerciseCalendarScreen(navController: NavController, userId: String) {
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceAround
                     ) {
-                        CalendarStatItem("运动里程(km)", String.format(Locale.getDefault(), "%.2f", totalDistanceKm))
-                        CalendarStatItem("运动时间(h)", String.format(Locale.getDefault(), "%.1f", totalDurationSec / 3600.0))
+                        CalendarStatItem("运动里程(km)", "0")
+                        CalendarStatItem("运动时间(h)", "0")
                         CalendarStatItem("累计爬升(m)", "0")
-                        CalendarStatItem("运动次数", totalCount.toString())
+                        CalendarStatItem("运动次数", "0")
                     }
                 }
             }
@@ -264,5 +225,5 @@ fun CalendarGrid(yearMonth: YearMonth, exerciseDates: Set<LocalDate>) {
 @Preview(showBackground = true)
 @Composable
 fun ExerciseCalendarScreenPreview() {
-    ExerciseCalendarScreen(navController = androidx.navigation.compose.rememberNavController(), userId = "1")
+    ExerciseCalendarScreen(navController = androidx.navigation.compose.rememberNavController())
 }

@@ -27,7 +27,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -36,13 +36,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.rideflow.backend.DatabaseHelper
-import com.example.rideflow.navigation.AppRoutes
-import android.os.Handler
-import android.os.Looper
-import java.text.SimpleDateFormat
-import java.util.Locale
-import java.util.Date
 
 data class ActivityItem(
     val id: Int,
@@ -67,13 +60,13 @@ val mockActivities = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MyActivitiesScreen(navController: NavController, userId: String = "") {
+fun MyActivitiesScreen(navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(text = "我的活动", fontSize = 18.sp, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.navigate("${AppRoutes.MAIN}?tab=profile") }) {
+                    IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
                             imageVector = Icons.Filled.ArrowBack,
                             contentDescription = "返回"
@@ -84,78 +77,12 @@ fun MyActivitiesScreen(navController: NavController, userId: String = "") {
             )
         }
     ) { innerPadding ->
-        val handler = Handler(Looper.getMainLooper())
-        var activities by remember { mutableStateOf<List<ActivityItem>>(emptyList()) }
-        var completedCount by remember { mutableStateOf(0) }
-        var inProgressCount by remember { mutableStateOf(0) }
-        var upcomingCount by remember { mutableStateOf(0) }
-        var totalDistanceStr by remember { mutableStateOf("—") }
-        LaunchedEffect(userId) {
-            val uid = userId.toIntOrNull()
-            if (uid != null) {
-                Thread {
-                    val list = mutableListOf<ActivityItem>()
-                    val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-                    DatabaseHelper.processQuery(
-                        "SELECT ue.user_event_id, e.title, e.event_date, e.location, e.event_type, ue.status, COALESCE(s.distance_km, 0), COALESCE(s.duration_seconds, 0) FROM user_events ue JOIN events e ON ue.event_id = e.event_id LEFT JOIN user_event_stats s ON s.user_id = ue.user_id AND s.event_id = ue.event_id WHERE ue.user_id = ? ORDER BY e.event_date DESC",
-                        listOf(uid)
-                    ) { rs ->
-                        while (rs.next()) {
-                            val id = rs.getInt(1)
-                            val title = rs.getString(2) ?: "活动"
-                            val ts = rs.getTimestamp(3)
-                            val dateStr = if (ts != null) sdf.format(Date(ts.time)) else ""
-                            val location = rs.getString(4) ?: ""
-                            val eventType = rs.getString(5) ?: "其他"
-                            val statusStr = rs.getString(6) ?: "upcoming"
-                            val distKm = rs.getDouble(7)
-                            val durSec = rs.getInt(8)
-                            val type = when (eventType) {
-                                "骑行" -> ActivityType.CYCLE
-                                "越野跑" -> ActivityType.RUNNING
-                                "徒步" -> ActivityType.WALKING
-                                else -> ActivityType.WALKING
-                            }
-                            val status = when (statusStr) {
-                                "completed" -> ActivityStatus.COMPLETED
-                                "in_progress" -> ActivityStatus.IN_PROGRESS
-                                "upcoming" -> ActivityStatus.UPCOMING
-                                else -> ActivityStatus.UPCOMING
-                            }
-                            list.add(
-                                ActivityItem(
-                                    id = id,
-                                    title = title,
-                                    date = dateStr,
-                                    location = location,
-                                    distance = if (distKm > 0.0) String.format(Locale.getDefault(), "%.2f km", distKm) else "—",
-                                    duration = formatDuration(durSec),
-                                    type = type,
-                                    status = status
-                                )
-                            )
-                        }
-                        handler.post {
-                            activities = list
-                            completedCount = list.count { it.status == ActivityStatus.COMPLETED }
-                            inProgressCount = list.count { it.status == ActivityStatus.IN_PROGRESS }
-                            upcomingCount = list.count { it.status == ActivityStatus.UPCOMING }
-                            val total = list.filter { it.type == ActivityType.CYCLE && it.status == ActivityStatus.COMPLETED }
-                                .mapNotNull { runCatching { it.distance.replace("km", "").trim().toDouble() }.getOrNull() }
-                                .sum()
-                            totalDistanceStr = if (total > 0.0) String.format(Locale.getDefault(), "%.2f km", total) else "—"
-                        }
-                        Unit
-                    }
-                }.start()
-            }
-        }
         LazyColumn(modifier = Modifier.fillMaxSize().padding(innerPadding), contentPadding = PaddingValues(16.dp)) {
             item {
-                ActivityStatsCard(completed = completedCount.toString(), inProgress = inProgressCount.toString(), upcoming = upcomingCount.toString(), totalDistance = totalDistanceStr)
+                ActivityStatsCard()
                 Spacer(modifier = Modifier.height(16.dp))
             }
-            items(activities) { activity ->
+            items(mockActivities) { activity ->
                 ActivityCard(activity)
                 Spacer(modifier = Modifier.height(12.dp))
             }
@@ -163,23 +90,16 @@ fun MyActivitiesScreen(navController: NavController, userId: String = "") {
     }
 }
 
-private fun formatDuration(seconds: Int): String {
-    if (seconds <= 0) return "—"
-    val h = seconds / 3600
-    val m = (seconds % 3600) / 60
-    return if (h > 0) "${h}小时${m}分钟" else "${m}分钟"
-}
-
 @Composable
-fun ActivityStatsCard(completed: String, inProgress: String, upcoming: String, totalDistance: String) {
+fun ActivityStatsCard() {
     Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = "活动统计", fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 16.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                ActivityStatItem("已完成", completed)
-                ActivityStatItem("进行中", inProgress)
-                ActivityStatItem("即将到来", upcoming)
-                ActivityStatItem("总距离", totalDistance)
+                ActivityStatItem("已完成", "2")
+                ActivityStatItem("进行中", "1")
+                ActivityStatItem("即将到来", "1")
+                ActivityStatItem("总距离", "70.4km")
             }
         }
     }
