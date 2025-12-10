@@ -1,6 +1,7 @@
 package com.example.rideflow.ui.screens
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -20,6 +21,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.rideflow.R
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.navigation.NavController
+import com.example.rideflow.navigation.AppRoutes
+import com.example.rideflow.backend.DatabaseHelper
+import android.os.Handler
+import android.os.Looper
+import coil.compose.AsyncImage
 
 data class RouteBook(
     val id: Int,
@@ -29,21 +36,51 @@ data class RouteBook(
     val location: String,
     val tags: List<String>,
     val coverImage: Int,
-    val difficulty: String
+    val coverImageUrl: String? = null,
+    val difficulty: String,
+    val favoriteCount: Int = 0
 )
 
 private val routeCategories = listOf("热门", "周边", "长距离", "爬坡", "休闲")
 
-private val mockRoutes = listOf(
-    RouteBook(1, "滨江环线", 32.5, 210, "上海市", listOf("骑行", "休闲"), R.drawable.ic_launcher_foreground, "简单"),
-    RouteBook(2, "西郊爬坡挑战", 65.0, 980, "浙江省", listOf("骑行", "爬坡"), R.drawable.ic_launcher_foreground, "困难"),
-    RouteBook(3, "城市夜骑", 18.3, 80, "上海市", listOf("骑行", "夜骑"), R.drawable.ic_launcher_foreground, "中等")
-)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RouteBookScreen(onBack: () -> Unit, onOpenMyRouteBook: () -> Unit = {}) {
+fun RouteBookScreen(onBack: () -> Unit, onOpenMyRouteBook: () -> Unit = {}, userId: String = "", navController: NavController? = null) {
     var selectedCategory by remember { mutableStateOf(0) }
+    val handler = Handler(Looper.getMainLooper())
+    var routes by remember { mutableStateOf<List<RouteBook>>(emptyList()) }
+    LaunchedEffect(Unit) {
+        Thread {
+            val list = mutableListOf<RouteBook>()
+            val tagsMap = mutableMapOf<Int, MutableList<String>>()
+            val favMap = mutableMapOf<Int, Int>()
+            DatabaseHelper.processQuery(
+                "SELECT route_id, title, distance_km, elevation_m, location, difficulty, cover_image_url FROM routes ORDER BY updated_at DESC LIMIT 200"
+            ) { rs ->
+                while (rs.next()) {
+                    val id = rs.getInt(1)
+                    val title = rs.getString(2)
+                    val dist = rs.getDouble(3)
+                    val elev = rs.getInt(4)
+                    val loc = rs.getString(5) ?: ""
+                    val diff = rs.getString(6) ?: "简单"
+                    val img = rs.getString(7)
+                    list.add(RouteBook(id, title, dist, elev, loc, emptyList(), R.drawable.ic_launcher_foreground, img, diff))
+                }
+                Unit
+            }
+            DatabaseHelper.processQuery("SELECT route_id, tag_name FROM route_tags") { trs ->
+                while (trs.next()) tagsMap.getOrPut(trs.getInt(1)) { mutableListOf() }.add(trs.getString(2) ?: "")
+                Unit
+            }
+            DatabaseHelper.processQuery("SELECT route_id, COUNT(*) AS c FROM route_favorites GROUP BY route_id") { frs ->
+                while (frs.next()) favMap[frs.getInt(1)] = frs.getInt(2)
+                Unit
+            }
+            val merged = list.map { r -> r.copy(tags = tagsMap[r.id] ?: emptyList(), favoriteCount = favMap[r.id] ?: 0) }
+            handler.post { routes = merged }
+        }.start()
+    }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -78,13 +115,13 @@ fun RouteBookScreen(onBack: () -> Unit, onOpenMyRouteBook: () -> Unit = {}) {
                     )
                 }
             }
-            val filteredRoutes = remember(selectedCategory) {
+            val filteredRoutes = remember(selectedCategory, routes) {
                 when (selectedCategory) {
-                    0 -> mockRoutes
-                    1 -> mockRoutes.filter { it.location.contains("上海") }
-                    2 -> mockRoutes.filter { it.distanceKm >= 50 }
-                    3 -> mockRoutes.filter { it.elevationM >= 500 }
-                    else -> mockRoutes.filter { it.tags.contains("休闲") }
+                    0 -> routes
+                    1 -> routes.filter { it.location.contains("上海") }
+                    2 -> routes.filter { it.distanceKm >= 50 }
+                    3 -> routes.filter { it.elevationM >= 500 }
+                    else -> routes.filter { it.tags.contains("休闲") }
                 }
             }
             LazyColumn(
@@ -92,7 +129,9 @@ fun RouteBookScreen(onBack: () -> Unit, onOpenMyRouteBook: () -> Unit = {}) {
                 contentPadding = PaddingValues(12.dp)
             ) {
                 items(filteredRoutes) { route ->
-                    RouteCard(route = route)
+                    RouteCard(route = route, onClick = {
+                        navController?.navigate("${AppRoutes.ROUTE_DETAIL}/${route.id}")
+                    })
                     Spacer(modifier = Modifier.height(12.dp))
                 }
             }
@@ -102,27 +141,43 @@ fun RouteBookScreen(onBack: () -> Unit, onOpenMyRouteBook: () -> Unit = {}) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RouteCard(route: RouteBook) {
+fun RouteCard(route: RouteBook, onClick: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
         shape = MaterialTheme.shapes.medium,
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
         Column {
             Box(modifier = Modifier.height(160.dp)) {
-                Image(
-                    painter = painterResource(id = route.coverImage),
-                    contentDescription = route.title,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
+                if (route.coverImageUrl != null) {
+                    AsyncImage(
+                        model = route.coverImageUrl,
+                        contentDescription = route.title,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(id = route.coverImage),
+                        contentDescription = route.title,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    AssistChip(onClick = {}, label = { Text(text = route.difficulty) })
+                    AssistChip(
+                        onClick = {},
+                        label = { Text(text = route.difficulty) },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = Color(0xFFE8F5E9),
+                            labelColor = Color(0xFF2E7D32)
+                        )
+                    )
                     Button(
                         onClick = {},
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF007AFF))
@@ -160,11 +215,10 @@ fun RouteCard(route: RouteBook) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    OutlinedButton(onClick = {}) { Text(text = "下载GPX") }
-                    Text(text = "已收藏 0", fontSize = 12.sp, color = Color.Gray)
+                    Text(text = "已收藏 ${route.favoriteCount}", fontSize = 12.sp, color = Color.Gray)
                 }
             }
         }
