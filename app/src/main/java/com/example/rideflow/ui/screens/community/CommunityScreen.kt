@@ -69,6 +69,14 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
         }
         val merged = withContext(Dispatchers.IO) {
             val posts = mutableListOf<Post>()
+            val uid = userId.toIntOrNull()
+            val likedSet = mutableSetOf<Int>()
+            if (uid != null) {
+                DatabaseHelper.processQuery("SELECT post_id FROM post_likes WHERE user_id = ?", listOf(uid)) { rs ->
+                    while (rs.next()) likedSet.add(rs.getInt(1))
+                    Unit
+                }
+            }
             // 统计数据容器在下方统一填充
 
             // 数据来源于数据库，不注入模拟动态
@@ -119,7 +127,7 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
                 while (rs.next()) commentsMap[rs.getInt(1)] = rs.getInt(2)
                 Unit
             }
-            posts.map { p -> p.copy(likes = likesMap[p.id] ?: p.likes, comments = commentsMap[p.id] ?: p.comments) }
+            posts.map { p -> p.copy(likes = likesMap[p.id] ?: p.likes, comments = commentsMap[p.id] ?: p.comments, initialIsLiked = likedSet.contains(p.id)) }
         }
         allPosts.clear(); allPosts.addAll(merged)
         isLoading = false
@@ -149,12 +157,23 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
     var showMessageDialog by remember { mutableStateOf(false) }
     var isSearching by remember { mutableStateOf(false) }
 
-    // 关注回调
     val onFollowToggle: (Int, Boolean) -> Unit = { id, isFollowing ->
+        val uid = userId.toIntOrNull()
         if (isFollowing) {
             followingUserIds.value = followingUserIds.value + id
         } else {
             followingUserIds.value = followingUserIds.value - id
+        }
+        if (uid != null) {
+            scope.launch {
+                withContext(Dispatchers.IO) {
+                    if (isFollowing) {
+                        DatabaseHelper.executeUpdate("INSERT IGNORE INTO user_follows (follower_user_id, followed_user_id) VALUES (?, ?)", listOf(uid, id))
+                    } else {
+                        DatabaseHelper.executeUpdate("DELETE FROM user_follows WHERE follower_user_id = ? AND followed_user_id = ?", listOf(uid, id))
+                    }
+                }
+            }
         }
     }
 
@@ -169,6 +188,31 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
 
     val onPostClick: (Int) -> Unit = { postId ->
         navController.navigate("${com.example.rideflow.navigation.AppRoutes.POST_DETAIL}/$postId")
+    }
+
+    val onLikeToggle: (Int, Boolean) -> Unit = { postId, newIsLiked ->
+        val uid = userId.toIntOrNull()
+        uid?.let { uidVal ->
+            scope.launch {
+                withContext(Dispatchers.IO) {
+                    if (newIsLiked) {
+                        DatabaseHelper.executeUpdate("INSERT IGNORE INTO post_likes (post_id, user_id) VALUES (?, ?)", listOf(postId, uidVal))
+                    } else {
+                        DatabaseHelper.executeUpdate("DELETE FROM post_likes WHERE post_id = ? AND user_id = ?", listOf(postId, uidVal))
+                    }
+                    var newCount = 0
+                    DatabaseHelper.processQuery("SELECT COUNT(*) FROM post_likes WHERE post_id = ?", listOf(postId)) { rs ->
+                        if (rs.next()) newCount = rs.getInt(1)
+                        Unit
+                    }
+                    val idx = allPosts.indexOfFirst { it.id == postId }
+                    if (idx >= 0) {
+                        val updated = allPosts[idx].copy(likes = newCount)
+                        allPosts[idx] = updated
+                    }
+                }
+            }
+        }
     }
 
     Scaffold(
@@ -194,24 +238,24 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
             } else {
                 Log.d("Perf", "CommunityScreen UIRender: ${System.currentTimeMillis() - pageStart} ms")
                 when (selectedCategory) {
-                "关注动态" -> CommunityFollowingScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick, onPostClick, hasMore, isLoadingMore, onLoadMore = {
+                "关注动态" -> CommunityFollowingScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick, onPostClick, onLikeToggle, hasMore, isLoadingMore, onLoadMore = {
                     if (hasMore && !isLoadingMore) {
                         scope.launch {
                             isLoadingMore = true
                             currentPage += 1
-                            val next = withContext(Dispatchers.IO) { loadPage(currentPage, pageSize) }
+                            val next = withContext(Dispatchers.IO) { loadPage(currentPage, pageSize, userId.toIntOrNull()) }
                             allPosts.addAll(next)
                             hasMore = next.size >= pageSize
                             isLoadingMore = false
                         }
                     }
                 })
-                "热门动态" -> CommunityHotScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick, onPostClick, hasMore, isLoadingMore, onLoadMore = {
+                "热门动态" -> CommunityHotScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick, onPostClick, onLikeToggle, hasMore, isLoadingMore, onLoadMore = {
                     if (hasMore && !isLoadingMore) {
                         scope.launch {
                             isLoadingMore = true
                             currentPage += 1
-                            val next = withContext(Dispatchers.IO) { loadPage(currentPage, pageSize) }
+                            val next = withContext(Dispatchers.IO) { loadPage(currentPage, pageSize, userId.toIntOrNull()) }
                             allPosts.addAll(next)
                             hasMore = next.size >= pageSize
                             isLoadingMore = false
@@ -220,12 +264,12 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
                 })
                 "社区交易" -> CommunityTradeScreen()
                 "俱乐部" -> CommunityClubPortalScreen(navController = navController, allPosts = allPosts)
-                else -> CommunityHotScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick, onPostClick, hasMore, isLoadingMore, onLoadMore = {
+                else -> CommunityHotScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick, onPostClick, onLikeToggle, hasMore, isLoadingMore, onLoadMore = {
                     if (hasMore && !isLoadingMore) {
                         scope.launch {
                             isLoadingMore = true
                             currentPage += 1
-                            val next = withContext(Dispatchers.IO) { loadPage(currentPage, pageSize) }
+                            val next = withContext(Dispatchers.IO) { loadPage(currentPage, pageSize, userId.toIntOrNull()) }
                             allPosts.addAll(next)
                             hasMore = next.size >= pageSize
                             isLoadingMore = false
@@ -247,7 +291,7 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
     // 统一使用个人主页，不再弹出用户小卡片
 }
 
-private suspend fun loadPage(page: Int, pageSize: Int): List<Post> {
+private suspend fun loadPage(page: Int, pageSize: Int, currentUserId: Int? = null): List<Post> {
     val posts = mutableListOf<Post>()
     DatabaseHelper.processQuery(
         "SELECT post_id, author_user_id, club_id, COALESCE(author_type,'user'), content_text, image_url, created_at FROM community_posts ORDER BY created_at DESC LIMIT ? OFFSET ?",
@@ -281,7 +325,17 @@ private suspend fun loadPage(page: Int, pageSize: Int): List<Post> {
         }
         Unit
     }
-    return posts.map { p -> if (p.userName.isEmpty()) p.copy(userName = nameMap[p.id] ?: "未知用户") else p }
+    val likedSet = mutableSetOf<Int>()
+    if (currentUserId != null) {
+        DatabaseHelper.processQuery("SELECT post_id FROM post_likes WHERE user_id = ?", listOf(currentUserId)) { rs ->
+            while (rs.next()) likedSet.add(rs.getInt(1))
+            Unit
+        }
+    }
+    return posts.map { p ->
+        val base = if (p.userName.isEmpty()) p.copy(userName = nameMap[p.id] ?: "未知用户") else p
+        base.copy(initialIsLiked = likedSet.contains(base.id))
+    }
 }
 
 private fun saveCacheFirstPage(context: android.content.Context, posts: List<Post>) {

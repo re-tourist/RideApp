@@ -177,14 +177,17 @@ fun PostCard(
     onFollowToggle: (Int, Boolean) -> Unit,
     showFollowButton: Boolean = true,
     onAvatarClick: (Int, String) -> Unit = { _, _ -> },
-    onPostClick: (Int) -> Unit = {} // 动态点击
+    onPostClick: (Int) -> Unit = {},
+    onLikeToggle: (Int, Boolean) -> Unit = { _, _ -> }
 ) {
     var isLiked by remember { mutableStateOf(post.initialIsLiked) }
     var showShareDialog by remember { mutableStateOf(false) }
     var showCommentSection by remember { mutableStateOf(false) }
 
     val onLikeClicked: () -> Unit = {
-        isLiked = !isLiked
+        val newState = !isLiked
+        isLiked = newState
+        onLikeToggle(post.id, newState)
     }
 
     if (showShareDialog) {
@@ -268,7 +271,7 @@ fun PostCard(
             )
             InteractionButton(
                 icon = Icons.Default.ThumbUp,
-                text = if (isLiked) (post.likes + 1).toString() else post.likes.toString(),
+                text = post.likes.toString(),
                 tint = if (isLiked) Color.Red else Color.Gray,
                 onClick = onLikeClicked
             )

@@ -18,6 +18,7 @@ fun CommunityHotScreen(
     onFollowToggle: (Int, Boolean) -> Unit,
     onAvatarClick: (Int, String) -> Unit,
     onPostClick: (Int) -> Unit,
+    onLikeToggle: (Int, Boolean) -> Unit,
     hasMore: Boolean = false,
     isLoadingMore: Boolean = false,
     onLoadMore: () -> Unit = {}
@@ -34,8 +35,10 @@ fun CommunityHotScreen(
                 post = post,
                 isFollowing = isFollowing,
                 onFollowToggle = onFollowToggle,
+                showFollowButton = post.authorType == "user",
                 onAvatarClick = onAvatarClick,
-                onPostClick = onPostClick
+                onPostClick = onPostClick,
+                onLikeToggle = onLikeToggle
             )
             Spacer(modifier = Modifier.height(8.dp).background(Color(0xFFF0F0F0)))
         }

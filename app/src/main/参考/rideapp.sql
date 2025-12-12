@@ -11,7 +11,7 @@
  Target Server Version : 80044 (8.0.44-0ubuntu0.22.04.1)
  File Encoding         : 65001
 
- Date: 12/12/2025 18:42:28
+ Date: 12/12/2025 20:12:43
 */
 
 SET NAMES utf8mb4;
@@ -291,7 +291,7 @@ CREATE TABLE `post_comments`  (
   INDEX `fk_comments_user`(`user_id` ASC) USING BTREE,
   CONSTRAINT `fk_comments_post` FOREIGN KEY (`post_id`) REFERENCES `community_posts` (`post_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_comments_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 16 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 27 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of post_comments
@@ -311,6 +311,17 @@ INSERT INTO `post_comments` VALUES (12, 4, 2, '路线和配速发一下', '2025-
 INSERT INTO `post_comments` VALUES (13, 5, 1, '夜骑灯光确实很美', '2025-12-04 21:11:00');
 INSERT INTO `post_comments` VALUES (14, 5, 3, '速度控制好更安全', '2025-12-04 21:13:00');
 INSERT INTO `post_comments` VALUES (15, 6, 3, '晨练集合几点？', '2025-12-03 06:53:00');
+INSERT INTO `post_comments` VALUES (16, 1, 1, '下次一起夜骑！', '2025-12-05 08:22:00');
+INSERT INTO `post_comments` VALUES (17, 1, 3, '路线不错，注意补给', '2025-12-05 08:23:00');
+INSERT INTO `post_comments` VALUES (18, 2, 2, '功率稳步提高，很棒', '2025-12-05 08:28:00');
+INSERT INTO `post_comments` VALUES (19, 2, 3, '下次拉我一个', '2025-12-05 08:46:00');
+INSERT INTO `post_comments` VALUES (20, 3, 1, '通勤顺路太香了', '2025-12-05 07:38:00');
+INSERT INTO `post_comments` VALUES (21, 3, 2, '城市夜骑路况要看好', '2025-12-05 07:42:00');
+INSERT INTO `post_comments` VALUES (22, 4, 1, '周末拉练报名+1', '2025-12-04 09:13:00');
+INSERT INTO `post_comments` VALUES (23, 4, 2, '路线和配速发一下', '2025-12-04 09:16:00');
+INSERT INTO `post_comments` VALUES (24, 5, 1, '夜骑灯光确实很美', '2025-12-04 21:11:00');
+INSERT INTO `post_comments` VALUES (25, 5, 3, '速度控制好更安全', '2025-12-04 21:13:00');
+INSERT INTO `post_comments` VALUES (26, 6, 3, '晨练集合几点？', '2025-12-03 06:53:00');
 
 -- ----------------------------
 -- Table structure for post_likes
@@ -945,7 +956,7 @@ CREATE TABLE `users`  (
 -- ----------------------------
 -- Records of users
 -- ----------------------------
-INSERT INTO `users` VALUES (1, 'testuser', 'test@example.com', '123456', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '222', 'female', '2025-12-03', '12345678900', 0, 1, '2025-12-12 18:40:14', '2025-11-27 20:58:42', '2025-12-12 18:40:14');
+INSERT INTO `users` VALUES (1, 'testuser', 'test@example.com', '123456', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '222', 'female', '2025-12-03', '12345678900', 0, 1, '2025-12-12 18:49:42', '2025-11-27 20:58:42', '2025-12-12 18:49:42');
 INSERT INTO `users` VALUES (2, 'admin', 'admin@example.com', 'admin123', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/User%20Icon/1764739073797.png', NULL, 'other', NULL, NULL, 0, 1, NULL, '2025-11-27 20:58:42', '2025-12-09 23:50:26');
 INSERT INTO `users` VALUES (3, 'user1', 'user1@example.com', 'password1', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/User%20Icon/1764739073797.png', NULL, 'other', NULL, NULL, 0, 1, NULL, '2025-11-27 20:58:42', '2025-12-09 23:50:50');
 INSERT INTO `users` VALUES (7, 'a', 'a@qq.com', 'aaaaaa', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/User%20Icon/1764739092619.png', NULL, 'other', NULL, NULL, 0, 0, '2025-11-28 00:06:10', '2025-11-28 00:06:10', '2025-12-09 23:50:57');

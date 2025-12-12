@@ -20,12 +20,12 @@ fun CommunityFollowingScreen(
     onFollowToggle: (Int, Boolean) -> Unit,
     onAvatarClick: (Int, String) -> Unit,
     onPostClick: (Int) -> Unit,
+    onLikeToggle: (Int, Boolean) -> Unit,
     hasMore: Boolean = false,
     isLoadingMore: Boolean = false,
     onLoadMore: () -> Unit = {}
 ) {
-    // 过滤出关注用户的帖子
-    val posts = allPosts.filter { followingUserIds.contains(it.userId) }
+    val posts = allPosts.filter { it.authorType == "user" && followingUserIds.contains(it.userId) }
 
     if (posts.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -44,8 +44,10 @@ fun CommunityFollowingScreen(
                 post = post,
                 isFollowing = true,
                 onFollowToggle = onFollowToggle,
+                showFollowButton = true,
                 onAvatarClick = onAvatarClick,
-                onPostClick = onPostClick
+                onPostClick = onPostClick,
+                onLikeToggle = onLikeToggle
             )
             Spacer(modifier = Modifier.height(8.dp).background(Color(0xFFF0F0F0)))
         }
