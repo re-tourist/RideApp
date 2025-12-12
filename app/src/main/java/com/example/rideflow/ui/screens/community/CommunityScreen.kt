@@ -69,40 +69,33 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
         }
         val merged = withContext(Dispatchers.IO) {
             val posts = mutableListOf<Post>()
-            val likesMap = mutableMapOf<Int, Int>()
-            val commentsMap = mutableMapOf<Int, Int>()
+            // 统计数据容器在下方统一填充
 
-            // 1. 注入"已加入俱乐部"的模拟动态数据
-            val mockClubPosts = listOf(
-                Post(901, 9001, Icons.Default.DateRange, "飓风骑行俱乐部", "10分钟前", "本周日将举行环湖拉练活动，请各位队员准时在北门集合！ #俱乐部活动", "[活动海报]", 32, 5),
-                Post(902, 9002, Icons.Default.DateRange, "周末休闲骑", "2小时前", "上周的腐败骑行圆满结束，大家吃得开心吗？照片已上传相册。", "[聚餐合影]", 15, 8),
-                Post(903, 9003, Icons.Default.DateRange, "山地越野小队", "1天前", "探索了一条新的林道，难度系数3星，欢迎老手来挑战。", "[林道照片]", 45, 12),
-                Post(904, 9001, Icons.Default.DateRange, "飓风骑行俱乐部", "3天前", "恭喜车队在市级比赛中获得团体第二名！", "[奖杯照片]", 88, 20)
-            )
-            posts.addAll(mockClubPosts)
+            // 数据来源于数据库，不注入模拟动态
 
             // 2. 加载数据库中的帖子
             DatabaseHelper.processQuery(
-                "SELECT post_id, author_user_id, content_text, image_url, created_at FROM community_posts ORDER BY created_at DESC LIMIT ? OFFSET ?",
+                "SELECT post_id, author_user_id, club_id, COALESCE(author_type,'user'), content_text, image_url, created_at FROM community_posts ORDER BY created_at DESC LIMIT ? OFFSET ?",
                 listOf(pageSize, currentPage * pageSize)
             ) { rs ->
                 while (rs.next()) {
                     val pid = rs.getInt(1)
-                    val uid = rs.getInt(2)
-                    val content = rs.getString(3) ?: ""
-                    val img = rs.getString(4) ?: "[图片]"
-                    val created = rs.getTimestamp(5)
+                    val auid = rs.getInt(2)
+                    val clubId = rs.getInt(3).takeIf { !rs.wasNull() }
+                    val aType = rs.getString(4) ?: "user"
+                    val content = rs.getString(5) ?: ""
+                    val img = rs.getString(6) ?: "[图片]"
+                    val created = rs.getTimestamp(7)
                     val timeStr = if (created != null) SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(created) else ""
-                    posts.add(Post(pid, uid, Icons.Default.Person, "", timeStr, content, img, 0, 0))
+                    val uid = if (aType == "club") (clubId ?: 0) else auid
+                    posts.add(Post(pid, uid, Icons.Default.Person, "", timeStr, content, img, 0, 0, false, aType))
                 }
                 Unit
             }
 
             // 3. 补充用户信息/俱乐部名称
             DatabaseHelper.processQuery(
-                "SELECT p.post_id, u.nickname, c.name FROM community_posts p " +
-                        "LEFT JOIN users u ON p.author_user_id = u.user_id " +
-                        "LEFT JOIN clubs c ON p.club_id = c.club_id"
+                "SELECT p.post_id, u.nickname, c.name FROM community_posts p LEFT JOIN users u ON p.author_user_id = u.user_id LEFT JOIN clubs c ON p.club_id = c.club_id"
             ) { rs ->
                 val nameMap = mutableMapOf<Int, String>()
                 while (rs.next()) {
@@ -113,6 +106,17 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
                     nameMap[pid] = displayName
                 }
                 posts.replaceAll { p -> if (p.userName.isEmpty()) p.copy(userName = nameMap[p.id] ?: "未知用户") else p }
+                Unit
+            }
+
+            val likesMap = mutableMapOf<Int, Int>()
+            DatabaseHelper.processQuery("SELECT post_id, COUNT(*) FROM post_likes GROUP BY post_id") { rs ->
+                while (rs.next()) likesMap[rs.getInt(1)] = rs.getInt(2)
+                Unit
+            }
+            val commentsMap = mutableMapOf<Int, Int>()
+            DatabaseHelper.processQuery("SELECT post_id, COUNT(*) FROM post_comments GROUP BY post_id") { rs ->
+                while (rs.next()) commentsMap[rs.getInt(1)] = rs.getInt(2)
                 Unit
             }
             posts.map { p -> p.copy(likes = likesMap[p.id] ?: p.likes, comments = commentsMap[p.id] ?: p.comments) }
@@ -155,8 +159,12 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
     }
 
     // 处理头像点击，加载用户详细信息
-    val onAvatarClick: (Int) -> Unit = { targetUserId ->
-        navController.navigate("${com.example.rideflow.navigation.AppRoutes.USER_PROFILE_DETAIL}/$targetUserId")
+    val onAvatarClick: (Int, String) -> Unit = { targetId, aType ->
+        if (aType == "club") {
+            navController.navigate("club_detail/$targetId")
+        } else {
+            navController.navigate("${com.example.rideflow.navigation.AppRoutes.USER_PROFILE_DETAIL}/$targetId")
+        }
     }
 
     val onPostClick: (Int) -> Unit = { postId ->
@@ -242,17 +250,20 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
 private suspend fun loadPage(page: Int, pageSize: Int): List<Post> {
     val posts = mutableListOf<Post>()
     DatabaseHelper.processQuery(
-        "SELECT post_id, author_user_id, content_text, image_url, created_at FROM community_posts ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        "SELECT post_id, author_user_id, club_id, COALESCE(author_type,'user'), content_text, image_url, created_at FROM community_posts ORDER BY created_at DESC LIMIT ? OFFSET ?",
         listOf(pageSize, page * pageSize)
     ) { rs ->
         while (rs.next()) {
             val pid = rs.getInt(1)
-            val uid = rs.getInt(2)
-            val content = rs.getString(3) ?: ""
-            val img = rs.getString(4) ?: "[图片]"
-            val created = rs.getTimestamp(5)
+            val auid = rs.getInt(2)
+            val clubId = rs.getInt(3).takeIf { !rs.wasNull() }
+            val aType = rs.getString(4) ?: "user"
+            val content = rs.getString(5) ?: ""
+            val img = rs.getString(6) ?: "[图片]"
+            val created = rs.getTimestamp(7)
             val timeStr = if (created != null) SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(created) else ""
-            posts.add(Post(pid, uid, Icons.Default.Person, "", timeStr, content, img, 0, 0))
+            val uid = if (aType == "club") (clubId ?: 0) else auid
+            posts.add(Post(pid, uid, Icons.Default.Person, "", timeStr, content, img, 0, 0, false, aType))
         }
         Unit
     }

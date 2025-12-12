@@ -16,7 +16,7 @@ fun CommunityHotScreen(
     allPosts: List<Post>,
     followingUserIds: Set<Int>,
     onFollowToggle: (Int, Boolean) -> Unit,
-    onAvatarClick: (Int) -> Unit, // 头像点击
+    onAvatarClick: (Int, String) -> Unit,
     onPostClick: (Int) -> Unit,
     hasMore: Boolean = false,
     isLoadingMore: Boolean = false,

@@ -97,7 +97,7 @@ fun MyActivitiesScreen(navController: NavController, userId: String = "") {
                     val list = mutableListOf<ActivityItem>()
                     val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
                     DatabaseHelper.processQuery(
-                        "SELECT ue.user_event_id, e.title, e.event_date, e.location, e.event_type, ue.status, COALESCE(s.distance_km, 0), COALESCE(s.duration_seconds, 0) FROM user_events ue JOIN events e ON ue.event_id = e.event_id LEFT JOIN user_event_stats s ON s.user_id = ue.user_id AND s.event_id = ue.event_id WHERE ue.user_id = ? ORDER BY e.event_date DESC",
+                        "SELECT ua.user_activity_id, a.title, a.event_date, a.location, a.event_type, ua.status, COALESCE(sa.distance_km, 0), COALESCE(sa.duration_seconds, 0) FROM user_activities ua JOIN activities a ON ua.activity_id = a.activity_id LEFT JOIN user_activity_stats sa ON sa.user_id = ua.user_id AND sa.activity_id = ua.activity_id WHERE ua.user_id = ? ORDER BY a.event_date DESC",
                         listOf(uid)
                     ) { rs ->
                         while (rs.next()) {

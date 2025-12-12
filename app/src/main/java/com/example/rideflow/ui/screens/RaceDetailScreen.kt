@@ -57,7 +57,7 @@ fun RaceDetailScreen(navController: NavController, raceId: Int = 0, onBack: () -
             Thread {
                 val sdf = SimpleDateFormat("yyyy.MM.dd HH:mm", Locale.getDefault())
                 DatabaseHelper.processQuery(
-                    "SELECT title, event_date, location, event_type, is_open, cover_image_url, description FROM events WHERE event_id = ?",
+                    "SELECT title, event_date, location, event_type, is_open, cover_image_url, description FROM races WHERE race_id = ?",
                     listOf(raceId)
                 ) { rs ->
                     if (rs.next()) {
@@ -82,7 +82,7 @@ fun RaceDetailScreen(navController: NavController, raceId: Int = 0, onBack: () -
                     Unit
                 }
                 DatabaseHelper.processQuery(
-                    "SELECT tag_name FROM event_tags WHERE event_id = ?",
+                    "SELECT tag_name FROM race_tags WHERE race_id = ?",
                     listOf(raceId)
                 ) { trs ->
                     val list = mutableListOf<String>()

@@ -18,7 +18,7 @@ fun CommunityFollowingScreen(
     allPosts: List<Post>,
     followingUserIds: Set<Int>,
     onFollowToggle: (Int, Boolean) -> Unit,
-    onAvatarClick: (Int) -> Unit,
+    onAvatarClick: (Int, String) -> Unit,
     onPostClick: (Int) -> Unit,
     hasMore: Boolean = false,
     isLoadingMore: Boolean = false,

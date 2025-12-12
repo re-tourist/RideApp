@@ -176,7 +176,7 @@ fun PostCard(
     isFollowing: Boolean,
     onFollowToggle: (Int, Boolean) -> Unit,
     showFollowButton: Boolean = true,
-    onAvatarClick: (Int) -> Unit = {}, // 头像点击
+    onAvatarClick: (Int, String) -> Unit = { _, _ -> },
     onPostClick: (Int) -> Unit = {} // 动态点击
 ) {
     var isLiked by remember { mutableStateOf(post.initialIsLiked) }
@@ -201,7 +201,7 @@ fun PostCard(
                     .size(40.dp)
                     .clip(CircleShape)
                     .background(Color.LightGray)
-                    .clickable { onAvatarClick(post.userId) } // 修改：添加点击事件
+                    .clickable { onAvatarClick(post.userId, post.authorType) }
             )
             Spacer(Modifier.width(8.dp))
             Column {
@@ -209,7 +209,7 @@ fun PostCard(
                     text = post.userName,
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
-                    modifier = Modifier.clickable { onAvatarClick(post.userId) } // 昵称也可点击
+                    modifier = Modifier.clickable { onAvatarClick(post.userId, post.authorType) }
                 )
                 Text(post.timeAgo, color = Color.Gray, fontSize = 12.sp)
             }

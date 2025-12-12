@@ -46,7 +46,7 @@ private val raceCategories = listOf("全部", "我的赛事", "娱乐赛", "竞�
 private fun loadRaces(handler: Handler, onLoaded: (List<Race>) -> Unit) {
     Thread {
         val list = mutableListOf<Race>()
-        DatabaseHelper.processQuery("SELECT event_id, title, event_date, location, event_type, is_open, cover_image_url FROM events ORDER BY event_date DESC LIMIT 100") { rs ->
+        DatabaseHelper.processQuery("SELECT race_id, title, event_date, location, event_type, is_open, cover_image_url FROM races ORDER BY event_date DESC LIMIT 100") { rs ->
             while (rs.next()) {
                 val id = rs.getInt(1)
                 val title = rs.getString(2)
@@ -56,13 +56,13 @@ private fun loadRaces(handler: Handler, onLoaded: (List<Race>) -> Unit) {
                 val open = rs.getBoolean(6)
                 val coverUrl = rs.getString(7) ?: "https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg"
                 val tags = mutableListOf<String>()
-                DatabaseHelper.processQuery("SELECT tag_name FROM event_tags WHERE event_id = ?", listOf(id)) { trs ->
+                DatabaseHelper.processQuery("SELECT tag_name FROM race_tags WHERE race_id = ?", listOf(id)) { trs ->
                     while (trs.next()) tags.add(trs.getString(1) ?: "")
                     Unit
                 }
                 var mine = false
                 DatabaseHelper.processQuery(
-                    "SELECT 1 FROM user_events WHERE user_id = ? AND event_id = ? AND relation IN ('registered','favorite') LIMIT 1",
+                    "SELECT 1 FROM user_races WHERE user_id = ? AND race_id = ? AND relation IN ('registered','favorite') LIMIT 1",
                     listOf(1, id)
                 ) { urs ->
                     mine = urs.next()
