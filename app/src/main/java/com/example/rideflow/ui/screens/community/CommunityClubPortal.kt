@@ -20,12 +20,18 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.rideflow.model.Post
 import com.example.rideflow.ui.components.PostCard
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
+import com.example.rideflow.backend.DatabaseHelper
+import android.os.Handler
+import android.os.Looper
 
 data class SimpleClubInfo(
     val id: Int,
     val name: String,
     val intro: String,
-    val avatarPlaceholder: String
+    val avatarPlaceholder: String,
+    val logoUrl: String? = null
 )
 
 @Composable
@@ -37,20 +43,33 @@ fun CommunityClubPortalScreen(
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     val tabs = listOf("俱乐部动态", "俱乐部列表")
 
-    // 我加入的俱乐部列表
-    val myClubs = remember {
-        listOf(
-            SimpleClubInfo(1, "飓风骑行俱乐部", "风在耳边，路在脚下", "飓"),
-            SimpleClubInfo(2, "周末休闲骑", "主打吃喝玩乐", "周"),
-            SimpleClubInfo(3, "山地越野小队", "不走寻常路", "山")
-        )
+    // 俱乐部列表（来自数据库）
+    var clubs by remember { mutableStateOf<List<SimpleClubInfo>>(emptyList()) }
+    val handler = Handler(Looper.getMainLooper())
+    LaunchedEffect(Unit) {
+        Thread {
+            val list = mutableListOf<SimpleClubInfo>()
+            DatabaseHelper.processQuery(
+                "SELECT club_id, name, city, logo_url, members_count, heat FROM clubs ORDER BY heat DESC LIMIT 100"
+            ) { rs ->
+                while (rs.next()) {
+                    val id = rs.getInt(1)
+                    val name = rs.getString(2) ?: "俱乐部"
+                    val city = rs.getString(3) ?: ""
+                    val logo = rs.getString(4)
+                    val members = rs.getInt(5)
+                    val heat = rs.getInt(6)
+                    val intro = listOf(city.takeIf { it.isNotEmpty() }, "成员$members", "热度$heat").filterNotNull().joinToString(" · ")
+                    list.add(SimpleClubInfo(id, name, intro, (name.firstOrNull() ?: '俱').toString(), logo))
+                }
+                handler.post { clubs = list }
+                Unit
+            }
+        }.start()
     }
 
-    // 过滤逻辑：只显示我加入的俱乐部的动态
-    val clubNames = myClubs.map { it.name }.toSet()
-    val clubPosts = allPosts.filter { post ->
-        clubNames.any { clubName -> post.userName.contains(clubName) }
-    }
+    // 过滤逻辑：显示所有由俱乐部发布的动态
+    val clubPosts = allPosts.filter { post -> post.authorType == "club" }
 
     Column(modifier = Modifier.fillMaxSize()) {
         TabRow(
@@ -82,8 +101,8 @@ fun CommunityClubPortalScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         when (selectedTab) {
-            0 -> ClubDynamicsTab(posts = clubPosts)
-            1 -> ClubListTab(clubs = myClubs, onClubClick = { clubId ->
+            0 -> ClubDynamicsTab(posts = clubPosts, navController = navController)
+            1 -> ClubListTab(clubs = clubs, onClubClick = { clubId ->
                 navController.navigate("community_club_detail/$clubId")
             })
         }
@@ -91,7 +110,7 @@ fun CommunityClubPortalScreen(
 }
 
 @Composable
-fun ClubDynamicsTab(posts: List<Post>) {
+fun ClubDynamicsTab(posts: List<Post>, navController: NavController) {
     if (posts.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("暂无俱乐部动态", color = Color.Gray)
@@ -106,7 +125,9 @@ fun ClubDynamicsTab(posts: List<Post>) {
                     post = post,
                     isFollowing = true,
                     onFollowToggle = { _, _ -> },
-                    showFollowButton = false // 隐藏关注按钮
+                    showFollowButton = false, // 隐藏关注按钮
+                    onAvatarClick = { targetId, _ -> navController.navigate("club_detail/$targetId") },
+                    onPostClick = { pid -> navController.navigate("${com.example.rideflow.navigation.AppRoutes.POST_DETAIL}/$pid") }
                 )
                 Spacer(modifier = Modifier.height(8.dp).background(Color(0xFFF0F0F0)))
             }
@@ -135,12 +156,21 @@ fun ClubListTab(clubs: List<SimpleClubInfo>, onClubClick: (Int) -> Unit) {
                         .background(Color.LightGray),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = club.avatarPlaceholder,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
-                    )
+                    if (!club.logoUrl.isNullOrBlank()) {
+                        AsyncImage(
+                            model = club.logoUrl,
+                            contentDescription = club.name,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Text(
+                            text = club.avatarPlaceholder,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.width(16.dp))

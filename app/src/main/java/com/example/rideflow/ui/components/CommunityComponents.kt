@@ -21,6 +21,18 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import com.example.rideflow.model.*
 import androidx.compose.ui.draw.clip
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import com.example.rideflow.backend.DatabaseHelper
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.Date
+import org.koin.androidx.compose.koinViewModel
+import com.example.rideflow.auth.AuthViewModel
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 
 // ------------------------------------
 // 1. 顶部搜索栏
@@ -183,6 +195,9 @@ fun PostCard(
     var isLiked by remember { mutableStateOf(post.initialIsLiked) }
     var showShareDialog by remember { mutableStateOf(false) }
     var showCommentSection by remember { mutableStateOf(false) }
+    var latestComments by remember { mutableStateOf<List<Comment>>(emptyList()) }
+    val authViewModel = koinViewModel<AuthViewModel>()
+    val scope = rememberCoroutineScope()
 
     val onLikeClicked: () -> Unit = {
         val newState = !isLiked
@@ -197,15 +212,29 @@ fun PostCard(
     Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
         // 头部信息
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = post.userAvatar,
-                contentDescription = "Avatar",
+            Box(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
                     .background(Color.LightGray)
                     .clickable { onAvatarClick(post.userId, post.authorType) }
-            )
+            ) {
+                if (!post.avatarUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = post.avatarUrl,
+                        contentDescription = "Avatar",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Icon(
+                        imageVector = post.userAvatar,
+                        contentDescription = "Avatar",
+                        tint = Color.Gray,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
             Spacer(Modifier.width(8.dp))
             Column {
                 Text(
@@ -236,23 +265,66 @@ fun PostCard(
         Text(post.content, modifier = Modifier.fillMaxWidth().clickable { onPostClick(post.id) })
         Spacer(Modifier.height(8.dp))
 
-        // 图片占位符
+        // 图片
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(200.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(Color.DarkGray.copy(alpha = 0.1f)),
-            contentAlignment = Alignment.Center
+                .background(Color.LightGray.copy(alpha = 0.2f))
         ) {
-            Box(modifier = Modifier.fillMaxSize().clickable { onPostClick(post.id) }) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(post.imagePlaceholder, color = Color.Gray)
-                }
-            }
+            AsyncImage(
+                model = post.imagePlaceholder,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
         }
 
         Spacer(Modifier.height(16.dp))
+
+        // 最新三条评论
+        LaunchedEffect(post.id) {
+            withContext(Dispatchers.IO) {
+                val list = mutableListOf<Comment>()
+                DatabaseHelper.processQuery(
+                    "SELECT pc.comment_id, u.nickname, pc.content, pc.created_at FROM post_comments pc JOIN users u ON pc.user_id = u.user_id WHERE pc.post_id = ? ORDER BY pc.created_at DESC LIMIT 3",
+                    listOf(post.id)
+                ) { rs ->
+                    while (rs.next()) {
+                        val cid = rs.getInt(1)
+                        val nick = rs.getString(2) ?: "匿名"
+                        val ctt = rs.getString(3) ?: ""
+                        val created = rs.getTimestamp(4)
+                        val ts = if (created != null) SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(created) else ""
+                        list.add(Comment(cid, nick, ctt, ts))
+                    }
+                    Unit
+                }
+                latestComments = list
+            }
+        }
+
+        if (latestComments.isNotEmpty()) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text("最新评论", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Spacer(Modifier.height(6.dp))
+                latestComments.forEach { c ->
+                    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Person, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(c.userName, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                            Spacer(Modifier.width(8.dp))
+                            Text(c.time, fontSize = 10.sp, color = Color.Gray)
+                        }
+                        Spacer(Modifier.height(2.dp))
+                        Text(c.content, fontSize = 13.sp)
+                    }
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+        }
 
         // 底部互动按钮
         Row(
@@ -278,7 +350,44 @@ fun PostCard(
         }
 
         if (showCommentSection) {
-            CommentSection(post)
+            // 展开评论输入与发送
+            var myComment by remember { mutableStateOf("") }
+            Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                HorizontalDivider()
+                Text("发表评论", fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp))
+                OutlinedTextField(
+                    value = myComment,
+                    onValueChange = { myComment = it },
+                    label = { Text("发表你的评论...") },
+                    trailingIcon = {
+                        Icon(
+                            Icons.Default.Send,
+                            contentDescription = "发送",
+                            modifier = Modifier.clickable {
+                                val text = myComment.trim()
+                                val uid = authViewModel.getCurrentUser()?.userId?.toIntOrNull()
+                                if (text.isNotEmpty() && uid != null) {
+                                    scope.launch(Dispatchers.IO) {
+                                        val newId = DatabaseHelper.insertAndReturnId(
+                                            "INSERT INTO post_comments (post_id, user_id, content, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
+                                            listOf(post.id, uid, text)
+                                        )
+                                        if (newId != null) {
+                                            val now = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
+                                            withContext(Dispatchers.Main) {
+                                                latestComments = listOf(Comment(newId, authViewModel.getCurrentUser()?.nickname ?: "我", text, now)) + latestComments.take(2)
+                                                myComment = ""
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    singleLine = true
+                )
+            }
         }
     }
 }
@@ -343,50 +452,7 @@ fun ShareDialog(onDismiss: () -> Unit) {
     }
 }
 
-@Composable
-fun CommentSection(post: Post) {
-    // 简单模拟评论数据获取，实际应用中应从 ViewModel 或 API 获取
-    val comments = remember(post.id) { getCommentsForPost(post.id) }
-    var myComment by remember { mutableStateOf("") }
-
-    Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-        HorizontalDivider()
-        Text("评论 (${comments.size})", fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp))
-
-        comments.forEach { comment ->
-            Column(modifier = Modifier.padding(bottom = 4.dp)) {
-                Text("${comment.userName}: ${comment.content}", fontSize = 14.sp)
-                Text(comment.time, color = Color.Gray, fontSize = 12.sp)
-            }
-        }
-
-        OutlinedTextField(
-            value = myComment,
-            onValueChange = { myComment = it },
-            label = { Text("发表你的评论...") },
-            trailingIcon = {
-                Icon(Icons.Default.Send, contentDescription = "发送",
-                    modifier = Modifier.clickable {
-                        if (myComment.isNotBlank()) {
-                            myComment = ""
-                        }
-                    })
-            },
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            singleLine = true
-        )
-    }
-}
-
-// 模拟评论数据源
-private fun getCommentsForPost(postId: Int): List<Comment> {
-    return when(postId) {
-        101 -> listOf(Comment(1, "山地老王", "200KM太猛了，请问全程爬升多少？", "10分钟前"), Comment(2, "用户A", "路书分享一下！想去挑战这条线。", "5分钟前"))
-        102 -> listOf(Comment(3, "日落追光者", "这颜色太治愈了，骑行结束看到这个值得！", "1小时前"), Comment(4, "小李", "同款风景，我昨天也去那儿了！", "30分钟前"))
-        103 -> listOf(Comment(5, "硬核玩家", "山地胎选对了很重要，期待你的测评！", "1小时前"), Comment(6, "配件狂魔", "哪个牌子的？我也想换！", "30分钟前"))
-        else -> emptyList()
-    }
-}
+// 旧的模拟评论已移除，评论改为数据库加载
 
 // ------------------------------------
 // 4. 交易相关组件

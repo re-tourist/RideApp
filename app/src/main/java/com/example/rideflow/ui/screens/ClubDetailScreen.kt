@@ -63,9 +63,39 @@ fun ClubDetailScreen(
 
     LaunchedEffect(clubId) {
         Thread {
-            Thread.sleep(300)
-            val mockData = getMockClubDetail(clubId)
-            handler.post { clubDetail = mockData }
+            com.example.rideflow.backend.DatabaseHelper.processQuery(
+                "SELECT name, city, logo_url, members_count, heat FROM clubs WHERE club_id = ?",
+                listOf(clubId)
+            ) { rs ->
+                if (rs.next()) {
+                    val name = rs.getString(1) ?: "未知俱乐部"
+                    val city = rs.getString(2) ?: ""
+                    val logo = rs.getString(3)
+                    val members = rs.getInt(4)
+                    val heat = rs.getInt(5)
+                    val detail = ClubDetail(
+                        id = clubId,
+                        name = name,
+                        city = city,
+                        rank = 1,
+                        totalMileage = 0,
+                        annualHeat = heat,
+                        monthlyHeat = if (heat > 0) heat / 12 else 0,
+                        captain = "队长",
+                        members = emptyList(),
+                        slogan = "暂无信息",
+                        logoRes = R.drawable.ic_launcher_foreground,
+                        badges = emptyList(),
+                        logoUrl = logo,
+                        themeColor = Color(0xFF1976D2)
+                    )
+                    handler.post { clubDetail = detail }
+                } else {
+                    val detail = getMockClubDetail(clubId)
+                    handler.post { clubDetail = detail }
+                }
+                Unit
+            }
         }.start()
     }
 

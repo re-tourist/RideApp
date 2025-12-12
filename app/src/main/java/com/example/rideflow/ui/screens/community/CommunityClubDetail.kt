@@ -24,6 +24,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import android.os.Handler
+import android.os.Looper
+import com.example.rideflow.backend.DatabaseHelper
+import java.text.SimpleDateFormat
+import java.util.Locale
 import com.example.rideflow.R
 import com.example.rideflow.model.Post
 import com.example.rideflow.ui.components.PostCard
@@ -36,7 +41,8 @@ data class UIClubInfo(
     val rankTag: String,
     val avatarInitial: String,
     val themeColor: Color,
-    val description: String // 简短描述用于弹窗
+    val description: String, // 简短描述用于弹窗
+    val logoUrl: String? = null
 )
 
 @Composable
@@ -44,9 +50,96 @@ fun CommunityClubDetailScreen(
     navController: NavController,
     clubId: Int
 ) {
-    // 1. 获取模拟数据
-    val clubInfo = remember(clubId) { getMockClubInfo(clubId) }
-    val clubPosts = remember(clubId) { getMockClubPosts(clubId) }
+    // 1. 俱乐部信息与动态列表
+    var clubInfo by remember(clubId) { mutableStateOf<UIClubInfo?>(null) }
+    var clubPosts by remember(clubId) { mutableStateOf<List<com.example.rideflow.model.Post>>(emptyList()) }
+    val handler = Handler(Looper.getMainLooper())
+
+    LaunchedEffect(clubId) {
+        // 加载俱乐部基本信息
+        Thread {
+            DatabaseHelper.processQuery(
+                "SELECT name, city, logo_url, members_count, heat FROM clubs WHERE club_id = ?",
+                listOf(clubId)
+            ) { rs ->
+                if (rs.next()) {
+                    val name = rs.getString(1) ?: "俱乐部"
+                    val city = rs.getString(2) ?: ""
+                    val logo = rs.getString(3)
+                    val members = rs.getInt(4)
+                    val heat = rs.getInt(5)
+                    val info = UIClubInfo(
+                        name = name,
+                        level = 1,
+                        heat = "$heat",
+                        rankTag = "认证俱乐部",
+                        avatarInitial = (name.firstOrNull() ?: '俱').toString(),
+                        themeColor = Color(0xFF1976D2),
+                        description = listOf(city.takeIf { it.isNotEmpty() }, "成员$members").filterNotNull().joinToString(" · "),
+                        logoUrl = logo
+                    )
+                    handler.post { clubInfo = info }
+                }
+                Unit
+            }
+        }.start()
+
+        // 加载俱乐部动态（来自数据库 community_posts）
+        Thread {
+            val list = mutableListOf<com.example.rideflow.model.Post>()
+            DatabaseHelper.processQuery(
+                "SELECT p.post_id, p.content_text, p.image_url, p.created_at, c.name, c.logo_url FROM community_posts p JOIN clubs c ON p.club_id = c.club_id WHERE p.club_id = ? ORDER BY p.created_at DESC",
+                listOf(clubId)
+            ) { rs ->
+                while (rs.next()) {
+                    val pid = rs.getInt(1)
+                    val content = rs.getString(2) ?: ""
+                    val img = rs.getString(3) ?: "[图片]"
+                    val created = rs.getTimestamp(4)
+                    val name = rs.getString(5) ?: "未知俱乐部"
+                    val logo = rs.getString(6)
+                    val timeStr = if (created != null) SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(created) else ""
+                    list.add(
+                        com.example.rideflow.model.Post(
+                            id = pid,
+                            userId = clubId,
+                            userName = name,
+                            timeAgo = timeStr,
+                            content = content,
+                            imagePlaceholder = img,
+                            likes = 0,
+                            comments = 0,
+                            initialIsLiked = false,
+                            authorType = "club",
+                            avatarUrl = logo
+                        )
+                    )
+                }
+                Unit
+            }
+
+            // 统计点赞与评论数量
+            val likesMap = mutableMapOf<Int, Int>()
+            DatabaseHelper.processQuery(
+                "SELECT pl.post_id, COUNT(*) FROM post_likes pl WHERE pl.post_id IN (SELECT post_id FROM community_posts WHERE club_id = ?) GROUP BY pl.post_id",
+                listOf(clubId)
+            ) { lrs ->
+                while (lrs.next()) likesMap[lrs.getInt(1)] = lrs.getInt(2)
+                Unit
+            }
+            val commentsMap = mutableMapOf<Int, Int>()
+            DatabaseHelper.processQuery(
+                "SELECT pc.post_id, COUNT(*) FROM post_comments pc WHERE pc.post_id IN (SELECT post_id FROM community_posts WHERE club_id = ?) GROUP BY pc.post_id",
+                listOf(clubId)
+            ) { crs ->
+                while (crs.next()) commentsMap[crs.getInt(1)] = crs.getInt(2)
+                Unit
+            }
+
+            val merged = list.map { p -> p.copy(likes = likesMap[p.id] ?: 0, comments = commentsMap[p.id] ?: 0) }
+            handler.post { clubPosts = merged }
+        }.start()
+    }
 
     // 2. 弹窗状态管理
     var showRankingDialog by remember { mutableStateOf(false) }
@@ -58,8 +151,9 @@ fun CommunityClubDetailScreen(
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             // 顶部 Header
             item {
+                val info = clubInfo ?: UIClubInfo("俱乐部", 1, "0", "认证俱乐部", "俱", Color(0xFF1976D2), "", null)
                 ClubDetailHeader(
-                    info = clubInfo,
+                    info = info,
                     onBackClick = { navController.popBackStack() },
                     // [修改点]：点击详情图标，传递参数告知目标页面隐藏加入按钮
                     onDetailClick = { navController.navigate("club_detail/$clubId?showJoin=false") },
@@ -70,7 +164,7 @@ fun CommunityClubDetailScreen(
             // 热度统计
             item {
                 ClubDetailHeatSection(
-                    heatValue = clubInfo.heat,
+                    heatValue = clubInfo?.heat ?: "0",
                     progress = when (clubId) { 1 -> 0.8f; 2 -> 0.4f; else -> 0.6f }
                 )
             }
@@ -94,7 +188,8 @@ fun CommunityClubDetailScreen(
             // 动态内容 Header
             item {
                 Spacer(modifier = Modifier.height(12.dp).fillMaxWidth().background(Color(0xFFF5F5F5)))
-                PostListHeader(clubInfo)
+                val info2 = clubInfo ?: UIClubInfo("俱乐部", 1, "0", "认证俱乐部", "俱", Color(0xFF1976D2), "", null)
+                PostListHeader(info2)
                 HorizontalDivider(color = Color(0xFFEEEEEE))
             }
 
@@ -111,7 +206,9 @@ fun CommunityClubDetailScreen(
                         post = post,
                         isFollowing = true,
                         onFollowToggle = { _, _ -> },
-                        showFollowButton = false
+                        showFollowButton = false,
+                        onAvatarClick = { targetId, _ -> navController.navigate("club_detail/$targetId") },
+                        onPostClick = { pid -> navController.navigate("${com.example.rideflow.navigation.AppRoutes.POST_DETAIL}/$pid") }
                     )
                     Spacer(modifier = Modifier.height(8.dp).background(Color(0xFFF0F0F0)))
                 }
@@ -124,7 +221,7 @@ fun CommunityClubDetailScreen(
         if (showRankingDialog) {
             AlertDialog(
                 onDismissRequest = { showRankingDialog = false },
-                title = { Text("本周贡献榜 - ${clubInfo.name}", fontSize = 18.sp, fontWeight = FontWeight.Bold) },
+                title = { Text("本周贡献榜 - ${clubInfo?.name ?: "俱乐部"}", fontSize = 18.sp, fontWeight = FontWeight.Bold) },
                 text = {
                     Column(modifier = Modifier.heightIn(max = 300.dp).verticalScroll(androidx.compose.foundation.rememberScrollState())) {
                         val members = getMockMembers(clubId)
@@ -188,7 +285,7 @@ fun CommunityClubDetailScreen(
                 title = { Text("申请加入") },
                 text = {
                     Column {
-                        Text("申请加入 ${clubInfo.name}，请填写申请理由：")
+                        Text("申请加入 ${clubInfo?.name ?: "俱乐部"}，请填写申请理由：")
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedTextField(
                             value = joinReason,
@@ -245,8 +342,17 @@ private fun ClubDetailHeader(info: UIClubInfo, onBackClick: () -> Unit, onDetail
                     color = Color.White,
                     modifier = Modifier.size(70.dp).clickable(onClick = onDetailClick) // 点击头像也能跳转
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(info.avatarInitial, fontSize = 32.sp, fontWeight = FontWeight.Bold, color = info.themeColor)
+                    if (!info.logoUrl.isNullOrBlank()) {
+                        coil.compose.AsyncImage(
+                            model = info.logoUrl,
+                            contentDescription = null,
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp))
+                        )
+                    } else {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(info.avatarInitial, fontSize = 32.sp, fontWeight = FontWeight.Bold, color = info.themeColor)
+                        }
                     }
                 }
                 Spacer(Modifier.width(16.dp))

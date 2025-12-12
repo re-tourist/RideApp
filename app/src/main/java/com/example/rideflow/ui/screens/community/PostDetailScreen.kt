@@ -23,17 +23,22 @@ import android.os.Handler
 import android.os.Looper
 import java.text.SimpleDateFormat
 import java.util.Locale
+import org.koin.androidx.compose.koinViewModel
+import com.example.rideflow.auth.AuthViewModel
+import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CommunityPostDetailScreen(navController: NavController, postId: Int) {
     var userName by remember { mutableStateOf("") }
     var timeAgo by remember { mutableStateOf("") }
-    var content by remember { mutableStateOf("") }
+    var content by remember { mutableStateOf("[图片]") }
     var imagePlaceholder by remember { mutableStateOf("[图片]") }
     var likeCount by remember { mutableStateOf(0) }
     var comments by remember { mutableStateOf(listOf<Comment>()) }
     var visibleCount by remember { mutableStateOf(10) }
+    var newCommentText by remember { mutableStateOf("") }
+    val authViewModel = koinViewModel<AuthViewModel>()
 
     LaunchedEffect(postId) {
         val handler = Handler(Looper.getMainLooper())
@@ -120,14 +125,14 @@ fun CommunityPostDetailScreen(navController: NavController, postId: Int) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(220.dp)
-                        .clip(RoundedCornerShape(8.dp)),
-                    contentAlignment = Alignment.Center
+                        .clip(RoundedCornerShape(8.dp))
                 ) {
-                    Surface(color = Color(0xFFF5F5F5)) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(text = imagePlaceholder, color = Color.Gray)
-                        }
-                    }
+                    coil.compose.AsyncImage(
+                        model = imagePlaceholder,
+                        contentDescription = null,
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
                 Spacer(Modifier.height(16.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -157,6 +162,43 @@ fun CommunityPostDetailScreen(navController: NavController, postId: Int) {
                     Spacer(Modifier.height(12.dp))
                     Button(onClick = { visibleCount = minOf(visibleCount + 5, comments.size) }, modifier = Modifier.fillMaxWidth()) {
                         Text(text = "加载更多评论")
+                    }
+                }
+            }
+            item {
+                Spacer(Modifier.height(12.dp))
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(
+                        value = newCommentText,
+                        onValueChange = { newCommentText = it },
+                        modifier = Modifier.weight(1f),
+                        placeholder = { Text("发表你的评论...") }
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    val currentUser = authViewModel.getCurrentUser()
+                    Button(
+                        onClick = {
+                            val uid = currentUser?.userId?.toIntOrNull()
+                            val text = newCommentText.trim()
+                            if (uid == null || text.isEmpty()) return@Button
+                            val handler = Handler(Looper.getMainLooper())
+                            Thread {
+                                val newId = DatabaseHelper.insertAndReturnId(
+                                    "INSERT INTO post_comments (post_id, user_id, content, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
+                                    listOf(postId, uid, text)
+                                )
+                                if (newId != null) {
+                                    val now = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
+                                    handler.post {
+                                        comments = listOf(Comment(newId, currentUser.nickname, text, now)) + comments
+                                        newCommentText = ""
+                                    }
+                                }
+                            }.start()
+                        },
+                        enabled = newCommentText.isNotBlank()
+                    ) {
+                        Text("发送")
                     }
                 }
             }

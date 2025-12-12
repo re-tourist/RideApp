@@ -218,10 +218,42 @@ fun ProfileDetailScreenPreview() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserProfileDetailScreen(navController: NavController, userId: Int) {
-    val profile = when (userId) {
-        1 -> mapOf("nickname" to "凌风", "city" to "杭州", "level" to "进阶", "avatar" to "https://rideapp.oss-cn-hangzhou.aliyunc.com/avatars/1.jpg", "bio" to "夜骑爱好者，公路车为主")
-        2 -> mapOf("nickname" to "辰星", "city" to "上海", "level" to "普通", "avatar" to "https://rideapp.oss-cn-hangzhou.aliyunc.com/avatars/2.jpg", "bio" to "周末骑行，热爱咖啡")
-        else -> mapOf("nickname" to "骑友$userId", "city" to "未知", "level" to "普通", "avatar" to null, "bio" to "这个人很懒，什么都没写")
+    var nickname by remember { mutableStateOf("") }
+    var avatar by remember { mutableStateOf<String?>(null) }
+    var bio by remember { mutableStateOf("") }
+    var city by remember { mutableStateOf("") }
+    var level by remember { mutableStateOf("") }
+    val handler = android.os.Handler(android.os.Looper.getMainLooper())
+
+    LaunchedEffect(userId) {
+        Thread {
+            com.example.rideflow.backend.DatabaseHelper.processQuery(
+                "SELECT nickname, avatar_url, bio FROM users WHERE user_id = ?",
+                listOf(userId)
+            ) { rs ->
+                if (rs.next()) {
+                    val n = rs.getString(1) ?: ""
+                    val a = rs.getString(2)
+                    val b = rs.getString(3) ?: ""
+                    handler.post {
+                        nickname = n
+                        avatar = a
+                        bio = b
+                        city = ""
+                        level = ""
+                    }
+                } else {
+                    handler.post {
+                        nickname = "骑友$userId"
+                        avatar = null
+                        bio = ""
+                        city = ""
+                        level = ""
+                    }
+                }
+                Unit
+            }
+        }.start()
     }
     Scaffold(
         topBar = {
@@ -243,9 +275,9 @@ fun UserProfileDetailScreen(navController: NavController, userId: Int) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Surface(modifier = Modifier.size(120.dp), shape = CircleShape, color = Color.LightGray) {
-                val avatar = profile["avatar"] as String?
-                if (!avatar.isNullOrBlank()) {
-                    AsyncImage(model = avatar, contentDescription = "头像", modifier = Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
+                val av = avatar
+                if (!av.isNullOrBlank()) {
+                    AsyncImage(model = av, contentDescription = "头像", modifier = Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
                 } else {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Icon(imageVector = Icons.Filled.Person, contentDescription = "头像", modifier = Modifier.size(60.dp), tint = Color.DarkGray)
@@ -253,15 +285,15 @@ fun UserProfileDetailScreen(navController: NavController, userId: Int) {
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
-            Text(text = profile["nickname"] as String, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(text = nickname, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(text = (profile["city"] as String?) ?: "", fontSize = 14.sp, color = Color.Gray)
-                Text(text = (profile["level"] as String?) ?: "", fontSize = 14.sp, color = Color.Gray)
+                Text(text = city, fontSize = 14.sp, color = Color.Gray)
+                Text(text = level, fontSize = 14.sp, color = Color.Gray)
             }
             Spacer(modifier = Modifier.height(24.dp))
             Column(modifier = Modifier.fillMaxWidth()) {
-                ProfileInfoRow(label = "简介:", value = (profile["bio"] as String?) ?: "")
+                ProfileInfoRow(label = "简介:", value = bio)
                 ProfileInfoRow(label = "里程:", value = "1324 km")
                 ProfileInfoRow(label = "均速:", value = "22.8 km/h")
                 ProfileInfoRow(label = "累计骑行:", value = "86 次")

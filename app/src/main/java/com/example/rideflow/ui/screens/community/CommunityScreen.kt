@@ -103,17 +103,26 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
 
             // 3. 补充用户信息/俱乐部名称
             DatabaseHelper.processQuery(
-                "SELECT p.post_id, u.nickname, c.name FROM community_posts p LEFT JOIN users u ON p.author_user_id = u.user_id LEFT JOIN clubs c ON p.club_id = c.club_id"
+                "SELECT p.post_id, u.nickname, c.name, u.avatar_url, c.logo_url FROM community_posts p LEFT JOIN users u ON p.author_user_id = u.user_id LEFT JOIN clubs c ON p.club_id = c.club_id"
             ) { rs ->
                 val nameMap = mutableMapOf<Int, String>()
+                val avatarMap = mutableMapOf<Int, String?>()
                 while (rs.next()) {
                     val pid = rs.getInt(1)
                     val nick = rs.getString(2)
                     val clubName = rs.getString(3)
+                    val uAvatar = rs.getString(4)
+                    val cLogo = rs.getString(5)
                     val displayName = if (!clubName.isNullOrEmpty()) clubName else (nick ?: "未知用户")
+                    val avatar = if (!cLogo.isNullOrEmpty()) cLogo else uAvatar
                     nameMap[pid] = displayName
+                    avatarMap[pid] = avatar
                 }
-                posts.replaceAll { p -> if (p.userName.isEmpty()) p.copy(userName = nameMap[p.id] ?: "未知用户") else p }
+                posts.replaceAll { p ->
+                    val nm = if (p.userName.isEmpty()) nameMap[p.id] ?: "未知用户" else p.userName
+                    val av = avatarMap[p.id]
+                    p.copy(userName = nm, avatarUrl = av)
+                }
                 Unit
             }
 
@@ -312,16 +321,21 @@ private suspend fun loadPage(page: Int, pageSize: Int, currentUserId: Int? = nul
         Unit
     }
     val nameMap = mutableMapOf<Int, String>()
+    val avatarMap = mutableMapOf<Int, String?>()
     DatabaseHelper.processQuery(
-        "SELECT p.post_id, u.nickname, c.name FROM community_posts p LEFT JOIN users u ON p.author_user_id = u.user_id LEFT JOIN clubs c ON p.club_id = c.club_id LIMIT ? OFFSET ?",
+        "SELECT p.post_id, u.nickname, c.name, u.avatar_url, c.logo_url FROM community_posts p LEFT JOIN users u ON p.author_user_id = u.user_id LEFT JOIN clubs c ON p.club_id = c.club_id LIMIT ? OFFSET ?",
         listOf(pageSize, page * pageSize)
     ) { rs ->
         while (rs.next()) {
             val pid = rs.getInt(1)
             val nick = rs.getString(2)
             val clubName = rs.getString(3)
+            val uAvatar = rs.getString(4)
+            val cLogo = rs.getString(5)
             val displayName = if (!clubName.isNullOrEmpty()) clubName else (nick ?: "未知用户")
+            val avatar = if (!cLogo.isNullOrEmpty()) cLogo else uAvatar
             nameMap[pid] = displayName
+            avatarMap[pid] = avatar
         }
         Unit
     }
@@ -333,8 +347,9 @@ private suspend fun loadPage(page: Int, pageSize: Int, currentUserId: Int? = nul
         }
     }
     return posts.map { p ->
-        val base = if (p.userName.isEmpty()) p.copy(userName = nameMap[p.id] ?: "未知用户") else p
-        base.copy(initialIsLiked = likedSet.contains(base.id))
+        val nm = if (p.userName.isEmpty()) nameMap[p.id] ?: "未知用户" else p.userName
+        val av = avatarMap[p.id]
+        p.copy(userName = nm, avatarUrl = av, initialIsLiked = likedSet.contains(p.id))
     }
 }
 
