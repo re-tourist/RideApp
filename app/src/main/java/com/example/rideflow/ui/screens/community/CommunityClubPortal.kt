@@ -75,11 +75,11 @@ fun CommunityClubPortalScreen(
         TabRow(
             selectedTabIndex = selectedTab,
             containerColor = Color.White,
-            contentColor = Color.Red,
+            contentColor = MaterialTheme.colorScheme.primary,
             indicator = { tabPositions ->
                 TabRowDefaults.SecondaryIndicator(
                     Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                    color = Color.Red
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
         ) {
@@ -90,7 +90,7 @@ fun CommunityClubPortalScreen(
                     text = {
                         Text(
                             text = title,
-                            color = if (selectedTab == index) Color.Red else Color.Black,
+                            color = if (selectedTab == index) MaterialTheme.colorScheme.primary else Color.Black,
                             fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal
                         )
                     }
@@ -103,7 +103,7 @@ fun CommunityClubPortalScreen(
         when (selectedTab) {
             0 -> ClubDynamicsTab(posts = clubPosts, navController = navController)
             1 -> ClubListTab(clubs = clubs, onClubClick = { clubId ->
-                navController.navigate("community_club_detail/$clubId")
+                navController.navigate("${com.example.rideflow.navigation.AppRoutes.COMMUNITY_CLUB_DETAIL}/$clubId")
             })
         }
     }
@@ -126,7 +126,7 @@ fun ClubDynamicsTab(posts: List<Post>, navController: NavController) {
                     isFollowing = true,
                     onFollowToggle = { _, _ -> },
                     showFollowButton = false, // 隐藏关注按钮
-                    onAvatarClick = { targetId, _ -> navController.navigate("club_detail/$targetId") },
+                    onAvatarClick = { targetId, _ -> navController.navigate("${com.example.rideflow.navigation.AppRoutes.COMMUNITY_CLUB_DETAIL}/$targetId") },
                     onPostClick = { pid -> navController.navigate("${com.example.rideflow.navigation.AppRoutes.POST_DETAIL}/$pid") }
                 )
                 Spacer(modifier = Modifier.height(8.dp).background(Color(0xFFF0F0F0)))

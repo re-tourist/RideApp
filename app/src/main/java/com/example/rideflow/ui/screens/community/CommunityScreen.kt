@@ -189,7 +189,7 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
     // 处理头像点击，加载用户详细信息
     val onAvatarClick: (Int, String) -> Unit = { targetId, aType ->
         if (aType == "club") {
-            navController.navigate("club_detail/$targetId")
+            navController.navigate("${com.example.rideflow.navigation.AppRoutes.COMMUNITY_CLUB_DETAIL}/$targetId")
         } else {
             navController.navigate("${com.example.rideflow.navigation.AppRoutes.USER_PROFILE_DETAIL}/$targetId")
         }
@@ -225,7 +225,7 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
     }
 
     Scaffold(
-        topBar = { TopSearchBar(isSearching = isSearching, onSearchToggle = { isSearching = it }) },
+        topBar = { },
         bottomBar = {
             CommunityBottomBar(
                 onPublishClick = { showPublishDialog = true },
@@ -234,13 +234,11 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
-            if (!isSearching) {
-                CategoryTabs(
-                    categories = categories,
-                    selectedCategory = selectedCategory,
-                    onCategorySelected = { selectedCategory = it }
-                )
-            }
+            CategoryTabs(
+                categories = categories,
+                selectedCategory = selectedCategory,
+                onCategorySelected = { selectedCategory = it }
+            )
 
             if (isLoading && allPosts.isEmpty()) {
                 PostListSkeleton()
@@ -271,7 +269,7 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
                         }
                     }
                 })
-                "社区交易" -> CommunityTradeScreen()
+                "社区交易" -> CommunityTradeScreen(navController = navController)
                 "俱乐部" -> CommunityClubPortalScreen(navController = navController, allPosts = allPosts)
                 else -> CommunityHotScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick, onPostClick, onLikeToggle, hasMore, isLoadingMore, onLoadMore = {
                     if (hasMore && !isLoadingMore) {
@@ -516,7 +514,7 @@ fun UserDetailInfoDialog(
                         onClick = onFollowClick,
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isFollowing) Color.Gray else Color.Red
+                            containerColor = if (isFollowing) Color.Gray else MaterialTheme.colorScheme.primary
                         )
                     ) {
                         Text(if (isFollowing) "已关注" else "关注对方")
@@ -539,7 +537,7 @@ fun CommunityBottomBar(onPublishClick: () -> Unit, onMessageClick: () -> Unit) {
             modifier = Modifier
                 .size(50.dp)
                 .clip(CircleShape)
-                .background(Color.Red)
+                .background(MaterialTheme.colorScheme.primary)
                 .clickable(onClick = onPublishClick),
             contentAlignment = Alignment.Center
         ) {

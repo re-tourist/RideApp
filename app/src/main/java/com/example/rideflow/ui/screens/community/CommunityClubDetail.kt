@@ -156,7 +156,7 @@ fun CommunityClubDetailScreen(
                     info = info,
                     onBackClick = { navController.popBackStack() },
                     // [修改点]：点击详情图标，传递参数告知目标页面隐藏加入按钮
-                    onDetailClick = { navController.navigate("club_detail/$clubId?showJoin=false") },
+                    onDetailClick = { navController.navigate("${com.example.rideflow.navigation.AppRoutes.COMMUNITY_CLUB_DETAIL}/$clubId") },
                     onShareClick = { /* 分享逻辑 */ }
                 )
             }
@@ -207,7 +207,7 @@ fun CommunityClubDetailScreen(
                         isFollowing = true,
                         onFollowToggle = { _, _ -> },
                         showFollowButton = false,
-                        onAvatarClick = { targetId, _ -> navController.navigate("club_detail/$targetId") },
+                        onAvatarClick = { targetId, _ -> navController.navigate("${com.example.rideflow.navigation.AppRoutes.COMMUNITY_CLUB_DETAIL}/$targetId") },
                         onPostClick = { pid -> navController.navigate("${com.example.rideflow.navigation.AppRoutes.POST_DETAIL}/$pid") }
                     )
                     Spacer(modifier = Modifier.height(8.dp).background(Color(0xFFF0F0F0)))
@@ -245,7 +245,7 @@ fun CommunityClubDetailScreen(
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Text(name, fontSize = 16.sp)
                                 }
-                                Text("${(1000 - index * 50)} 贡献", color = Color.Red, fontSize = 14.sp)
+                                Text("${(1000 - index * 50)} 贡献", color = MaterialTheme.colorScheme.primary, fontSize = 14.sp)
                             }
                             HorizontalDivider(color = Color(0xFFF0F0F0))
                         }
@@ -269,7 +269,7 @@ fun CommunityClubDetailScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedButton(onClick = { }, modifier = Modifier.fillMaxWidth()) { Text("查看公告") }
                         Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedButton(onClick = { }, modifier = Modifier.fillMaxWidth()) { Text("退出俱乐部", color = Color.Red) }
+                        OutlinedButton(onClick = { }, modifier = Modifier.fillMaxWidth()) { Text("退出俱乐部", color = MaterialTheme.colorScheme.primary) }
                     }
                 },
                 confirmButton = {
@@ -422,7 +422,7 @@ private fun ClubDetailHeatSection(heatValue: String, progress: Float) {
         LinearProgressIndicator(
             progress = progress,
             modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-            color = Color.Red,
+            color = MaterialTheme.colorScheme.primary,
             trackColor = Color(0xFFEEEEEE)
         )
     }
@@ -481,7 +481,7 @@ private fun ClubDetailMenuItem(icon: ImageVector, title: String, subText: String
 
 private fun getMockClubInfo(id: Int): UIClubInfo {
     return when(id) {
-        1 -> UIClubInfo("飓风骑行俱乐部", 8, "57万℃", "年度第1骑", "飓", Color.Red, "追求速度与激情的专业车队")
+        1 -> UIClubInfo("飓风骑行俱乐部", 8, "57万℃", "年度第1骑", "飓", Color(0xFF1976D2), "追求速度与激情的专业车队")
         2 -> UIClubInfo("周末休闲骑", 3, "12万℃", "美食猎人", "周", Color.Blue, "骑车只是借口，干饭才是正事")
         3 -> UIClubInfo("山地越野小队", 5, "33万℃", "山神降临", "山", Color(0xFF006400), "无兄弟，不越野，探索未知林道")
         else -> UIClubInfo("未知俱乐部", 1, "0℃", "新手上路", "?", Color.Gray, "")

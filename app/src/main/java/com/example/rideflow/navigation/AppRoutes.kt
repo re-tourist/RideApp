@@ -43,6 +43,8 @@ object AppRoutes {
     // 俱乐部相关路由
 const val CLUB_SCREEN = "club_screen"
 const val CLUB_DETAIL = "club_detail"
+const val COMMUNITY_CLUB_DETAIL = "community_club_detail"
 const val CREATE_CLUB = "create_club"
 const val SET_MAIN_CLUB = "set_main_club"
+    const val TRADE_DETAIL = "trade_detail"
 }

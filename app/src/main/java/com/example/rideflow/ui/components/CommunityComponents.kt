@@ -55,7 +55,7 @@ fun TopSearchBar(isSearching: Boolean, onSearchToggle: (Boolean) -> Unit) {
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = "搜索") },
                 modifier = Modifier.weight(1f),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color.Red,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
                     unfocusedBorderColor = Color.LightGray
                 )
             )
@@ -71,13 +71,13 @@ fun TopSearchBar(isSearching: Boolean, onSearchToggle: (Boolean) -> Unit) {
     } else {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("热搜", color = Color.Red, fontWeight = FontWeight.Bold)
+                Text("热搜", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.width(8.dp))
                 Text("第十七届山地越野赛即将开始报名", fontSize = 14.sp)
                 Spacer(Modifier.weight(1f))
                 Button(
                     onClick = { onSearchToggle(true) },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.LightGray.copy(alpha = 0.3f)),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)),
                     contentPadding = PaddingValues(horizontal = 10.dp),
                     modifier = Modifier.height(30.dp)
                 ) {
@@ -158,7 +158,7 @@ fun CategoryTabs(
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = category,
-                    color = if (category == selectedCategory) Color.Red else Color.Black,
+                    color = if (category == selectedCategory) MaterialTheme.colorScheme.primary else Color.Black,
                     fontWeight = if (category == selectedCategory) FontWeight.Bold else FontWeight.Normal,
                     modifier = Modifier.clickable { onCategorySelected(category) }
                 )
@@ -168,7 +168,7 @@ fun CategoryTabs(
                             .width(18.dp)
                             .height(3.dp)
                             .clip(RoundedCornerShape(2.dp))
-                            .background(Color.Red)
+                            .background(MaterialTheme.colorScheme.primary)
                     )
                 } else {
                     Spacer(modifier = Modifier.height(3.dp))
@@ -250,7 +250,7 @@ fun PostCard(
             if (showFollowButton) {
                 Button(
                     onClick = { onFollowToggle(post.userId, !isFollowing) },
-                    colors = ButtonDefaults.buttonColors(containerColor = if (isFollowing) Color.Gray.copy(alpha = 0.5f) else Color.Red.copy(alpha = 0.8f)),
+                    colors = ButtonDefaults.buttonColors(containerColor = if (isFollowing) Color.Gray.copy(alpha = 0.5f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)),
                     contentPadding = PaddingValues(horizontal = 10.dp),
                     modifier = Modifier.height(30.dp)
                 ) {
@@ -344,7 +344,7 @@ fun PostCard(
             InteractionButton(
                 icon = Icons.Default.ThumbUp,
                 text = post.likes.toString(),
-                tint = if (isLiked) Color.Red else Color.Gray,
+                tint = if (isLiked) MaterialTheme.colorScheme.primary else Color.Gray,
                 onClick = onLikeClicked
             )
         }
@@ -474,7 +474,12 @@ fun TradePostCard(item: TradeItem, onClick: () -> Unit) {
                 .background(Color.LightGray.copy(alpha = 0.5f)),
             contentAlignment = Alignment.Center
         ) {
-            Text(item.imagePlaceholder, fontSize = 12.sp, color = Color.DarkGray)
+            AsyncImage(
+                model = item.imagePlaceholder,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
         }
 
         Spacer(Modifier.width(12.dp))
@@ -486,7 +491,7 @@ fun TradePostCard(item: TradeItem, onClick: () -> Unit) {
             Spacer(Modifier.height(4.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(item.price, color = Color.Red, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(item.price, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 Spacer(Modifier.width(8.dp))
                 if (!item.isOfficial) {
                     Text("发布者: ${item.sellerName}", color = Color.Gray, fontSize = 12.sp)
@@ -621,7 +626,7 @@ fun ClubHeaderSection(onBackClick: () -> Unit, onMenuClick: () -> Unit, onShareC
                     modifier = Modifier.size(70.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.DateRange, contentDescription = null, tint = Color.Red, modifier = Modifier.size(40.dp))
+                        Icon(Icons.Default.DateRange, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(40.dp))
                     }
                 }
 
@@ -678,12 +683,12 @@ fun ClubHeatSection() {
         LinearProgressIndicator(
             progress = 0.78f,
             modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-            color = Color.Red,
+            color = MaterialTheme.colorScheme.primary,
             trackColor = Color(0xFFEEEEEE)
         )
         Spacer(Modifier.height(4.dp))
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            Text("3909℃", color = Color.Red, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text("3909℃", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
         }
     }
     HorizontalDivider(thickness = 8.dp, color = Color(0xFFF5F5F5))
@@ -740,18 +745,18 @@ fun ClubActionItem(icon: ImageVector, title: String, isSelected: Boolean = false
         Icon(
             imageVector = icon,
             contentDescription = title,
-            tint = if (isSelected) Color.Red else Color(0xFF0091EA),
+            tint = if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray,
             modifier = Modifier.size(28.dp)
         )
         Spacer(Modifier.height(8.dp))
         Text(
             text = title,
             fontSize = 12.sp,
-            color = if (isSelected) Color.Red else Color.Gray
+            color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray
         )
         if (isSelected) {
             Spacer(Modifier.height(4.dp))
-            Box(modifier = Modifier.width(20.dp).height(2.dp).background(Color.Red))
+            Box(modifier = Modifier.width(20.dp).height(2.dp).background(MaterialTheme.colorScheme.primary))
         }
     }
 }

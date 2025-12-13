@@ -11,7 +11,7 @@
  Target Server Version : 80044 (8.0.44-0ubuntu0.22.04.1)
  File Encoding         : 65001
 
- Date: 12/12/2025 20:12:43
+ Date: 13/12/2025 15:19:29
 */
 
 SET NAMES utf8mb4;
@@ -291,7 +291,7 @@ CREATE TABLE `post_comments`  (
   INDEX `fk_comments_user`(`user_id` ASC) USING BTREE,
   CONSTRAINT `fk_comments_post` FOREIGN KEY (`post_id`) REFERENCES `community_posts` (`post_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_comments_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 27 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 31 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of post_comments
@@ -322,6 +322,10 @@ INSERT INTO `post_comments` VALUES (23, 4, 2, '路线和配速发一下', '2025-
 INSERT INTO `post_comments` VALUES (24, 5, 1, '夜骑灯光确实很美', '2025-12-04 21:11:00');
 INSERT INTO `post_comments` VALUES (25, 5, 3, '速度控制好更安全', '2025-12-04 21:13:00');
 INSERT INTO `post_comments` VALUES (26, 6, 3, '晨练集合几点？', '2025-12-03 06:53:00');
+INSERT INTO `post_comments` VALUES (27, 2, 1, '111', '2025-12-12 20:34:09');
+INSERT INTO `post_comments` VALUES (28, 2, 1, 'test', '2025-12-12 20:40:48');
+INSERT INTO `post_comments` VALUES (29, 6, 1, 'good', '2025-12-12 21:17:01');
+INSERT INTO `post_comments` VALUES (30, 5, 1, 'gooooood', '2025-12-12 21:17:22');
 
 -- ----------------------------
 -- Table structure for post_likes
@@ -344,19 +348,18 @@ INSERT INTO `post_likes` VALUES (1, 1, '2025-12-05 08:15:00');
 INSERT INTO `post_likes` VALUES (1, 2, '2025-12-05 09:00:00');
 INSERT INTO `post_likes` VALUES (1, 3, '2025-12-05 08:19:00');
 INSERT INTO `post_likes` VALUES (1, 7, '2025-12-05 08:21:00');
-INSERT INTO `post_likes` VALUES (2, 1, '2025-12-05 08:25:00');
 INSERT INTO `post_likes` VALUES (2, 2, '2025-12-05 08:27:00');
 INSERT INTO `post_likes` VALUES (2, 3, '2025-12-05 08:40:00');
 INSERT INTO `post_likes` VALUES (2, 9, '2025-12-05 08:45:00');
 INSERT INTO `post_likes` VALUES (3, 1, '2025-12-05 07:35:00');
 INSERT INTO `post_likes` VALUES (3, 2, '2025-12-05 07:40:00');
-INSERT INTO `post_likes` VALUES (4, 1, '2025-12-04 10:00:00');
+INSERT INTO `post_likes` VALUES (4, 1, '2025-12-12 20:26:07');
 INSERT INTO `post_likes` VALUES (4, 2, '2025-12-04 09:12:00');
 INSERT INTO `post_likes` VALUES (4, 3, '2025-12-04 09:15:00');
 INSERT INTO `post_likes` VALUES (5, 1, '2025-12-04 21:00:00');
 INSERT INTO `post_likes` VALUES (5, 2, '2025-12-04 21:10:00');
 INSERT INTO `post_likes` VALUES (5, 3, '2025-12-04 21:12:00');
-INSERT INTO `post_likes` VALUES (6, 1, '2025-12-03 06:50:00');
+INSERT INTO `post_likes` VALUES (6, 1, '2025-12-12 21:16:41');
 INSERT INTO `post_likes` VALUES (6, 2, '2025-12-03 07:00:00');
 INSERT INTO `post_likes` VALUES (6, 3, '2025-12-03 06:52:00');
 
@@ -599,12 +602,12 @@ CREATE TABLE `trade_items`  (
 -- ----------------------------
 -- Records of trade_items
 -- ----------------------------
-INSERT INTO `trade_items` VALUES (1, 0, '9成新碳纤维公路车架', '尺寸M，超轻，只用了半年，因为换车出售。可小刀。', 4500.00, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/frame.jpg', 'xianyu://item/12345', 1, '整车', 1, '2025-12-05 09:00:00');
-INSERT INTO `trade_items` VALUES (2, 0, 'Shimano 105套件（二手）', '飞轮、链条、牙盘全套，正常使用痕迹，功能完好。', 1500.00, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/groupset.jpg', 'xianyu://item/67890', 2, '配件', 1, '2025-12-05 09:05:00');
-INSERT INTO `trade_items` VALUES (3, 0, '冬季骑行抓绒手套', '全新未拆封，L号，防水防风，多买了一副，便宜出。', 89.00, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/gloves.jpg', 'taobao://item/11223', 1, '配件', 1, '2025-12-05 09:10:00');
-INSERT INTO `trade_items` VALUES (4, 1, 'RideFlow 2024新款速干骑行服套装', '骑行服，透气排汗，夏季必备。分类：骑行服', 399.00, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/jersey.jpg', 'app://official/product/399', NULL, '骑行服', 1, '2025-12-05 09:20:00');
-INSERT INTO `trade_items` VALUES (5, 1, '高性能GPS码表（R700型号）', '精准定位，超长续航，支持心率监测。分类：配件', 1899.00, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/computer.jpg', 'app://official/product/r700', NULL, '配件', 1, '2025-12-05 09:25:00');
-INSERT INTO `trade_items` VALUES (6, 1, '山地越野头盔（Pro系列）', 'MIPS保护系统，轻量化设计，多色可选。分类：配件', 599.00, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/helmet.jpg', 'app://official/product/prohelmet', NULL, '配件', 1, '2025-12-05 09:30:00');
+INSERT INTO `trade_items` VALUES (1, 0, '9成新碳纤维公路车架', '尺寸M，超轻，只用了半年，因为换车出售。可小刀。', 4500.00, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/trade/3ba8f1964fff51db305e5d6966537153.jpg', 'xianyu://item/12345', 1, '整车', 1, '2025-12-05 09:00:00');
+INSERT INTO `trade_items` VALUES (2, 0, 'Shimano 105套件（二手）', '飞轮、链条、牙盘全套，正常使用痕迹，功能完好。', 1500.00, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/trade/0fa7a0d4e8da33d939daf6843a072846.jpg', 'xianyu://item/67890', 2, '配件', 1, '2025-12-05 09:05:00');
+INSERT INTO `trade_items` VALUES (3, 0, '冬季骑行抓绒手套', '全新未拆封，L号，防水防风，多买了一副，便宜出。', 89.00, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/trade/89f63fe94889606f2520e5413f5e405e.jpg', 'taobao://item/11223', 1, '配件', 1, '2025-12-05 09:10:00');
+INSERT INTO `trade_items` VALUES (4, 1, 'RideFlow 2024新款速干骑行服套装', '骑行服，透气排汗，夏季必备。分类：骑行服', 399.00, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/trade/4cec2ce0f03e2e48f31b36abe9fcb725.jpg', 'app://official/product/399', NULL, '骑行服', 1, '2025-12-05 09:20:00');
+INSERT INTO `trade_items` VALUES (5, 1, '高性能GPS码表（R700型号）', '精准定位，超长续航，支持心率监测。分类：配件', 1899.00, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/trade/8c01623046a896f57795599c7a6776a9.jpg', 'app://official/product/r700', NULL, '配件', 1, '2025-12-05 09:25:00');
+INSERT INTO `trade_items` VALUES (6, 1, '山地越野头盔（Pro系列）', 'MIPS保护系统，轻量化设计，多色可选。分类：配件', 599.00, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/trade/40fb2b02b2334ddd4d34c3f1ce3a9d1a.jpg', 'app://official/product/prohelmet', NULL, '配件', 1, '2025-12-05 09:30:00');
 
 -- ----------------------------
 -- Table structure for user_achievement_progress
@@ -783,6 +786,8 @@ CREATE TABLE `user_follows`  (
 -- ----------------------------
 -- Records of user_follows
 -- ----------------------------
+INSERT INTO `user_follows` VALUES (1, 1, '2025-12-12 20:26:34');
+INSERT INTO `user_follows` VALUES (1, 2, '2025-12-12 20:25:45');
 INSERT INTO `user_follows` VALUES (1, 3, '2025-12-10 10:54:36');
 
 -- ----------------------------
@@ -956,7 +961,7 @@ CREATE TABLE `users`  (
 -- ----------------------------
 -- Records of users
 -- ----------------------------
-INSERT INTO `users` VALUES (1, 'testuser', 'test@example.com', '123456', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '222', 'female', '2025-12-03', '12345678900', 0, 1, '2025-12-12 18:49:42', '2025-11-27 20:58:42', '2025-12-12 18:49:42');
+INSERT INTO `users` VALUES (1, 'testuser', 'test@example.com', '123456', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '222', 'female', '2025-12-03', '12345678900', 0, 1, '2025-12-13 15:18:28', '2025-11-27 20:58:42', '2025-12-13 15:18:28');
 INSERT INTO `users` VALUES (2, 'admin', 'admin@example.com', 'admin123', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/User%20Icon/1764739073797.png', NULL, 'other', NULL, NULL, 0, 1, NULL, '2025-11-27 20:58:42', '2025-12-09 23:50:26');
 INSERT INTO `users` VALUES (3, 'user1', 'user1@example.com', 'password1', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/User%20Icon/1764739073797.png', NULL, 'other', NULL, NULL, 0, 1, NULL, '2025-11-27 20:58:42', '2025-12-09 23:50:50');
 INSERT INTO `users` VALUES (7, 'a', 'a@qq.com', 'aaaaaa', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/User%20Icon/1764739092619.png', NULL, 'other', NULL, NULL, 0, 0, '2025-11-28 00:06:10', '2025-11-28 00:06:10', '2025-12-09 23:50:57');

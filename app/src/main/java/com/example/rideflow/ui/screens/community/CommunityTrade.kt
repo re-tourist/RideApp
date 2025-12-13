@@ -6,8 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,12 +13,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.example.rideflow.backend.DatabaseHelper
 import com.example.rideflow.model.TradeItem
 import com.example.rideflow.ui.components.TradePostCard
+import com.example.rideflow.navigation.AppRoutes
 
 @Composable
-fun CommunityTradeScreen() {
+fun CommunityTradeScreen(navController: NavController) {
     val tabs = listOf("二手交易", "官方售卖")
     var selectedTabIndex by remember { mutableIntStateOf(0) }
 
@@ -64,7 +64,7 @@ fun CommunityTradeScreen() {
                 Tab(
                     selected = selectedTabIndex == index,
                     onClick = { selectedTabIndex = index },
-                    text = { Text(title, color = if (selectedTabIndex == index) Color.Red else Color.Black) }
+                    text = { Text(title, color = if (selectedTabIndex == index) MaterialTheme.colorScheme.primary else Color.Black) }
                 )
             }
         }
@@ -72,33 +72,23 @@ fun CommunityTradeScreen() {
         Spacer(Modifier.height(8.dp))
 
         when (tabs[selectedTabIndex]) {
-            "二手交易" -> SecondHandMarketScreen(tradeItems)
-            "官方售卖" -> OfficialStoreScreen(tradeItems)
+            "二手交易" -> SecondHandMarketScreen(tradeItems, navController)
+            "官方售卖" -> OfficialStoreScreen(tradeItems, navController)
         }
     }
 }
 
 @Composable
-private fun SecondHandMarketScreen(allTradeItems: List<TradeItem>) {
+private fun SecondHandMarketScreen(allTradeItems: List<TradeItem>, navController: NavController) {
     val secondhandItems = allTradeItems.filter { !it.isOfficial && it.isPublished }
-    var searchText by remember { mutableStateOf("") }
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-        OutlinedTextField(
-            value = searchText,
-            onValueChange = { searchText = it },
-            label = { Text("搜索二手商品关键词...") },
-            singleLine = true,
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "搜索") },
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-        )
-
         LazyColumn(
             modifier = Modifier.fillMaxSize().weight(1f),
             contentPadding = PaddingValues(vertical = 8.dp)
         ) {
             items(secondhandItems, key = { it.id }) { item ->
-                TradePostCard(item = item) { /* 点击详情逻辑 */ }
+                TradePostCard(item = item) { navController.navigate("${AppRoutes.TRADE_DETAIL}/${item.id}") }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             }
         }
@@ -106,7 +96,7 @@ private fun SecondHandMarketScreen(allTradeItems: List<TradeItem>) {
         Button(
             onClick = { /* 模拟发布弹窗 */ },
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color.Red.copy(alpha = 0.8f))
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f))
         ) {
             Text("发布二手交易链接")
         }
@@ -114,7 +104,7 @@ private fun SecondHandMarketScreen(allTradeItems: List<TradeItem>) {
 }
 
 @Composable
-private fun OfficialStoreScreen(allTradeItems: List<TradeItem>) {
+private fun OfficialStoreScreen(allTradeItems: List<TradeItem>, navController: NavController) {
     val officialItems = allTradeItems.filter { it.isOfficial }
     val categories = listOf("骑行服", "配件", "整车", "其他")
     var selectedCategory by remember { mutableStateOf("骑行服") }
@@ -127,7 +117,7 @@ private fun OfficialStoreScreen(allTradeItems: List<TradeItem>) {
             categories.forEach { category ->
                 Text(
                     text = category,
-                    color = if (category == selectedCategory) Color.Red else Color.Gray,
+                    color = if (category == selectedCategory) MaterialTheme.colorScheme.primary else Color.Gray,
                     fontWeight = if (category == selectedCategory) FontWeight.Bold else FontWeight.Normal,
                     modifier = Modifier.clickable { selectedCategory = category }
                 )
@@ -143,7 +133,7 @@ private fun OfficialStoreScreen(allTradeItems: List<TradeItem>) {
                 it.description.contains(selectedCategory) || selectedCategory == "配件" // 简化逻辑保留原样
             }
             items(filteredItems, key = { it.id }) { item ->
-                TradePostCard(item = item) { /* 点击详情 */ }
+                TradePostCard(item = item) { navController.navigate("${AppRoutes.TRADE_DETAIL}/${item.id}") }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             }
         }
