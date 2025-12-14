@@ -365,7 +365,7 @@ fun ArticleCard(article: Article) {
 private suspend fun loadRecommendedRacesIO(): List<Race> {
     return withContext(Dispatchers.IO) {
         val list = mutableListOf<Race>()
-        DatabaseHelper.processQuery("SELECT event_id, title, event_date, location, event_type, is_open, cover_image_url FROM events ORDER BY event_date DESC LIMIT 30") { rs ->
+        DatabaseHelper.processQuery("SELECT race_id, title, event_date, location, event_type, is_open, cover_image_url FROM races ORDER BY event_date DESC LIMIT 30") { rs ->
             while (rs.next()) {
                 val id = rs.getInt(1)
                 val title = rs.getString(2)
@@ -375,14 +375,11 @@ private suspend fun loadRecommendedRacesIO(): List<Race> {
                 val open = rs.getBoolean(6)
                 val coverUrl = rs.getString(7)
                 val tags = mutableListOf<String>()
-                DatabaseHelper.processQuery("SELECT tag_name FROM event_tags WHERE event_id = ?", listOf(id)) { trs ->
+                DatabaseHelper.processQuery("SELECT tag_name FROM race_tags WHERE race_id = ?", listOf(id)) { trs ->
                     while (trs.next()) tags.add(trs.getString(1) ?: "")
                     Unit
                 }
-                val isRace = type in listOf("娱乐赛", "竞速赛") || tags.any { it in listOf("娱乐赛", "竞速赛") }
-                if (isRace) {
-                    list.add(Race(id, title, "时间：" + (if (date.isNotEmpty()) date.substring(0, 10) else "待定"), "地点：" + loc, if (tags.isEmpty()) listOf(type) else tags, R.drawable.ic_launcher_foreground, coverUrl, open, false))
-                }
+                list.add(Race(id, title, "时间：" + (if (date.isNotEmpty()) date.substring(0, 10) else "待定"), "地点：" + loc, if (tags.isEmpty()) listOf(type) else tags, R.drawable.ic_launcher_foreground, coverUrl, open, false))
             }
             Unit
         }
@@ -393,7 +390,7 @@ private suspend fun loadRecommendedRacesIO(): List<Race> {
 private suspend fun loadRecommendedActivitiesIO(): List<Activity> {
     return withContext(Dispatchers.IO) {
         val list = mutableListOf<Activity>()
-        DatabaseHelper.processQuery("SELECT event_id, title, event_date, location, event_type, is_open, cover_image_url FROM events ORDER BY event_date DESC LIMIT 30") { rs ->
+        DatabaseHelper.processQuery("SELECT activity_id, title, event_date, location, event_type, is_open, cover_image_url FROM activities ORDER BY event_date DESC LIMIT 30") { rs ->
             while (rs.next()) {
                 val id = rs.getInt(1)
                 val title = rs.getString(2)
@@ -403,14 +400,11 @@ private suspend fun loadRecommendedActivitiesIO(): List<Activity> {
                 val open = rs.getBoolean(6)
                 val coverUrl = rs.getString(7)
                 val tags = mutableListOf<String>()
-                DatabaseHelper.processQuery("SELECT tag_name FROM event_tags WHERE event_id = ?", listOf(id)) { trs ->
+                DatabaseHelper.processQuery("SELECT tag_name FROM activity_tags WHERE activity_id = ?", listOf(id)) { trs ->
                     while (trs.next()) tags.add(trs.getString(1) ?: "")
                     Unit
                 }
-                val isActivity = tags.any { it in listOf("亲子活动", "公益活动", "周末活动") }
-                if (isActivity) {
-                    list.add(Activity(id, title, "时间：" + (if (date.isNotEmpty()) date.substring(0, 16) else "待定"), "地点：" + loc, if (tags.isEmpty()) listOf(type) else tags, R.drawable.ic_launcher_foreground, coverUrl, open, false))
-                }
+                list.add(Activity(id, title, "时间：" + (if (date.isNotEmpty()) date.substring(0, 16) else "待定"), "地点：" + loc, if (tags.isEmpty()) listOf(type) else tags, R.drawable.ic_launcher_foreground, coverUrl, open, false))
             }
             Unit
         }

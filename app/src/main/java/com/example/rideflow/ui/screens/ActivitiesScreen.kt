@@ -42,7 +42,7 @@ data class Activity(
     val isMine: Boolean
 )
 
-private val activityCategories = listOf("全部", "我的赛事", "亲子活动", "公益活动", "周末活动")
+private val activityCategories = listOf("全部", "我的活动", "亲子活动", "公益活动", "周末活动")
 
 private val mockActivitiesList = listOf(
     Activity(
@@ -107,7 +107,7 @@ fun ActivitiesScreen(navController: NavController, onBack: () -> Unit, onCreateA
         Thread {
             val list = mutableListOf<Activity>()
             DatabaseHelper.processQuery(
-                "SELECT event_id, title, event_date, location, event_type, is_open, cover_image_url FROM events ORDER BY event_date DESC LIMIT 100"
+                "SELECT activity_id, title, event_date, location, event_type, is_open, cover_image_url FROM activities ORDER BY event_date DESC LIMIT 100"
             ) { rs ->
                 while (rs.next()) {
                     val id = rs.getInt(1)
@@ -119,7 +119,7 @@ fun ActivitiesScreen(navController: NavController, onBack: () -> Unit, onCreateA
                     val coverUrl = rs.getString(7) ?: "https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg"
                     val tags = mutableListOf<String>()
                     DatabaseHelper.processQuery(
-                        "SELECT tag_name FROM event_tags WHERE event_id = ?",
+                        "SELECT tag_name FROM activity_tags WHERE activity_id = ?",
                         listOf(id)
                     ) { trs ->
                         while (trs.next()) tags.add(trs.getString(1) ?: "")
@@ -127,7 +127,7 @@ fun ActivitiesScreen(navController: NavController, onBack: () -> Unit, onCreateA
                     }
                 var mine = false
                 DatabaseHelper.processQuery(
-                    "SELECT 1 FROM user_events WHERE user_id = ? AND event_id = ? AND relation IN ('registered','favorite') LIMIT 1",
+                    "SELECT 1 FROM user_activities WHERE user_id = ? AND activity_id = ? AND relation IN ('registered','favorite') LIMIT 1",
                     listOf(1, id)
                 ) { urs ->
                     mine = urs.next()

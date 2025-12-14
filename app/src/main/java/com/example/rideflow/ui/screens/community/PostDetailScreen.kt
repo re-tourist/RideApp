@@ -18,17 +18,77 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.rideflow.model.Comment
+import com.example.rideflow.backend.DatabaseHelper
+import android.os.Handler
+import android.os.Looper
+import java.text.SimpleDateFormat
+import java.util.Locale
+import org.koin.androidx.compose.koinViewModel
+import com.example.rideflow.auth.AuthViewModel
+import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CommunityPostDetailScreen(navController: NavController, postId: Int) {
-    val postData = remember(postId) {
-        when (postId) {
-            901 -> DemoPost("飓风骑行俱乐部", "10分钟前", "本周日将举行环湖拉练活动，请各位队员准时在北门集合！ #俱乐部活动", "[活动海报]", 32, 5)
-            902 -> DemoPost("周末休闲骑", "2小时前", "上周的腐败骑行圆满结束，大家吃得开心吗？照片已上传相册。", "[聚餐合影]", 15, 8)
-            903 -> DemoPost("山地越野小队", "1天前", "探索了一条新的林道，难度系数3星，欢迎老手来挑战。", "[林道照片]", 45, 12)
-            else -> DemoPost("用户$postId", "刚刚", "这是示例动态内容。", "[图片]", 0, 0)
-        }
+    var userName by remember { mutableStateOf("") }
+    var timeAgo by remember { mutableStateOf("") }
+    var content by remember { mutableStateOf("[图片]") }
+    var imagePlaceholder by remember { mutableStateOf("[图片]") }
+    var likeCount by remember { mutableStateOf(0) }
+    var comments by remember { mutableStateOf(listOf<Comment>()) }
+    var visibleCount by remember { mutableStateOf(10) }
+    var newCommentText by remember { mutableStateOf("") }
+    val authViewModel = koinViewModel<AuthViewModel>()
+
+    LaunchedEffect(postId) {
+        val handler = Handler(Looper.getMainLooper())
+        Thread {
+            DatabaseHelper.processQuery(
+                "SELECT p.content_text, p.image_url, p.created_at, COALESCE(c.name, u.nickname) AS author_name FROM community_posts p LEFT JOIN clubs c ON p.club_id = c.club_id LEFT JOIN users u ON p.author_user_id = u.user_id WHERE p.post_id = ?",
+                listOf(postId)
+            ) { rs ->
+                if (rs.next()) {
+                    val ct = rs.getString(1) ?: ""
+                    val img = rs.getString(2) ?: "[图片]"
+                    val created = rs.getTimestamp(3)
+                    val name = rs.getString(4) ?: "未知用户"
+                    val ts = if (created != null) SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(created) else ""
+                    handler.post {
+                        content = ct
+                        imagePlaceholder = img
+                        userName = name
+                        timeAgo = ts
+                    }
+                }
+                Unit
+            }
+            DatabaseHelper.processQuery(
+                "SELECT COUNT(*) FROM post_likes WHERE post_id = ?",
+                listOf(postId)
+            ) { lrs ->
+                if (lrs.next()) {
+                    val cnt = lrs.getInt(1)
+                    handler.post { likeCount = cnt }
+                }
+                Unit
+            }
+            DatabaseHelper.processQuery(
+                "SELECT pc.comment_id, u.nickname, pc.content, pc.created_at FROM post_comments pc JOIN users u ON pc.user_id = u.user_id WHERE pc.post_id = ? ORDER BY pc.created_at DESC",
+                listOf(postId)
+            ) { crs ->
+                val list = mutableListOf<Comment>()
+                while (crs.next()) {
+                    val cid = crs.getInt(1)
+                    val nick = crs.getString(2) ?: "匿名"
+                    val ctt = crs.getString(3) ?: ""
+                    val created = crs.getTimestamp(4)
+                    val ts = if (created != null) SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(created) else ""
+                    list.add(Comment(cid, nick, ctt, ts))
+                }
+                handler.post { comments = list }
+                Unit
+            }
+        }.start()
     }
 
     Scaffold(
@@ -43,8 +103,6 @@ fun CommunityPostDetailScreen(navController: NavController, postId: Int) {
             )
         }
     ) { innerPadding ->
-        val comments = remember(postId) { demoComments(postId) }
-        var visibleCount by remember { mutableStateOf(10) }
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -56,29 +114,29 @@ fun CommunityPostDetailScreen(navController: NavController, postId: Int) {
                     Icon(imageVector = Icons.Filled.Person, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(40.dp))
                     Spacer(Modifier.width(8.dp))
                     Column {
-                        Text(postData.userName, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                        Text(postData.timeAgo, fontSize = 12.sp, color = Color.Gray)
+                        Text(userName.ifEmpty { "未知用户" }, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text(timeAgo, fontSize = 12.sp, color = Color.Gray)
                     }
                 }
                 Spacer(Modifier.height(16.dp))
-                Text(text = postData.content, fontSize = 16.sp)
+                Text(text = content, fontSize = 16.sp)
                 Spacer(Modifier.height(12.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(220.dp)
-                        .clip(RoundedCornerShape(8.dp)),
-                    contentAlignment = Alignment.Center
+                        .clip(RoundedCornerShape(8.dp))
                 ) {
-                    Surface(color = Color(0xFFF5F5F5)) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(text = postData.imagePlaceholder, color = Color.Gray)
-                        }
-                    }
+                    coil.compose.AsyncImage(
+                        model = imagePlaceholder,
+                        contentDescription = null,
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
                 Spacer(Modifier.height(16.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text(text = "赞: ${postData.likes}", color = Color.Gray)
+                    Text(text = "赞: ${likeCount}", color = Color.Gray)
                     Text(text = "评论: ${comments.size}", color = Color.Gray)
                 }
                 Spacer(Modifier.height(12.dp))
@@ -107,36 +165,43 @@ fun CommunityPostDetailScreen(navController: NavController, postId: Int) {
                     }
                 }
             }
+            item {
+                Spacer(Modifier.height(12.dp))
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(
+                        value = newCommentText,
+                        onValueChange = { newCommentText = it },
+                        modifier = Modifier.weight(1f),
+                        placeholder = { Text("发表你的评论...") }
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    val currentUser = authViewModel.getCurrentUser()
+                    Button(
+                        onClick = {
+                            val uid = currentUser?.userId?.toIntOrNull()
+                            val text = newCommentText.trim()
+                            if (uid == null || text.isEmpty()) return@Button
+                            val handler = Handler(Looper.getMainLooper())
+                            Thread {
+                                val newId = DatabaseHelper.insertAndReturnId(
+                                    "INSERT INTO post_comments (post_id, user_id, content, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
+                                    listOf(postId, uid, text)
+                                )
+                                if (newId != null) {
+                                    val now = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
+                                    handler.post {
+                                        comments = listOf(Comment(newId, currentUser.nickname, text, now)) + comments
+                                        newCommentText = ""
+                                    }
+                                }
+                            }.start()
+                        },
+                        enabled = newCommentText.isNotBlank()
+                    ) {
+                        Text("发送")
+                    }
+                }
+            }
         }
     }
-}
-
-private data class DemoPost(
-    val userName: String,
-    val timeAgo: String,
-    val content: String,
-    val imagePlaceholder: String,
-    val likes: Int,
-    val comments: Int
-)
-
-private fun demoComments(postId: Int): List<Comment> {
-    val base = listOf(
-        Comment(1, "山地老王", "太猛了，路线分享一下！", "10分钟前"),
-        Comment(2, "城市骑手小李", "周末一起骑？", "20分钟前"),
-        Comment(3, "硬核玩家", "爬坡感觉如何？", "1小时前"),
-        Comment(4, "配件狂魔", "换了什么胎？", "1小时前"),
-        Comment(5, "日落追光者", "风景太美了", "2小时前"),
-        Comment(6, "用户A", "报名活动了没？", "昨天"),
-        Comment(7, "骑行新手", "求带！", "昨天"),
-        Comment(8, "百公里挑战者", "支持！", "昨天"),
-        Comment(9, "夜骑爱好者", "夜骑走起", "2天前"),
-        Comment(10, "圈圈", "赞！", "2天前"),
-        Comment(11, "网友甲", "加油！", "3天前"),
-        Comment(12, "网友乙", "nice", "3天前"),
-        Comment(13, "网友丙", "厉害", "4天前"),
-        Comment(14, "网友丁", "学习了", "4天前"),
-        Comment(15, "网友戊", "关注了", "5天前")
-    )
-    return base.map { it.copy(id = it.id + postId) }
 }

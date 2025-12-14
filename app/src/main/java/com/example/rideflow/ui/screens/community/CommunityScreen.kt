@@ -69,53 +69,74 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
         }
         val merged = withContext(Dispatchers.IO) {
             val posts = mutableListOf<Post>()
-            val likesMap = mutableMapOf<Int, Int>()
-            val commentsMap = mutableMapOf<Int, Int>()
+            val uid = userId.toIntOrNull()
+            val likedSet = mutableSetOf<Int>()
+            if (uid != null) {
+                DatabaseHelper.processQuery("SELECT post_id FROM post_likes WHERE user_id = ?", listOf(uid)) { rs ->
+                    while (rs.next()) likedSet.add(rs.getInt(1))
+                    Unit
+                }
+            }
+            // 统计数据容器在下方统一填充
 
-            // 1. 注入"已加入俱乐部"的模拟动态数据
-            val mockClubPosts = listOf(
-                Post(901, 9001, Icons.Default.DateRange, "飓风骑行俱乐部", "10分钟前", "本周日将举行环湖拉练活动，请各位队员准时在北门集合！ #俱乐部活动", "[活动海报]", 32, 5),
-                Post(902, 9002, Icons.Default.DateRange, "周末休闲骑", "2小时前", "上周的腐败骑行圆满结束，大家吃得开心吗？照片已上传相册。", "[聚餐合影]", 15, 8),
-                Post(903, 9003, Icons.Default.DateRange, "山地越野小队", "1天前", "探索了一条新的林道，难度系数3星，欢迎老手来挑战。", "[林道照片]", 45, 12),
-                Post(904, 9001, Icons.Default.DateRange, "飓风骑行俱乐部", "3天前", "恭喜车队在市级比赛中获得团体第二名！", "[奖杯照片]", 88, 20)
-            )
-            posts.addAll(mockClubPosts)
+            // 数据来源于数据库，不注入模拟动态
 
             // 2. 加载数据库中的帖子
             DatabaseHelper.processQuery(
-                "SELECT post_id, author_user_id, content_text, image_url, created_at FROM community_posts ORDER BY created_at DESC LIMIT ? OFFSET ?",
+                "SELECT post_id, author_user_id, club_id, COALESCE(author_type,'user'), content_text, image_url, created_at FROM community_posts ORDER BY created_at DESC LIMIT ? OFFSET ?",
                 listOf(pageSize, currentPage * pageSize)
             ) { rs ->
                 while (rs.next()) {
                     val pid = rs.getInt(1)
-                    val uid = rs.getInt(2)
-                    val content = rs.getString(3) ?: ""
-                    val img = rs.getString(4) ?: "[图片]"
-                    val created = rs.getTimestamp(5)
+                    val auid = rs.getInt(2)
+                    val clubId = rs.getInt(3).takeIf { !rs.wasNull() }
+                    val aType = rs.getString(4) ?: "user"
+                    val content = rs.getString(5) ?: ""
+                    val img = rs.getString(6) ?: "[图片]"
+                    val created = rs.getTimestamp(7)
                     val timeStr = if (created != null) SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(created) else ""
-                    posts.add(Post(pid, uid, Icons.Default.Person, "", timeStr, content, img, 0, 0))
+                    val uid = if (aType == "club") (clubId ?: 0) else auid
+                    posts.add(Post(pid, uid, Icons.Default.Person, "", timeStr, content, img, 0, 0, false, aType))
                 }
                 Unit
             }
 
             // 3. 补充用户信息/俱乐部名称
             DatabaseHelper.processQuery(
-                "SELECT p.post_id, u.nickname, c.name FROM community_posts p " +
-                        "LEFT JOIN users u ON p.author_user_id = u.user_id " +
-                        "LEFT JOIN clubs c ON p.club_id = c.club_id"
+                "SELECT p.post_id, u.nickname, c.name, u.avatar_url, c.logo_url FROM community_posts p LEFT JOIN users u ON p.author_user_id = u.user_id LEFT JOIN clubs c ON p.club_id = c.club_id"
             ) { rs ->
                 val nameMap = mutableMapOf<Int, String>()
+                val avatarMap = mutableMapOf<Int, String?>()
                 while (rs.next()) {
                     val pid = rs.getInt(1)
                     val nick = rs.getString(2)
                     val clubName = rs.getString(3)
+                    val uAvatar = rs.getString(4)
+                    val cLogo = rs.getString(5)
                     val displayName = if (!clubName.isNullOrEmpty()) clubName else (nick ?: "未知用户")
+                    val avatar = if (!cLogo.isNullOrEmpty()) cLogo else uAvatar
                     nameMap[pid] = displayName
+                    avatarMap[pid] = avatar
                 }
-                posts.replaceAll { p -> if (p.userName.isEmpty()) p.copy(userName = nameMap[p.id] ?: "未知用户") else p }
+                posts.replaceAll { p ->
+                    val nm = if (p.userName.isEmpty()) nameMap[p.id] ?: "未知用户" else p.userName
+                    val av = avatarMap[p.id]
+                    p.copy(userName = nm, avatarUrl = av)
+                }
                 Unit
             }
-            posts.map { p -> p.copy(likes = likesMap[p.id] ?: p.likes, comments = commentsMap[p.id] ?: p.comments) }
+
+            val likesMap = mutableMapOf<Int, Int>()
+            DatabaseHelper.processQuery("SELECT post_id, COUNT(*) FROM post_likes GROUP BY post_id") { rs ->
+                while (rs.next()) likesMap[rs.getInt(1)] = rs.getInt(2)
+                Unit
+            }
+            val commentsMap = mutableMapOf<Int, Int>()
+            DatabaseHelper.processQuery("SELECT post_id, COUNT(*) FROM post_comments GROUP BY post_id") { rs ->
+                while (rs.next()) commentsMap[rs.getInt(1)] = rs.getInt(2)
+                Unit
+            }
+            posts.map { p -> p.copy(likes = likesMap[p.id] ?: p.likes, comments = commentsMap[p.id] ?: p.comments, initialIsLiked = likedSet.contains(p.id)) }
         }
         allPosts.clear(); allPosts.addAll(merged)
         isLoading = false
@@ -145,26 +166,66 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
     var showMessageDialog by remember { mutableStateOf(false) }
     var isSearching by remember { mutableStateOf(false) }
 
-    // 关注回调
     val onFollowToggle: (Int, Boolean) -> Unit = { id, isFollowing ->
+        val uid = userId.toIntOrNull()
         if (isFollowing) {
             followingUserIds.value = followingUserIds.value + id
         } else {
             followingUserIds.value = followingUserIds.value - id
         }
+        if (uid != null) {
+            scope.launch {
+                withContext(Dispatchers.IO) {
+                    if (isFollowing) {
+                        DatabaseHelper.executeUpdate("INSERT IGNORE INTO user_follows (follower_user_id, followed_user_id) VALUES (?, ?)", listOf(uid, id))
+                    } else {
+                        DatabaseHelper.executeUpdate("DELETE FROM user_follows WHERE follower_user_id = ? AND followed_user_id = ?", listOf(uid, id))
+                    }
+                }
+            }
+        }
     }
 
     // 处理头像点击，加载用户详细信息
-    val onAvatarClick: (Int) -> Unit = { targetUserId ->
-        navController.navigate("${com.example.rideflow.navigation.AppRoutes.USER_PROFILE_DETAIL}/$targetUserId")
+    val onAvatarClick: (Int, String) -> Unit = { targetId, aType ->
+        if (aType == "club") {
+            navController.navigate("${com.example.rideflow.navigation.AppRoutes.COMMUNITY_CLUB_DETAIL}/$targetId")
+        } else {
+            navController.navigate("${com.example.rideflow.navigation.AppRoutes.USER_PROFILE_DETAIL}/$targetId")
+        }
     }
 
     val onPostClick: (Int) -> Unit = { postId ->
         navController.navigate("${com.example.rideflow.navigation.AppRoutes.POST_DETAIL}/$postId")
     }
 
+    val onLikeToggle: (Int, Boolean) -> Unit = { postId, newIsLiked ->
+        val uid = userId.toIntOrNull()
+        uid?.let { uidVal ->
+            scope.launch {
+                withContext(Dispatchers.IO) {
+                    if (newIsLiked) {
+                        DatabaseHelper.executeUpdate("INSERT IGNORE INTO post_likes (post_id, user_id) VALUES (?, ?)", listOf(postId, uidVal))
+                    } else {
+                        DatabaseHelper.executeUpdate("DELETE FROM post_likes WHERE post_id = ? AND user_id = ?", listOf(postId, uidVal))
+                    }
+                    var newCount = 0
+                    DatabaseHelper.processQuery("SELECT COUNT(*) FROM post_likes WHERE post_id = ?", listOf(postId)) { rs ->
+                        if (rs.next()) newCount = rs.getInt(1)
+                        Unit
+                    }
+                    val idx = allPosts.indexOfFirst { it.id == postId }
+                    if (idx >= 0) {
+                        val updated = allPosts[idx].copy(likes = newCount)
+                        allPosts[idx] = updated
+                    }
+                }
+            }
+        }
+    }
+
     Scaffold(
-        topBar = { TopSearchBar(isSearching = isSearching, onSearchToggle = { isSearching = it }) },
+        topBar = { },
         bottomBar = {
             CommunityBottomBar(
                 onPublishClick = { showPublishDialog = true },
@@ -173,51 +234,49 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
-            if (!isSearching) {
-                CategoryTabs(
-                    categories = categories,
-                    selectedCategory = selectedCategory,
-                    onCategorySelected = { selectedCategory = it }
-                )
-            }
+            CategoryTabs(
+                categories = categories,
+                selectedCategory = selectedCategory,
+                onCategorySelected = { selectedCategory = it }
+            )
 
             if (isLoading && allPosts.isEmpty()) {
                 PostListSkeleton()
             } else {
                 Log.d("Perf", "CommunityScreen UIRender: ${System.currentTimeMillis() - pageStart} ms")
                 when (selectedCategory) {
-                "关注动态" -> CommunityFollowingScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick, onPostClick, hasMore, isLoadingMore, onLoadMore = {
+                "关注动态" -> CommunityFollowingScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick, onPostClick, onLikeToggle, hasMore, isLoadingMore, onLoadMore = {
                     if (hasMore && !isLoadingMore) {
                         scope.launch {
                             isLoadingMore = true
                             currentPage += 1
-                            val next = withContext(Dispatchers.IO) { loadPage(currentPage, pageSize) }
+                            val next = withContext(Dispatchers.IO) { loadPage(currentPage, pageSize, userId.toIntOrNull()) }
                             allPosts.addAll(next)
                             hasMore = next.size >= pageSize
                             isLoadingMore = false
                         }
                     }
                 })
-                "热门动态" -> CommunityHotScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick, onPostClick, hasMore, isLoadingMore, onLoadMore = {
+                "热门动态" -> CommunityHotScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick, onPostClick, onLikeToggle, hasMore, isLoadingMore, onLoadMore = {
                     if (hasMore && !isLoadingMore) {
                         scope.launch {
                             isLoadingMore = true
                             currentPage += 1
-                            val next = withContext(Dispatchers.IO) { loadPage(currentPage, pageSize) }
+                            val next = withContext(Dispatchers.IO) { loadPage(currentPage, pageSize, userId.toIntOrNull()) }
                             allPosts.addAll(next)
                             hasMore = next.size >= pageSize
                             isLoadingMore = false
                         }
                     }
                 })
-                "社区交易" -> CommunityTradeScreen()
+                "社区交易" -> CommunityTradeScreen(navController = navController)
                 "俱乐部" -> CommunityClubPortalScreen(navController = navController, allPosts = allPosts)
-                else -> CommunityHotScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick, onPostClick, hasMore, isLoadingMore, onLoadMore = {
+                else -> CommunityHotScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick, onPostClick, onLikeToggle, hasMore, isLoadingMore, onLoadMore = {
                     if (hasMore && !isLoadingMore) {
                         scope.launch {
                             isLoadingMore = true
                             currentPage += 1
-                            val next = withContext(Dispatchers.IO) { loadPage(currentPage, pageSize) }
+                            val next = withContext(Dispatchers.IO) { loadPage(currentPage, pageSize, userId.toIntOrNull()) }
                             allPosts.addAll(next)
                             hasMore = next.size >= pageSize
                             isLoadingMore = false
@@ -239,38 +298,57 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
     // 统一使用个人主页，不再弹出用户小卡片
 }
 
-private suspend fun loadPage(page: Int, pageSize: Int): List<Post> {
+private suspend fun loadPage(page: Int, pageSize: Int, currentUserId: Int? = null): List<Post> {
     val posts = mutableListOf<Post>()
     DatabaseHelper.processQuery(
-        "SELECT post_id, author_user_id, content_text, image_url, created_at FROM community_posts ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        "SELECT post_id, author_user_id, club_id, COALESCE(author_type,'user'), content_text, image_url, created_at FROM community_posts ORDER BY created_at DESC LIMIT ? OFFSET ?",
         listOf(pageSize, page * pageSize)
     ) { rs ->
         while (rs.next()) {
             val pid = rs.getInt(1)
-            val uid = rs.getInt(2)
-            val content = rs.getString(3) ?: ""
-            val img = rs.getString(4) ?: "[图片]"
-            val created = rs.getTimestamp(5)
+            val auid = rs.getInt(2)
+            val clubId = rs.getInt(3).takeIf { !rs.wasNull() }
+            val aType = rs.getString(4) ?: "user"
+            val content = rs.getString(5) ?: ""
+            val img = rs.getString(6) ?: "[图片]"
+            val created = rs.getTimestamp(7)
             val timeStr = if (created != null) SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(created) else ""
-            posts.add(Post(pid, uid, Icons.Default.Person, "", timeStr, content, img, 0, 0))
+            val uid = if (aType == "club") (clubId ?: 0) else auid
+            posts.add(Post(pid, uid, Icons.Default.Person, "", timeStr, content, img, 0, 0, false, aType))
         }
         Unit
     }
     val nameMap = mutableMapOf<Int, String>()
+    val avatarMap = mutableMapOf<Int, String?>()
     DatabaseHelper.processQuery(
-        "SELECT p.post_id, u.nickname, c.name FROM community_posts p LEFT JOIN users u ON p.author_user_id = u.user_id LEFT JOIN clubs c ON p.club_id = c.club_id LIMIT ? OFFSET ?",
+        "SELECT p.post_id, u.nickname, c.name, u.avatar_url, c.logo_url FROM community_posts p LEFT JOIN users u ON p.author_user_id = u.user_id LEFT JOIN clubs c ON p.club_id = c.club_id LIMIT ? OFFSET ?",
         listOf(pageSize, page * pageSize)
     ) { rs ->
         while (rs.next()) {
             val pid = rs.getInt(1)
             val nick = rs.getString(2)
             val clubName = rs.getString(3)
+            val uAvatar = rs.getString(4)
+            val cLogo = rs.getString(5)
             val displayName = if (!clubName.isNullOrEmpty()) clubName else (nick ?: "未知用户")
+            val avatar = if (!cLogo.isNullOrEmpty()) cLogo else uAvatar
             nameMap[pid] = displayName
+            avatarMap[pid] = avatar
         }
         Unit
     }
-    return posts.map { p -> if (p.userName.isEmpty()) p.copy(userName = nameMap[p.id] ?: "未知用户") else p }
+    val likedSet = mutableSetOf<Int>()
+    if (currentUserId != null) {
+        DatabaseHelper.processQuery("SELECT post_id FROM post_likes WHERE user_id = ?", listOf(currentUserId)) { rs ->
+            while (rs.next()) likedSet.add(rs.getInt(1))
+            Unit
+        }
+    }
+    return posts.map { p ->
+        val nm = if (p.userName.isEmpty()) nameMap[p.id] ?: "未知用户" else p.userName
+        val av = avatarMap[p.id]
+        p.copy(userName = nm, avatarUrl = av, initialIsLiked = likedSet.contains(p.id))
+    }
 }
 
 private fun saveCacheFirstPage(context: android.content.Context, posts: List<Post>) {
@@ -436,7 +514,7 @@ fun UserDetailInfoDialog(
                         onClick = onFollowClick,
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isFollowing) Color.Gray else Color.Red
+                            containerColor = if (isFollowing) Color.Gray else MaterialTheme.colorScheme.primary
                         )
                     ) {
                         Text(if (isFollowing) "已关注" else "关注对方")
@@ -459,7 +537,7 @@ fun CommunityBottomBar(onPublishClick: () -> Unit, onMessageClick: () -> Unit) {
             modifier = Modifier
                 .size(50.dp)
                 .clip(CircleShape)
-                .background(Color.Red)
+                .background(MaterialTheme.colorScheme.primary)
                 .clickable(onClick = onPublishClick),
             contentAlignment = Alignment.Center
         ) {

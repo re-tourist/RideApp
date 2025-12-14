@@ -57,7 +57,7 @@ fun ActivityDetailScreen(navController: NavController, activityId: Int = 0, onBa
             Thread {
                 val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
                 DatabaseHelper.processQuery(
-                    "SELECT title, event_date, location, is_open, cover_image_url, description FROM events WHERE event_id = ?",
+                    "SELECT title, event_date, location, is_open, cover_image_url, description FROM activities WHERE activity_id = ?",
                     listOf(activityId)
                 ) { rs ->
                     if (rs.next()) {
@@ -80,7 +80,7 @@ fun ActivityDetailScreen(navController: NavController, activityId: Int = 0, onBa
                     Unit
                 }
                 DatabaseHelper.processQuery(
-                    "SELECT 1 FROM user_events WHERE user_id = ? AND event_id = ? AND relation = 'favorite' LIMIT 1",
+                    "SELECT 1 FROM user_activities WHERE user_id = ? AND activity_id = ? AND relation = 'favorite' LIMIT 1",
                     listOf(1, activityId)
                 ) { frs ->
                     val fav = frs.next()
@@ -108,13 +108,13 @@ fun ActivityDetailScreen(navController: NavController, activityId: Int = 0, onBa
                         Thread {
                             if (!isFavorited) {
                                 val result = DatabaseHelper.executeUpdate(
-                                    "INSERT INTO user_events (user_id, event_id, relation, status, notes) VALUES (?,?,?,?,?)",
+                                    "INSERT INTO user_activities (user_id, activity_id, relation, status, notes) VALUES (?,?,?,?,?)",
                                     listOf(1, activityId, "favorite", "upcoming", "收藏关注")
                                 )
                                 handler.post { if (result >= 0) isFavorited = true }
                             } else {
                                 DatabaseHelper.executeUpdate(
-                                    "DELETE FROM user_events WHERE user_id = ? AND event_id = ? AND relation = 'favorite'",
+                                    "DELETE FROM user_activities WHERE user_id = ? AND activity_id = ? AND relation = 'favorite'",
                                     listOf(1, activityId)
                                 )
                                 handler.post { isFavorited = false }

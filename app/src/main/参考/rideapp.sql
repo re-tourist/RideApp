@@ -11,7 +11,7 @@
  Target Server Version : 80044 (8.0.44-0ubuntu0.22.04.1)
  File Encoding         : 65001
 
- Date: 09/12/2025 23:33:14
+ Date: 13/12/2025 15:19:29
 */
 
 SET NAMES utf8mb4;
@@ -50,6 +50,54 @@ INSERT INTO `achievement_badges` VALUES (5, 'night_3', '夜骑3次', '22:00后�
 INSERT INTO `achievement_badges` VALUES (6, 'monthly_20', '月度20次', '一个月内完成20次骑行', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', 'monthly_rides', 20, 0.00, 0, 30, 1, '2025-12-07 14:09:55');
 
 -- ----------------------------
+-- Table structure for activities
+-- ----------------------------
+DROP TABLE IF EXISTS `activities`;
+CREATE TABLE `activities`  (
+  `activity_id` int NOT NULL AUTO_INCREMENT,
+  `title` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `event_date` datetime NOT NULL,
+  `location` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  `event_type` enum('骑行','越野跑','徒步','其他') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '骑行',
+  `is_open` tinyint(1) NULL DEFAULT 1,
+  `cover_image_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`activity_id`) USING BTREE,
+  INDEX `idx_activities_date`(`event_date` ASC) USING BTREE,
+  INDEX `idx_activities_type`(`event_type` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '活动' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of activities
+-- ----------------------------
+INSERT INTO `activities` VALUES (3, '越野跑周末挑战赛', '2025-12-01 08:30:00', '上海市郊区', '越野跑', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/1e30d935247661a86ac4c5ab24dd26c.png', '周末越野跑挑战', '2025-12-04 23:00:54', '2025-12-09 23:42:14');
+INSERT INTO `activities` VALUES (4, '111', '2025-11-11 11:11:00', '111', '骑行', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/40343505983679401e1fbe48a30c3cb.png', '', '2025-12-09 11:10:54', '2025-12-09 23:42:24');
+INSERT INTO `activities` VALUES (5, '111', '2025-11-11 11:11:00', '111', '骑行', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/4c7d9c89b9a7ee6253037c5b1206cb5.png', '', '2025-12-09 11:11:21', '2025-12-09 23:44:37');
+
+-- ----------------------------
+-- Table structure for activity_tags
+-- ----------------------------
+DROP TABLE IF EXISTS `activity_tags`;
+CREATE TABLE `activity_tags`  (
+  `activity_id` int NOT NULL,
+  `tag_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  PRIMARY KEY (`activity_id`, `tag_name`) USING BTREE,
+  CONSTRAINT `fk_activity_tags_activity` FOREIGN KEY (`activity_id`) REFERENCES `activities` (`activity_id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '活动标签' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of activity_tags
+-- ----------------------------
+INSERT INTO `activity_tags` VALUES (3, '周末活动');
+INSERT INTO `activity_tags` VALUES (3, '娱乐赛');
+INSERT INTO `activity_tags` VALUES (3, '挑战');
+INSERT INTO `activity_tags` VALUES (3, '越野跑');
+INSERT INTO `activity_tags` VALUES (4, '娱乐赛');
+INSERT INTO `activity_tags` VALUES (5, '娱乐赛');
+
+-- ----------------------------
 -- Table structure for articles
 -- ----------------------------
 DROP TABLE IF EXISTS `articles`;
@@ -69,8 +117,8 @@ CREATE TABLE `articles`  (
 -- ----------------------------
 -- Records of articles
 -- ----------------------------
-INSERT INTO `articles` VALUES (1, '骑车时别听歌，除非你...', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '2025-11-20', 2444, '2025-12-04 23:01:07');
-INSERT INTO `articles` VALUES (2, '告别耳内闷罐，这款耳机成了我的通勤与运动全能搭子', 2, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '2025-11-20', 1876, '2025-12-04 23:01:07');
+INSERT INTO `articles` VALUES (1, '骑车时别听歌，除非你...', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/06a5fee73fbac9e2b32da524f8fcbe4.png', '2025-11-20', 2444, '2025-12-04 23:01:07');
+INSERT INTO `articles` VALUES (2, '告别耳内闷罐，这款耳机成了我的通勤与运动全能搭子', 2, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/13f1017e33c76449f8af3f71cea0002.png', '2025-11-20', 1876, '2025-12-04 23:01:07');
 
 -- ----------------------------
 -- Table structure for club_badges
@@ -137,9 +185,9 @@ CREATE TABLE `clubs`  (
 -- ----------------------------
 -- Records of clubs
 -- ----------------------------
-INSERT INTO `clubs` VALUES (1, '北京狂魔车队', '北京市', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', 1943, 42987, '2025-12-04 23:00:55', '2025-12-04 23:00:55');
-INSERT INTO `clubs` VALUES (2, 'CAPU行者', '北京市', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', 1258, 24658, '2025-12-04 23:00:55', '2025-12-04 23:00:55');
-INSERT INTO `clubs` VALUES (3, '成都骑行吧', '成都市', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', 1880, 96232, '2025-12-04 23:00:55', '2025-12-04 23:00:55');
+INSERT INTO `clubs` VALUES (1, '北京狂魔车队', '北京市', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/club/5c852f57d7e9b60a838432c7f0526c8b.jpg', 1943, 42987, '2025-12-04 23:00:55', '2025-12-09 23:48:15');
+INSERT INTO `clubs` VALUES (2, 'CAPU行者', '北京市', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/club/3e63aa691b77b852a9c17e336a64de4d.jpg', 1258, 24658, '2025-12-04 23:00:55', '2025-12-09 23:49:36');
+INSERT INTO `clubs` VALUES (3, '成都骑行吧', '成都市', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/club/2c9e127243eeae82204dae2e7cc96d52.jpg', 1880, 96232, '2025-12-04 23:00:55', '2025-12-09 23:48:55');
 
 -- ----------------------------
 -- Table structure for community_posts
@@ -149,12 +197,14 @@ CREATE TABLE `community_posts`  (
   `post_id` int NOT NULL AUTO_INCREMENT,
   `author_user_id` int NOT NULL,
   `club_id` int NULL DEFAULT NULL,
+  `author_type` enum('user','club') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'user',
   `content_text` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL,
   `image_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`post_id`) USING BTREE,
   INDEX `fk_posts_author`(`author_user_id` ASC) USING BTREE,
   INDEX `fk_posts_club`(`club_id` ASC) USING BTREE,
+  INDEX `idx_posts_author_type`(`author_type` ASC) USING BTREE,
   CONSTRAINT `fk_posts_author` FOREIGN KEY (`author_user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_posts_club` FOREIGN KEY (`club_id`) REFERENCES `clubs` (`club_id`) ON DELETE SET NULL ON UPDATE RESTRICT
 ) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
@@ -162,12 +212,12 @@ CREATE TABLE `community_posts`  (
 -- ----------------------------
 -- Records of community_posts
 -- ----------------------------
-INSERT INTO `community_posts` VALUES (1, 1, NULL, '滨江夜骑，微风很舒服', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/bj-night.jpg', '2025-12-05 08:10:00');
-INSERT INTO `community_posts` VALUES (2, 2, NULL, '西郊爬坡训练，平均功率提升了', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/hill-climb.jpg', '2025-12-05 08:20:00');
-INSERT INTO `community_posts` VALUES (3, 3, NULL, '城市早骑，通勤顺路锻炼', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/city-morning.jpg', '2025-12-05 07:30:00');
-INSERT INTO `community_posts` VALUES (4, 1, 1, '北京狂魔车队周末拉练，路线很燃', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/club-ride-1.jpg', '2025-12-04 09:00:00');
-INSERT INTO `community_posts` VALUES (5, 2, 2, 'CAPU行者夜骑分享，灯光很美', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/club-ride-2.jpg', '2025-12-04 20:30:00');
-INSERT INTO `community_posts` VALUES (6, 3, 3, '成都骑行吧晨练集合，欢迎一起', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/club-ride-3.jpg', '2025-12-03 06:45:00');
+INSERT INTO `community_posts` VALUES (1, 1, NULL, 'user', '滨江夜骑，微风很舒服', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/8032121a67073f79ed86cc6b5bf1e09.png', '2025-12-05 08:10:00');
+INSERT INTO `community_posts` VALUES (2, 2, NULL, 'user', '西郊爬坡训练，平均功率提升了', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/94acc13357724afb632e0040df2587a.png', '2025-12-05 08:20:00');
+INSERT INTO `community_posts` VALUES (3, 3, NULL, 'user', '城市早骑，通勤顺路锻炼', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/city-morning.jpg', '2025-12-05 07:30:00');
+INSERT INTO `community_posts` VALUES (4, 1, 1, 'club', '北京狂魔车队周末拉练，路线很燃', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/d0d454cdf63ec9fc40bba29a29de004.png', '2025-12-04 09:00:00');
+INSERT INTO `community_posts` VALUES (5, 2, 2, 'club', 'CAPU行者夜骑分享，灯光很美', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/8032121a67073f79ed86cc6b5bf1e09.png', '2025-12-04 20:30:00');
+INSERT INTO `community_posts` VALUES (6, 3, 3, 'club', '成都骑行吧晨练集合，欢迎一起', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/d4efdd6f9fcfbe8789bb53a6a7250f3.png', '2025-12-03 06:45:00');
 
 -- ----------------------------
 -- Table structure for event_tags
@@ -220,11 +270,11 @@ CREATE TABLE `events`  (
 -- ----------------------------
 -- Records of events
 -- ----------------------------
-INSERT INTO `events` VALUES (1, '迎风织金季·GBA青年自行车线上赛', '2025-11-08 09:00:00', '任意地点', '骑行', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '线上赛挑战', '2025-12-04 23:00:54', '2025-12-04 23:00:54');
-INSERT INTO `events` VALUES (2, '2025“环八娄”自行车爬坡联赛（娄城）', '2025-11-29 08:00:00', '浙江省娄城市', '骑行', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '爬坡联赛', '2025-12-04 23:00:54', '2025-12-04 23:00:54');
-INSERT INTO `events` VALUES (3, '越野跑周末挑战赛', '2025-12-01 08:30:00', '上海市郊区', '越野跑', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '周末越野跑挑战', '2025-12-04 23:00:54', '2025-12-04 23:00:54');
-INSERT INTO `events` VALUES (4, '111', '2025-11-11 11:11:00', '111', '骑行', 1, '', '', '2025-12-09 11:10:54', '2025-12-09 11:10:54');
-INSERT INTO `events` VALUES (5, '111', '2025-11-11 11:11:00', '111', '骑行', 1, '', '', '2025-12-09 11:11:21', '2025-12-09 11:11:21');
+INSERT INTO `events` VALUES (1, '迎风织金季·GBA青年自行车线上赛', '2025-11-08 09:00:00', '任意地点', '骑行', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/06a5fee73fbac9e2b32da524f8fcbe4.png', '线上赛挑战', '2025-12-04 23:00:54', '2025-12-09 23:41:37');
+INSERT INTO `events` VALUES (2, '2025“环八娄”自行车爬坡联赛（娄城）', '2025-11-29 08:00:00', '浙江省娄城市', '骑行', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/13f1017e33c76449f8af3f71cea0002.png', '爬坡联赛', '2025-12-04 23:00:54', '2025-12-09 23:41:49');
+INSERT INTO `events` VALUES (3, '越野跑周末挑战赛', '2025-12-01 08:30:00', '上海市郊区', '越野跑', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/1e30d935247661a86ac4c5ab24dd26c.png', '周末越野跑挑战', '2025-12-04 23:00:54', '2025-12-09 23:42:14');
+INSERT INTO `events` VALUES (4, '111', '2025-11-11 11:11:00', '111', '骑行', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/40343505983679401e1fbe48a30c3cb.png', '', '2025-12-09 11:10:54', '2025-12-09 23:42:24');
+INSERT INTO `events` VALUES (5, '111', '2025-11-11 11:11:00', '111', '骑行', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/4c7d9c89b9a7ee6253037c5b1206cb5.png', '', '2025-12-09 11:11:21', '2025-12-09 23:44:37');
 
 -- ----------------------------
 -- Table structure for post_comments
@@ -241,7 +291,7 @@ CREATE TABLE `post_comments`  (
   INDEX `fk_comments_user`(`user_id` ASC) USING BTREE,
   CONSTRAINT `fk_comments_post` FOREIGN KEY (`post_id`) REFERENCES `community_posts` (`post_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_comments_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 31 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of post_comments
@@ -250,6 +300,32 @@ INSERT INTO `post_comments` VALUES (1, 1, 2, '夜骑不错，注意安全', '202
 INSERT INTO `post_comments` VALUES (2, 1, 3, '风很舒服，支持！', '2025-12-05 08:18:00');
 INSERT INTO `post_comments` VALUES (3, 2, 1, '爬坡加油，稳步提升', '2025-12-05 08:26:00');
 INSERT INTO `post_comments` VALUES (4, 4, 3, '周末拉练报名！', '2025-12-04 09:10:00');
+INSERT INTO `post_comments` VALUES (5, 1, 1, '下次一起夜骑！', '2025-12-05 08:22:00');
+INSERT INTO `post_comments` VALUES (6, 1, 3, '路线不错，注意补给', '2025-12-05 08:23:00');
+INSERT INTO `post_comments` VALUES (7, 2, 2, '功率稳步提高，很棒', '2025-12-05 08:28:00');
+INSERT INTO `post_comments` VALUES (8, 2, 3, '下次拉我一个', '2025-12-05 08:46:00');
+INSERT INTO `post_comments` VALUES (9, 3, 1, '通勤顺路太香了', '2025-12-05 07:38:00');
+INSERT INTO `post_comments` VALUES (10, 3, 2, '城市夜骑路况要看好', '2025-12-05 07:42:00');
+INSERT INTO `post_comments` VALUES (11, 4, 1, '周末拉练报名+1', '2025-12-04 09:13:00');
+INSERT INTO `post_comments` VALUES (12, 4, 2, '路线和配速发一下', '2025-12-04 09:16:00');
+INSERT INTO `post_comments` VALUES (13, 5, 1, '夜骑灯光确实很美', '2025-12-04 21:11:00');
+INSERT INTO `post_comments` VALUES (14, 5, 3, '速度控制好更安全', '2025-12-04 21:13:00');
+INSERT INTO `post_comments` VALUES (15, 6, 3, '晨练集合几点？', '2025-12-03 06:53:00');
+INSERT INTO `post_comments` VALUES (16, 1, 1, '下次一起夜骑！', '2025-12-05 08:22:00');
+INSERT INTO `post_comments` VALUES (17, 1, 3, '路线不错，注意补给', '2025-12-05 08:23:00');
+INSERT INTO `post_comments` VALUES (18, 2, 2, '功率稳步提高，很棒', '2025-12-05 08:28:00');
+INSERT INTO `post_comments` VALUES (19, 2, 3, '下次拉我一个', '2025-12-05 08:46:00');
+INSERT INTO `post_comments` VALUES (20, 3, 1, '通勤顺路太香了', '2025-12-05 07:38:00');
+INSERT INTO `post_comments` VALUES (21, 3, 2, '城市夜骑路况要看好', '2025-12-05 07:42:00');
+INSERT INTO `post_comments` VALUES (22, 4, 1, '周末拉练报名+1', '2025-12-04 09:13:00');
+INSERT INTO `post_comments` VALUES (23, 4, 2, '路线和配速发一下', '2025-12-04 09:16:00');
+INSERT INTO `post_comments` VALUES (24, 5, 1, '夜骑灯光确实很美', '2025-12-04 21:11:00');
+INSERT INTO `post_comments` VALUES (25, 5, 3, '速度控制好更安全', '2025-12-04 21:13:00');
+INSERT INTO `post_comments` VALUES (26, 6, 3, '晨练集合几点？', '2025-12-03 06:53:00');
+INSERT INTO `post_comments` VALUES (27, 2, 1, '111', '2025-12-12 20:34:09');
+INSERT INTO `post_comments` VALUES (28, 2, 1, 'test', '2025-12-12 20:40:48');
+INSERT INTO `post_comments` VALUES (29, 6, 1, 'good', '2025-12-12 21:17:01');
+INSERT INTO `post_comments` VALUES (30, 5, 1, 'gooooood', '2025-12-12 21:17:22');
 
 -- ----------------------------
 -- Table structure for post_likes
@@ -270,11 +346,69 @@ CREATE TABLE `post_likes`  (
 -- ----------------------------
 INSERT INTO `post_likes` VALUES (1, 1, '2025-12-05 08:15:00');
 INSERT INTO `post_likes` VALUES (1, 2, '2025-12-05 09:00:00');
-INSERT INTO `post_likes` VALUES (2, 1, '2025-12-05 08:25:00');
+INSERT INTO `post_likes` VALUES (1, 3, '2025-12-05 08:19:00');
+INSERT INTO `post_likes` VALUES (1, 7, '2025-12-05 08:21:00');
+INSERT INTO `post_likes` VALUES (2, 2, '2025-12-05 08:27:00');
 INSERT INTO `post_likes` VALUES (2, 3, '2025-12-05 08:40:00');
-INSERT INTO `post_likes` VALUES (4, 1, '2025-12-04 10:00:00');
+INSERT INTO `post_likes` VALUES (2, 9, '2025-12-05 08:45:00');
+INSERT INTO `post_likes` VALUES (3, 1, '2025-12-05 07:35:00');
+INSERT INTO `post_likes` VALUES (3, 2, '2025-12-05 07:40:00');
+INSERT INTO `post_likes` VALUES (4, 1, '2025-12-12 20:26:07');
+INSERT INTO `post_likes` VALUES (4, 2, '2025-12-04 09:12:00');
+INSERT INTO `post_likes` VALUES (4, 3, '2025-12-04 09:15:00');
 INSERT INTO `post_likes` VALUES (5, 1, '2025-12-04 21:00:00');
+INSERT INTO `post_likes` VALUES (5, 2, '2025-12-04 21:10:00');
+INSERT INTO `post_likes` VALUES (5, 3, '2025-12-04 21:12:00');
+INSERT INTO `post_likes` VALUES (6, 1, '2025-12-12 21:16:41');
 INSERT INTO `post_likes` VALUES (6, 2, '2025-12-03 07:00:00');
+INSERT INTO `post_likes` VALUES (6, 3, '2025-12-03 06:52:00');
+
+-- ----------------------------
+-- Table structure for race_tags
+-- ----------------------------
+DROP TABLE IF EXISTS `race_tags`;
+CREATE TABLE `race_tags`  (
+  `race_id` int NOT NULL,
+  `tag_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  PRIMARY KEY (`race_id`, `tag_name`) USING BTREE,
+  CONSTRAINT `fk_race_tags_race` FOREIGN KEY (`race_id`) REFERENCES `races` (`race_id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '赛事标签' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of race_tags
+-- ----------------------------
+INSERT INTO `race_tags` VALUES (1, '娱乐赛');
+INSERT INTO `race_tags` VALUES (1, '挑战');
+INSERT INTO `race_tags` VALUES (1, '骑行');
+INSERT INTO `race_tags` VALUES (2, '竞速');
+INSERT INTO `race_tags` VALUES (2, '竞速赛');
+INSERT INTO `race_tags` VALUES (2, '骑行');
+
+-- ----------------------------
+-- Table structure for races
+-- ----------------------------
+DROP TABLE IF EXISTS `races`;
+CREATE TABLE `races`  (
+  `race_id` int NOT NULL AUTO_INCREMENT,
+  `title` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `event_date` datetime NOT NULL,
+  `location` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  `event_type` enum('娱乐赛','竞速赛','骑行','其他') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '娱乐赛',
+  `is_open` tinyint(1) NULL DEFAULT 1,
+  `cover_image_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`race_id`) USING BTREE,
+  INDEX `idx_races_date`(`event_date` ASC) USING BTREE,
+  INDEX `idx_races_type`(`event_type` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '赛事' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of races
+-- ----------------------------
+INSERT INTO `races` VALUES (1, '迎风织金季·GBA青年自行车线上赛', '2025-11-08 09:00:00', '任意地点', '骑行', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/06a5fee73fbac9e2b32da524f8fcbe4.png', '线上赛挑战', '2025-12-04 23:00:54', '2025-12-09 23:41:37');
+INSERT INTO `races` VALUES (2, '2025“环八娄”自行车爬坡联赛（娄城）', '2025-11-29 08:00:00', '浙江省娄城市', '骑行', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/13f1017e33c76449f8af3f71cea0002.png', '爬坡联赛', '2025-12-04 23:00:54', '2025-12-09 23:41:49');
 
 -- ----------------------------
 -- Table structure for ride_preference_categories
@@ -439,10 +573,10 @@ CREATE TABLE `routes`  (
 -- ----------------------------
 -- Records of routes
 -- ----------------------------
-INSERT INTO `routes` VALUES (1, '滨江环线', 32.50, 210, '上海市', '简单', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '2025-12-04 23:00:55', '2025-12-04 23:00:55');
-INSERT INTO `routes` VALUES (2, '西郊爬坡挑战', 65.00, 980, '浙江省', '困难', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '2025-12-04 23:00:55', '2025-12-04 23:00:55');
-INSERT INTO `routes` VALUES (3, '城市夜骑', 18.30, 80, '上海市', '中等', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '2025-12-04 23:00:55', '2025-12-05 19:42:13');
-INSERT INTO `routes` VALUES (4, '测试', 11.11, 100, '南昌市', '简单', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '2025-12-05 19:42:07', '2025-12-05 19:42:11');
+INSERT INTO `routes` VALUES (1, '滨江环线', 32.50, 210, '上海市', '简单', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/route/1f208a8e980f612c72ca5ca40373c384.jpg', '2025-12-04 23:00:55', '2025-12-10 08:32:29');
+INSERT INTO `routes` VALUES (2, '西郊爬坡挑战', 65.00, 980, '浙江省', '困难', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/route/3905914b2ec3cf0cf7674a267dcc0edb.jpg', '2025-12-04 23:00:55', '2025-12-10 08:32:42');
+INSERT INTO `routes` VALUES (3, '城市夜骑', 18.30, 80, '上海市', '中等', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/route/482c97200a2a41bb9e876840b1c82eb3.jpg', '2025-12-04 23:00:55', '2025-12-10 08:32:52');
+INSERT INTO `routes` VALUES (4, '测试', 11.11, 100, '南昌市', '简单', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/route/648617fd7b21449a0e2e2d0d3557f5dc.jpg', '2025-12-05 19:42:07', '2025-12-10 08:33:01');
 
 -- ----------------------------
 -- Table structure for trade_items
@@ -468,12 +602,12 @@ CREATE TABLE `trade_items`  (
 -- ----------------------------
 -- Records of trade_items
 -- ----------------------------
-INSERT INTO `trade_items` VALUES (1, 0, '9成新碳纤维公路车架', '尺寸M，超轻，只用了半年，因为换车出售。可小刀。', 4500.00, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/frame.jpg', 'xianyu://item/12345', 1, '整车', 1, '2025-12-05 09:00:00');
-INSERT INTO `trade_items` VALUES (2, 0, 'Shimano 105套件（二手）', '飞轮、链条、牙盘全套，正常使用痕迹，功能完好。', 1500.00, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/groupset.jpg', 'xianyu://item/67890', 2, '配件', 1, '2025-12-05 09:05:00');
-INSERT INTO `trade_items` VALUES (3, 0, '冬季骑行抓绒手套', '全新未拆封，L号，防水防风，多买了一副，便宜出。', 89.00, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/gloves.jpg', 'taobao://item/11223', 1, '配件', 1, '2025-12-05 09:10:00');
-INSERT INTO `trade_items` VALUES (4, 1, 'RideFlow 2024新款速干骑行服套装', '骑行服，透气排汗，夏季必备。分类：骑行服', 399.00, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/jersey.jpg', 'app://official/product/399', NULL, '骑行服', 1, '2025-12-05 09:20:00');
-INSERT INTO `trade_items` VALUES (5, 1, '高性能GPS码表（R700型号）', '精准定位，超长续航，支持心率监测。分类：配件', 1899.00, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/computer.jpg', 'app://official/product/r700', NULL, '配件', 1, '2025-12-05 09:25:00');
-INSERT INTO `trade_items` VALUES (6, 1, '山地越野头盔（Pro系列）', 'MIPS保护系统，轻量化设计，多色可选。分类：配件', 599.00, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/helmet.jpg', 'app://official/product/prohelmet', NULL, '配件', 1, '2025-12-05 09:30:00');
+INSERT INTO `trade_items` VALUES (1, 0, '9成新碳纤维公路车架', '尺寸M，超轻，只用了半年，因为换车出售。可小刀。', 4500.00, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/trade/3ba8f1964fff51db305e5d6966537153.jpg', 'xianyu://item/12345', 1, '整车', 1, '2025-12-05 09:00:00');
+INSERT INTO `trade_items` VALUES (2, 0, 'Shimano 105套件（二手）', '飞轮、链条、牙盘全套，正常使用痕迹，功能完好。', 1500.00, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/trade/0fa7a0d4e8da33d939daf6843a072846.jpg', 'xianyu://item/67890', 2, '配件', 1, '2025-12-05 09:05:00');
+INSERT INTO `trade_items` VALUES (3, 0, '冬季骑行抓绒手套', '全新未拆封，L号，防水防风，多买了一副，便宜出。', 89.00, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/trade/89f63fe94889606f2520e5413f5e405e.jpg', 'taobao://item/11223', 1, '配件', 1, '2025-12-05 09:10:00');
+INSERT INTO `trade_items` VALUES (4, 1, 'RideFlow 2024新款速干骑行服套装', '骑行服，透气排汗，夏季必备。分类：骑行服', 399.00, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/trade/4cec2ce0f03e2e48f31b36abe9fcb725.jpg', 'app://official/product/399', NULL, '骑行服', 1, '2025-12-05 09:20:00');
+INSERT INTO `trade_items` VALUES (5, 1, '高性能GPS码表（R700型号）', '精准定位，超长续航，支持心率监测。分类：配件', 1899.00, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/trade/8c01623046a896f57795599c7a6776a9.jpg', 'app://official/product/r700', NULL, '配件', 1, '2025-12-05 09:25:00');
+INSERT INTO `trade_items` VALUES (6, 1, '山地越野头盔（Pro系列）', 'MIPS保护系统，轻量化设计，多色可选。分类：配件', 599.00, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/trade/40fb2b02b2334ddd4d34c3f1ce3a9d1a.jpg', 'app://official/product/prohelmet', NULL, '配件', 1, '2025-12-05 09:30:00');
 
 -- ----------------------------
 -- Table structure for user_achievement_progress
@@ -527,6 +661,57 @@ CREATE TABLE `user_achievement_record_links`  (
 -- ----------------------------
 -- Records of user_achievement_record_links
 -- ----------------------------
+
+-- ----------------------------
+-- Table structure for user_activities
+-- ----------------------------
+DROP TABLE IF EXISTS `user_activities`;
+CREATE TABLE `user_activities`  (
+  `user_activity_id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `activity_id` int NOT NULL,
+  `relation` enum('registered','favorite') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT 'registered',
+  `status` enum('upcoming','in_progress','completed','cancelled') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT 'upcoming',
+  `registered_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `notes` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  PRIMARY KEY (`user_activity_id`) USING BTREE,
+  UNIQUE INDEX `unique_user_activity_relation`(`user_id` ASC, `activity_id` ASC, `relation` ASC) USING BTREE,
+  INDEX `idx_user_activities_user`(`user_id` ASC) USING BTREE,
+  INDEX `idx_user_activities_activity`(`activity_id` ASC) USING BTREE,
+  CONSTRAINT `fk_user_activities_activity` FOREIGN KEY (`activity_id`) REFERENCES `activities` (`activity_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_user_activities_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 10 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户-活动关系' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of user_activities
+-- ----------------------------
+INSERT INTO `user_activities` VALUES (8, 1, 5, 'favorite', 'upcoming', '2025-12-09 11:20:02', '????');
+INSERT INTO `user_activities` VALUES (9, 1, 4, 'favorite', 'upcoming', '2025-12-12 18:12:46', '????');
+
+-- ----------------------------
+-- Table structure for user_activity_stats
+-- ----------------------------
+DROP TABLE IF EXISTS `user_activity_stats`;
+CREATE TABLE `user_activity_stats`  (
+  `user_id` int NOT NULL,
+  `activity_id` int NOT NULL,
+  `distance_km` decimal(8, 2) NOT NULL DEFAULT 0.00,
+  `duration_seconds` int NOT NULL DEFAULT 0,
+  `avg_speed_kmh` decimal(8, 2) NULL DEFAULT NULL,
+  `calories` int NULL DEFAULT NULL,
+  `note` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`user_id`, `activity_id`) USING BTREE,
+  INDEX `idx_user_activity_stats_user`(`user_id` ASC) USING BTREE,
+  INDEX `idx_user_activity_stats_activity`(`activity_id` ASC) USING BTREE,
+  CONSTRAINT `fk_stats_activity` FOREIGN KEY (`activity_id`) REFERENCES `activities` (`activity_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_stats_user_a` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户-活动统计' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of user_activity_stats
+-- ----------------------------
+INSERT INTO `user_activity_stats` VALUES (1, 3, 0.00, 0, NULL, NULL, '活动3：收藏关注', '2025-12-09 10:40:31');
 
 -- ----------------------------
 -- Table structure for user_event_stats
@@ -601,8 +786,61 @@ CREATE TABLE `user_follows`  (
 -- ----------------------------
 -- Records of user_follows
 -- ----------------------------
-INSERT INTO `user_follows` VALUES (1, 2, '2025-12-05 20:35:08');
-INSERT INTO `user_follows` VALUES (1, 3, '2025-12-05 20:35:08');
+INSERT INTO `user_follows` VALUES (1, 1, '2025-12-12 20:26:34');
+INSERT INTO `user_follows` VALUES (1, 2, '2025-12-12 20:25:45');
+INSERT INTO `user_follows` VALUES (1, 3, '2025-12-10 10:54:36');
+
+-- ----------------------------
+-- Table structure for user_race_stats
+-- ----------------------------
+DROP TABLE IF EXISTS `user_race_stats`;
+CREATE TABLE `user_race_stats`  (
+  `user_id` int NOT NULL,
+  `race_id` int NOT NULL,
+  `distance_km` decimal(8, 2) NOT NULL DEFAULT 0.00,
+  `duration_seconds` int NOT NULL DEFAULT 0,
+  `avg_speed_kmh` decimal(8, 2) NULL DEFAULT NULL,
+  `calories` int NULL DEFAULT NULL,
+  `note` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`user_id`, `race_id`) USING BTREE,
+  INDEX `idx_user_race_stats_user`(`user_id` ASC) USING BTREE,
+  INDEX `idx_user_race_stats_race`(`race_id` ASC) USING BTREE,
+  CONSTRAINT `fk_stats_race` FOREIGN KEY (`race_id`) REFERENCES `races` (`race_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_stats_user2` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户-赛事统计' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of user_race_stats
+-- ----------------------------
+INSERT INTO `user_race_stats` VALUES (1, 1, 32.50, 5400, 21.67, 850, '活动1：夜骑完成', '2025-12-09 10:40:31');
+INSERT INTO `user_race_stats` VALUES (1, 2, 18.30, 3600, 18.30, 600, '活动2：计划晨骑', '2025-12-09 10:40:31');
+
+-- ----------------------------
+-- Table structure for user_races
+-- ----------------------------
+DROP TABLE IF EXISTS `user_races`;
+CREATE TABLE `user_races`  (
+  `user_race_id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `race_id` int NOT NULL,
+  `relation` enum('registered','favorite') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT 'registered',
+  `status` enum('upcoming','in_progress','completed','cancelled') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT 'upcoming',
+  `registered_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `notes` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  PRIMARY KEY (`user_race_id`) USING BTREE,
+  UNIQUE INDEX `unique_user_race_relation`(`user_id` ASC, `race_id` ASC, `relation` ASC) USING BTREE,
+  INDEX `idx_user_races_user`(`user_id` ASC) USING BTREE,
+  INDEX `idx_user_races_race`(`race_id` ASC) USING BTREE,
+  CONSTRAINT `fk_user_races_race` FOREIGN KEY (`race_id`) REFERENCES `races` (`race_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_user_races_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户-赛事关系' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of user_races
+-- ----------------------------
+INSERT INTO `user_races` VALUES (1, 1, 1, 'registered', 'completed', '2025-12-05 19:12:14', '已参加并完成');
+INSERT INTO `user_races` VALUES (2, 1, 2, 'registered', 'upcoming', '2025-12-05 19:12:14', '已报名，待开始');
 
 -- ----------------------------
 -- Table structure for user_ride_preferences
@@ -650,20 +888,48 @@ CREATE TABLE `user_ride_records`  (
   `note` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
   `notes` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `climb` int NULL DEFAULT NULL,
+  `max_speed_kmh` decimal(5, 2) NULL DEFAULT NULL,
   PRIMARY KEY (`record_id`) USING BTREE,
   INDEX `route_id`(`route_id` ASC) USING BTREE,
   INDEX `idx_ride_records_user`(`user_id` ASC) USING BTREE,
   INDEX `idx_ride_records_start_time`(`start_time` ASC) USING BTREE,
   CONSTRAINT `user_ride_records_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `user_ride_records_ibfk_2` FOREIGN KEY (`route_id`) REFERENCES `routes` (`route_id`) ON DELETE SET NULL ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户骑行记录' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 116037533 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户骑行记录' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of user_ride_records
 -- ----------------------------
-INSERT INTO `user_ride_records` VALUES (1, 1, 1, '2025-11-21 19:00:00', 0, 5400, 32.50, 21.67, 850, NULL, '夜骑很爽', '2025-12-04 23:00:55');
-INSERT INTO `user_ride_records` VALUES (2, 2, 2, '2025-11-22 08:00:00', 0, 10800, 65.00, 21.66, 1600, NULL, '爬坡辛苦', '2025-12-04 23:00:55');
-INSERT INTO `user_ride_records` VALUES (3, 3, 3, '2025-11-23 20:00:00', 0, 3600, 18.30, 18.30, 600, NULL, '城市风光不错', '2025-12-04 23:00:55');
+INSERT INTO `user_ride_records` VALUES (1, 1, 1, '2025-11-21 19:00:00', 0, 5400, 32.50, 21.67, 850, NULL, '夜骑很爽', '2025-12-04 23:00:55', NULL, NULL);
+INSERT INTO `user_ride_records` VALUES (2, 2, 2, '2025-11-22 08:00:00', 0, 10800, 65.00, 21.66, 1600, NULL, '爬坡辛苦', '2025-12-04 23:00:55', NULL, NULL);
+INSERT INTO `user_ride_records` VALUES (3, 3, 3, '2025-11-23 20:00:00', 0, 3600, 18.30, 18.30, 600, NULL, '城市风光不错', '2025-12-04 23:00:55', NULL, NULL);
+INSERT INTO `user_ride_records` VALUES (96398612, 11, NULL, '2025-12-10 00:52:37', 0, 3, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 08:52:39', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (97431832, 11, NULL, '2025-12-10 01:09:50', 0, 3, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 09:09:53', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (98194425, 1, NULL, '2025-12-10 09:22:33', 0, 5, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 09:22:34', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (101425626, 11, NULL, '2025-12-10 02:16:24', 0, 3, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:16:26', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (101443771, 11, NULL, '2025-12-10 02:16:42', 0, 8, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:16:44', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (101503576, 1, NULL, '2025-12-10 02:17:42', 0, 13, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:17:45', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (101774447, 11, NULL, '2025-12-10 10:22:13', 0, 49, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:22:13', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (101779699, 11, NULL, '2025-12-10 10:22:18', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:22:19', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (101901621, 11, NULL, '2025-12-10 10:24:20', 0, 71, 0.08, 3.60, 4, NULL, NULL, '2025-12-10 10:24:20', 0, 5.25);
+INSERT INTO `user_ride_records` VALUES (102513116, 11, NULL, '2025-12-10 10:34:31', 0, 4, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:34:33', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (102862332, 11, NULL, '2025-12-10 02:40:20', 0, 8, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:40:24', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (102944728, 11, NULL, '2025-12-10 02:41:43', 0, 17, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:41:46', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (103418061, 11, NULL, '2025-12-10 02:49:36', 0, 4, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:49:40', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (103423646, 11, NULL, '2025-12-10 02:49:42', 0, 0, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:49:48', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (103892224, 11, NULL, '2025-12-10 02:57:30', 0, 3, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:57:34', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (103897976, 11, NULL, '2025-12-10 02:57:36', 0, 2, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:57:42', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (104400404, 11, NULL, '2025-12-10 11:05:59', 0, 16, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 11:06:00', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (104413160, 11, NULL, '2025-12-10 11:06:11', 0, 4, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 11:06:13', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (104466393, 11, NULL, '2025-12-10 11:07:05', 0, 37, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 11:07:07', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (104570600, 11, NULL, '2025-12-10 11:08:49', 0, 4, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 11:08:50', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (107079789, 1, NULL, '2025-12-10 11:50:38', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 11:50:39', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (107090646, 1, NULL, '2025-12-10 11:50:49', 0, 6, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 11:50:50', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (107112978, 1, NULL, '2025-12-10 11:51:11', 0, 19, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 11:51:13', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (107180767, 1, NULL, '2025-12-10 11:52:19', 0, 55, 0.06, 3.90, 2, NULL, NULL, '2025-12-10 11:52:20', 0, 16.05);
+INSERT INTO `user_ride_records` VALUES (108412885, 1, NULL, '2025-12-10 12:12:51', 0, 0, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 12:12:53', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (116037532, 11, NULL, '2025-12-10 06:19:56', 0, 4, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 14:19:56', 0, 0.00);
 
 -- ----------------------------
 -- Table structure for users
@@ -695,13 +961,13 @@ CREATE TABLE `users`  (
 -- ----------------------------
 -- Records of users
 -- ----------------------------
-INSERT INTO `users` VALUES (1, 'testuser', 'test@example.com', '123456', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '222', 'female', '2025-12-03', '12345678900', 0, 1, '2025-12-09 23:19:47', '2025-11-27 20:58:42', '2025-12-09 23:19:47');
-INSERT INTO `users` VALUES (2, 'admin', 'admin@example.com', 'admin123', NULL, NULL, 'other', NULL, NULL, 0, 1, NULL, '2025-11-27 20:58:42', '2025-11-27 20:58:42');
-INSERT INTO `users` VALUES (3, 'user1', 'user1@example.com', 'password1', NULL, NULL, 'other', NULL, NULL, 0, 1, NULL, '2025-11-27 20:58:42', '2025-11-27 20:58:42');
-INSERT INTO `users` VALUES (7, 'a', 'a@qq.com', 'aaaaaa', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-11-28 00:06:10', '2025-11-28 00:06:10', '2025-11-28 00:06:10');
-INSERT INTO `users` VALUES (8, '123456', '710963274@qq.com', '123456', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-12-09 23:02:42', '2025-12-02 12:09:25', '2025-12-09 23:02:42');
-INSERT INTO `users` VALUES (9, 'ddd', 'aaa@gmail.com', 'sssssss', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-12-02 20:24:26', '2025-12-02 20:24:26', '2025-12-02 20:24:26');
-INSERT INTO `users` VALUES (10, '111', '111@gmail.com', '111111', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-12-09 19:17:45', '2025-12-02 20:48:47', '2025-12-09 19:17:45');
-INSERT INTO `users` VALUES (11, '1', '1@gmail.com', '123123', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-12-09 22:28:51', '2025-12-09 19:31:59', '2025-12-09 22:28:51');
+INSERT INTO `users` VALUES (1, 'testuser', 'test@example.com', '123456', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '222', 'female', '2025-12-03', '12345678900', 0, 1, '2025-12-13 15:18:28', '2025-11-27 20:58:42', '2025-12-13 15:18:28');
+INSERT INTO `users` VALUES (2, 'admin', 'admin@example.com', 'admin123', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/User%20Icon/1764739073797.png', NULL, 'other', NULL, NULL, 0, 1, NULL, '2025-11-27 20:58:42', '2025-12-09 23:50:26');
+INSERT INTO `users` VALUES (3, 'user1', 'user1@example.com', 'password1', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/User%20Icon/1764739073797.png', NULL, 'other', NULL, NULL, 0, 1, NULL, '2025-11-27 20:58:42', '2025-12-09 23:50:50');
+INSERT INTO `users` VALUES (7, 'a', 'a@qq.com', 'aaaaaa', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/User%20Icon/1764739092619.png', NULL, 'other', NULL, NULL, 0, 0, '2025-11-28 00:06:10', '2025-11-28 00:06:10', '2025-12-09 23:50:57');
+INSERT INTO `users` VALUES (8, '123456', '710963274@qq.com', '123456', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/User%20Icon/1764739092619.png', NULL, 'other', NULL, NULL, 0, 0, '2025-12-10 08:52:50', '2025-12-02 12:09:25', '2025-12-10 08:52:50');
+INSERT INTO `users` VALUES (9, 'ddd', 'aaa@gmail.com', 'sssssss', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/User%20Icon/1764739110342.png', NULL, 'other', NULL, NULL, 0, 0, '2025-12-02 20:24:26', '2025-12-02 20:24:26', '2025-12-09 23:51:09');
+INSERT INTO `users` VALUES (10, '111', '111@gmail.com', '111111', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/User%20Icon/1764739127863.png', NULL, 'other', NULL, NULL, 0, 0, '2025-12-09 19:17:45', '2025-12-02 20:48:47', '2025-12-09 23:51:16');
+INSERT INTO `users` VALUES (11, '1', '1@gmail.com', '123123', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/User%20Icon/1764739143896.png', NULL, 'other', NULL, NULL, 0, 0, '2025-12-10 14:13:19', '2025-12-09 19:31:59', '2025-12-10 14:13:19');
 
 SET FOREIGN_KEY_CHECKS = 1;
