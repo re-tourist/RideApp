@@ -630,11 +630,10 @@ fun RideMainContent(onShowHistory: () -> Unit, onShowRouteBook: () -> Unit, shou
             when (rideStatus.value) {
                 is RideStatus.NotStarted -> {
                     TopAppBar(
-                        title = { Text("骑迹", color = Color.White) },
+                        title = { ModeToggle(activeIsSport = true, onClick = onShowRouteBook) },
                         colors = TopAppBarDefaults.topAppBarColors(
                             containerColor = Color(0xFF007AFF)
                         ),
-                        // 顶部右侧按钮：历史记录 + 路书
                         actions = {
                             IconButton(onClick = onShowHistory) {
                                 Icon(
@@ -643,7 +642,6 @@ fun RideMainContent(onShowHistory: () -> Unit, onShowRouteBook: () -> Unit, shou
                                     tint = Color.White
                                 )
                             }
-                            ModeToggle(activeIsSport = true, onClick = onShowRouteBook)
                         }
                     )
                 }

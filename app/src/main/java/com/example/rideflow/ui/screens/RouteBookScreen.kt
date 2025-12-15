@@ -26,6 +26,12 @@ import com.amap.api.services.help.Inputtips
 import com.amap.api.services.help.InputtipsQuery
 import com.amap.api.services.help.Tip
 import com.google.android.gms.location.LocationServices
+import com.amap.api.services.core.LatLonPoint
+import com.amap.api.services.route.RouteSearch
+import com.amap.api.services.route.RideRouteResult
+import com.amap.api.services.route.WalkRouteResult
+import android.os.Handler
+import android.os.Looper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,15 +73,95 @@ fun RouteBookScreen(onBackToMain: () -> Unit, onShowHistory: () -> Unit, onStart
     val searchResults = remember { mutableStateListOf<Tip>() }
     val selectedPlace = remember { mutableStateOf<LatLng?>(null) }
     var showSearchOverlay by remember { mutableStateOf(false) }
+    val routePoints = remember { mutableStateListOf<LatLng>() }
+    val mainHandler = remember { Handler(Looper.getMainLooper()) }
+
+    fun calculateRoute(from: LatLng?, to: LatLng?) {
+        if (from == null || to == null) return
+        try {
+            val routeSearch = RouteSearch(context)
+            val fromAndTo = RouteSearch.FromAndTo(LatLonPoint(from.latitude, from.longitude), LatLonPoint(to.latitude, to.longitude))
+            val rideQuery = RouteSearch.RideRouteQuery(fromAndTo, RouteSearch.RidingDefault)
+            val walkQuery = RouteSearch.WalkRouteQuery(fromAndTo, RouteSearch.WalkDefault)
+
+            fun updatePointsSafely(points: List<LatLng>) {
+                mainHandler.post {
+                    routePoints.clear()
+                    routePoints.addAll(points)
+                }
+            }
+
+            fun fallbackWalk() {
+                routeSearch.calculateWalkRouteAsyn(walkQuery)
+            }
+
+            routeSearch.setRouteSearchListener(object : RouteSearch.OnRouteSearchListener {
+                override fun onRideRouteSearched(result: RideRouteResult?, code: Int) {
+                    try {
+                        if (code == 1000) {
+                            val path = result?.paths?.firstOrNull()
+                            val steps = path?.steps
+                            if (steps != null && steps.isNotEmpty()) {
+                                val temp = mutableListOf<LatLng>()
+                                steps.forEach { step ->
+                                    val pts = step.polyline
+                                    pts?.forEach { p -> temp.add(LatLng(p.latitude, p.longitude)) }
+                                }
+                                if (temp.size >= 2) {
+                                    updatePointsSafely(temp)
+                                    return
+                                }
+                            }
+                        }
+                        fallbackWalk()
+                    } catch (e: Exception) {
+                        fallbackWalk()
+                    }
+                }
+                override fun onWalkRouteSearched(result: WalkRouteResult?, code: Int) {
+                    try {
+                        if (code == 1000) {
+                            val path = result?.paths?.firstOrNull()
+                            val steps = path?.steps
+                            if (steps != null && steps.isNotEmpty()) {
+                                val temp = mutableListOf<LatLng>()
+                                steps.forEach { step ->
+                                    val pts = step.polyline
+                                    pts?.forEach { p -> temp.add(LatLng(p.latitude, p.longitude)) }
+                                }
+                                if (temp.size >= 2) {
+                                    updatePointsSafely(temp)
+                                    return
+                                }
+                            }
+                        }
+                        val fallback = listOf(from, to)
+                        updatePointsSafely(fallback)
+                    } catch (e: Exception) {
+                        val fallback = listOf(from, to)
+                        updatePointsSafely(fallback)
+                    }
+                }
+                override fun onDriveRouteSearched(p0: com.amap.api.services.route.DriveRouteResult?, p1: Int) {}
+                override fun onBusRouteSearched(p0: com.amap.api.services.route.BusRouteResult?, p1: Int) {}
+            })
+
+            routeSearch.calculateRideRouteAsyn(rideQuery)
+        } catch (e: Exception) {
+            mainHandler.post {
+                routePoints.clear()
+                routePoints.addAll(listOf(from, to))
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("骑迹", color = Color.White) },
+                title = { ModeToggleRoute(activeIsSport = false, onClick = onBackToMain) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF007AFF)),
                 actions = {
                     IconButton(onClick = onShowHistory) { Icon(imageVector = Icons.Filled.DateRange, contentDescription = "骑行记录", tint = Color.White) }
-                    ModeToggleRoute(activeIsSport = false, onClick = onBackToMain)
                 }
             )
         }
@@ -87,12 +173,13 @@ fun RouteBookScreen(onBackToMain: () -> Unit, onShowHistory: () -> Unit, onStart
         ) {
             item {
                 Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Box {
+                    Box(modifier = Modifier.fillMaxWidth().clickable { showSearchOverlay = true }) {
                         TextField(
                             value = searchQuery,
                             onValueChange = { },
-                            modifier = Modifier.fillMaxWidth().clickable { showSearchOverlay = true },
+                            modifier = Modifier.fillMaxWidth(),
                             readOnly = true,
+                            enabled = false,
                             placeholder = { Text("输入关键词") }
                         )
                     }
@@ -109,6 +196,7 @@ fun RouteBookScreen(onBackToMain: () -> Unit, onShowHistory: () -> Unit, onStart
                     AMap2DContainer(
                         modifier = Modifier.fillMaxSize(),
                         myLocation = currentLocation.value,
+                        routePoints = routePoints,
                         selectedLocation = selectedPlace.value
                     )
                 }
@@ -184,6 +272,7 @@ fun RouteBookScreen(onBackToMain: () -> Unit, onShowHistory: () -> Unit, onStart
                                         if (p != null) {
                                             selectedPlace.value = LatLng(p.latitude, p.longitude)
                                             searchQuery = tip.name
+                                            calculateRoute(currentLocation.value, selectedPlace.value)
                                         }
                                         showSearchOverlay = false
                                     }
@@ -201,6 +290,9 @@ fun RouteBookScreen(onBackToMain: () -> Unit, onShowHistory: () -> Unit, onStart
                 }
             }
         )
+    }
+    LaunchedEffect(selectedPlace.value, currentLocation.value) {
+        calculateRoute(currentLocation.value, selectedPlace.value)
     }
 }
 
