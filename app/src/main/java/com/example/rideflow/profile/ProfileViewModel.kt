@@ -3,6 +3,7 @@ package com.example.rideflow.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.rideflow.auth.AuthRepository
+import com.example.rideflow.core.result.AppResult
 import com.example.rideflow.model.UserData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -44,8 +45,11 @@ class ProfileViewModel(
             try {
                 val userId = authRepository.getCurrentUserId()
                 if (userId != null) {
-                    val userData = profileRepository.getCurrentUserProfile(userId)
-                    _userProfile.value = userData
+                    when (val result = profileRepository.getCurrentUserProfile(userId)) {
+                        is AppResult.Success -> _userProfile.value = result.data
+                        is AppResult.Error -> _errorMessage.value = result.error.message
+                        AppResult.Loading -> {}
+                    }
                 } else {
                     _errorMessage.value = "用户未登录"
                 }
@@ -91,24 +95,40 @@ class ProfileViewModel(
 
                 // 检查昵称是否可用（如果提供了新昵称）
                 if (!nickname.isNullOrEmpty() && nickname != _userProfile.value?.nickname) {
-                    val isNicknameAvailable = profileRepository.isNicknameAvailable(nickname)
-                    if (!isNicknameAvailable) {
-                        _errorMessage.value = "昵称已被使用"
-                        return@launch
+                    when (val result = profileRepository.isNicknameAvailable(nickname)) {
+                        is AppResult.Success -> {
+                            if (!result.data) {
+                                _errorMessage.value = "昵称已被使用"
+                                return@launch
+                            }
+                        }
+                        is AppResult.Error -> {
+                            _errorMessage.value = result.error.message
+                            return@launch
+                        }
+                        AppResult.Loading -> {}
                     }
                 }
 
                 // 检查邮箱是否可用（如果提供了新邮箱）
                 if (!email.isNullOrEmpty() && email != _userProfile.value?.email) {
-                    val isEmailAvailable = profileRepository.isEmailAvailable(email)
-                    if (!isEmailAvailable) {
-                        _errorMessage.value = "邮箱已被使用"
-                        return@launch
+                    when (val result = profileRepository.isEmailAvailable(email)) {
+                        is AppResult.Success -> {
+                            if (!result.data) {
+                                _errorMessage.value = "邮箱已被使用"
+                                return@launch
+                            }
+                        }
+                        is AppResult.Error -> {
+                            _errorMessage.value = result.error.message
+                            return@launch
+                        }
+                        AppResult.Loading -> {}
                     }
                 }
 
                 // 更新用户资料
-                val success = profileRepository.updateUserProfile(
+                val result = profileRepository.updateUserProfile(
                     nickname = nickname,
                     email = email,
                     avatarUrl = avatarUrl,
@@ -118,12 +138,15 @@ class ProfileViewModel(
                     emergencyContact = emergencyContact
                 )
 
-                if (success) {
-                    _updateSuccess.value = true
-                    // 重新加载用户资料
-                    loadUserProfile()
-                } else {
-                    _errorMessage.value = "更新用户资料失败"
+                when (result) {
+                    is AppResult.Success -> {
+                        _updateSuccess.value = true
+                        loadUserProfile()
+                    }
+                    is AppResult.Error -> {
+                        _errorMessage.value = result.error.message
+                    }
+                    AppResult.Loading -> {}
                 }
             } catch (e: Exception) {
                 _errorMessage.value = "更新用户资料失败: ${e.message}"
