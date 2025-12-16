@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
@@ -36,6 +37,7 @@ import com.example.rideflow.navigation.AppRoutes
 import com.example.rideflow.backend.DatabaseHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
 import android.util.Log
@@ -229,7 +231,17 @@ fun DiscoverScreen(navController: androidx.navigation.NavController, userId: Str
 
 @Composable
 fun PromoCarousel(images: List<String>) {
-    LazyRow(modifier = Modifier.fillMaxWidth()) {
+    val listState = rememberLazyListState()
+    LaunchedEffect(images, listState.isScrollInProgress) {
+        while (true) {
+            delay(4000)
+            if (images.isNotEmpty() && !listState.isScrollInProgress) {
+                val next = (listState.firstVisibleItemIndex + 1) % images.size
+                listState.animateScrollToItem(next)
+            }
+        }
+    }
+    LazyRow(modifier = Modifier.fillMaxWidth(), state = listState) {
         items(images) { url ->
             Card(
                 modifier = Modifier
@@ -326,8 +338,8 @@ fun CategoryItemDrawable(imageRes: Int, label: String, onClick: () -> Unit = {})
                 Image(
                     painter = painterResource(id = imageRes),
                     contentDescription = label,
-                    modifier = Modifier.size(44.dp),
-                    contentScale = ContentScale.Fit
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
                 )
             }
         }
