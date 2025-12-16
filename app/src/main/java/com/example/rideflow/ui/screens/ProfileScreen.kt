@@ -237,93 +237,63 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
                         }
                     }
                 }
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(72.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFFCCCCCC))
-                            .clickable(onClick = { navigateToEditProfile() }),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (avatarUrl.isNotBlank()) {
-                            AsyncImage(
-                                model = avatarUrl,
-                                contentDescription = "用户头像",
-                                modifier = Modifier.size(72.dp).clip(CircleShape),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = "用户头像",
-                                tint = Color(0xFF9E9E9E),
-                                modifier = Modifier.size(36.dp)
-                            )
-                        }
-                    }
-                    Column(modifier = Modifier.padding(start = 16.dp).weight(1f)) {
-                        Text(
-                            text = if (nickname.isNotBlank()) nickname else "",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White,
-                            modifier = Modifier.clickable(onClick = { navigateToEditProfile() })
-                        )
-                        if (bio.isNotBlank()) {
-                            Text(
-                                text = bio,
-                                fontSize = 13.sp,
-                                color = Color(0xFFDDDDDD),
-                                modifier = Modifier.padding(top = 4.dp)
-                            )
-                        }
-                        if (userId.isNotBlank()) {
-                            Text(
-                                text = "ID: ${userId}",
-                                fontSize = 12.sp,
-                                color = Color(0xFFBBBBBB)
-                            )
-                        }
-                    }
-
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val unlockedCount = badgeItems.count { it.unlocked }
-                        SocialStatChip(
-                            label = "粉丝",
-                            count = followersCount,
-                            icon = Icons.Default.Group,
-                            onClick = { navController.navigate("${AppRoutes.MAIN}?tab=community") }
-                        )
-                        SocialStatChip(
-                            label = "关注",
-                            count = followingCount,
-                            icon = Icons.Default.PersonAdd,
-                            onClick = { navController.navigate("${AppRoutes.MAIN}?tab=community") }
-                        )
-                        SocialStatChip(
-                            label = "俱乐部",
-                            count = clubsCount,
-                            icon = Icons.Default.Home,
-                            onClick = { navController.navigate(AppRoutes.CLUB_SCREEN) }
-                        )
-                        SocialStatChip(
-                            label = "徽章",
-                            count = unlockedCount,
-                            icon = Icons.Default.Star,
-                            onClick = { navController.navigate(AppRoutes.ACHIEVEMENTS) }
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(72.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFCCCCCC))
+                                .clickable(onClick = { navigateToEditProfile() }),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (avatarUrl.isNotBlank()) {
+                                AsyncImage(
+                                    model = avatarUrl,
+                                    contentDescription = "用户头像",
+                                    modifier = Modifier.size(72.dp).clip(CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Person,
+                                    contentDescription = "用户头像",
+                                    tint = Color(0xFF9E9E9E),
+                                    modifier = Modifier.size(36.dp)
+                                )
+                            }
+                        }
+                        Column(modifier = Modifier.padding(start = 16.dp).weight(1f)) {
+                            Text(
+                                text = if (nickname.isNotBlank()) nickname else "",
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White,
+                                modifier = Modifier.clickable(onClick = { navigateToEditProfile() })
+                            )
+                            if (bio.isNotBlank()) {
+                                Text(
+                                    text = bio,
+                                    fontSize = 13.sp,
+                                    color = Color(0xFFDDDDDD),
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
+                            if (userId.isNotBlank()) {
+                                Text(
+                                    text = "ID: ${userId}",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFFBBBBBB)
+                                )
+                            }
+                        }
                     }
                 }
                 HeaderSocialStatsRow(postsCount = postsCount, followingCount = followingCount, followersCount = followersCount)
