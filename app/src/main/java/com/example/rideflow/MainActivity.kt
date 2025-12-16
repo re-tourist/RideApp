@@ -177,6 +177,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AppWithNavigation() {
     val authViewModel = koinViewModel<AuthViewModel>()
+    androidx.compose.runtime.LaunchedEffect(Unit) { authViewModel.checkSession() }
     AppNavGraph(authViewModel = authViewModel)
 }
 

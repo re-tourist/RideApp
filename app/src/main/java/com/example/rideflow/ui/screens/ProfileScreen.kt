@@ -291,6 +291,40 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
                             )
                         }
                     }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val unlockedCount = badgeItems.count { it.unlocked }
+                        SocialStatChip(
+                            label = "粉丝",
+                            count = followersCount,
+                            icon = Icons.Default.Group,
+                            onClick = { navController.navigate("${AppRoutes.MAIN}?tab=community") }
+                        )
+                        SocialStatChip(
+                            label = "关注",
+                            count = followingCount,
+                            icon = Icons.Default.PersonAdd,
+                            onClick = { navController.navigate("${AppRoutes.MAIN}?tab=community") }
+                        )
+                        SocialStatChip(
+                            label = "俱乐部",
+                            count = clubsCount,
+                            icon = Icons.Default.Home,
+                            onClick = { navController.navigate(AppRoutes.CLUB_SCREEN) }
+                        )
+                        SocialStatChip(
+                            label = "徽章",
+                            count = unlockedCount,
+                            icon = Icons.Default.Star,
+                            onClick = { navController.navigate(AppRoutes.ACHIEVEMENTS) }
+                        )
+                    }
                 }
                 HeaderSocialStatsRow(postsCount = postsCount, followingCount = followingCount, followersCount = followersCount)
                 AchievementsPreviewRow(

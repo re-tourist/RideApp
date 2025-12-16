@@ -1,0 +1,1231 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 8.13.0" type="baseline" client="gradle" dependencies="false" name="AGP (8.13.0)" variant="all" version="8.13.0">
+
+    <issue
+        id="MissingSuperCall"
+        message="Overriding method should call `super.onStartCommand`"
+        errorLine1="    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {"
+        errorLine2="                 ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/services/RideTrackingService.kt"
+            line="31"
+            column="18"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="        String.format(&quot;%02d:%02d:%02d&quot;, h, m, s)"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/RideScreen.kt"
+            line="325"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="                        rideDistance.value = String.format(&quot;%.2f&quot;, totalDistance.value / 1000)"
+        errorLine2="                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/RideScreen.kt"
+            line="424"
+            column="46"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="                        currentSpeed.value = String.format(&quot;%.1f&quot;, speed)"
+        errorLine2="                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/RideScreen.kt"
+            line="428"
+            column="46"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="                            maxSpeed.value = String.format(&quot;%.1f&quot;, speed)"
+        errorLine2="                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/RideScreen.kt"
+            line="433"
+            column="46"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="                            avgSpeed.value = String.format(&quot;%.1f&quot;, avgSpeedValue)"
+        errorLine2="                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/RideScreen.kt"
+            line="440"
+            column="46"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="            String.format(&quot;%02d:%02d:%02d&quot;, h, m, s)"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/RideScreen.kt"
+            line="503"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="                    Text(&quot;经度: ${myLocation?.longitude?.let { String.format(&quot;%.6f&quot;, it) } ?: &quot;定位中&quot;}&quot;, fontSize = 14.sp, color = Color.Gray)"
+        errorLine2="                                                             ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/RideScreen.kt"
+            line="805"
+            column="62"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="                    Text(&quot;纬度: ${myLocation?.latitude?.let { String.format(&quot;%.6f&quot;, it) } ?: &quot;定位中&quot;}&quot;, fontSize = 14.sp, color = Color.Gray)"
+        errorLine2="                                                            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/RideScreen.kt"
+            line="806"
+            column="61"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="        return String.format(&quot;%02d:%02d:%02d&quot;, h, m, s)"
+        errorLine2="               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/RideScreen.kt"
+            line="992"
+            column="16"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="                                RideDataRow(&quot;距离&quot;, String.format(&quot;%.2f km&quot;, r.distanceKm))"
+        errorLine2="                                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/RideScreen.kt"
+            line="1049"
+            column="51"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="                                RideDataRow(&quot;均速&quot;, String.format(&quot;%.2f km/h&quot;, r.avgSpeedKmh))"
+        errorLine2="                                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/RideScreen.kt"
+            line="1052"
+            column="51"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="                                RideDataRow(&quot;消耗&quot;, String.format(&quot;%d kcal&quot;, r.calories))"
+        errorLine2="                                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/RideScreen.kt"
+            line="1053"
+            column="51"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="                    Text(text = &quot;距离 ${String.format(&quot;%.2f&quot;, distanceKm)} km&quot;, fontSize = 14.sp, color = Color.Gray)"
+        errorLine2="                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/RouteBookDetailScreen.kt"
+            line="170"
+            column="39"/>
+    </issue>
+
+    <issue
+        id="ExifInterface"
+        message="Avoid using `android.media.ExifInterface`; use `androidx.exifinterface.media.ExifInterface` instead"
+        errorLine1="import android.media.ExifInterface"
+        errorLine2="       ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/utils/ImageUploadUtils.kt"
+            line="9"
+            column="8"/>
+    </issue>
+
+    <issue
+        id="IntentReset"
+        message="Calling `setType` after setting URI in `Intent` constructor will clear the data: Call `setDataAndType` instead?"
+        errorLine1="        pickPhotoIntent.type = &quot;image/*&quot;"
+        errorLine2="                        ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/utils/ImagePicker.kt"
+            line="32"
+            column="25"/>
+        <location
+            file="src/main/java/com/example/rideflow/utils/ImagePicker.kt"
+            line="31"
+            column="58"
+            message="Originally set here"/>
+    </issue>
+
+    <issue
+        id="IntentReset"
+        message="Calling `setType` after setting URI in `Intent` constructor will clear the data: Call `setDataAndType` instead?"
+        errorLine1="    intent.type = &quot;image/*&quot;"
+        errorLine2="           ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/utils/ImagePicker.kt"
+            line="69"
+            column="12"/>
+        <location
+            file="src/main/java/com/example/rideflow/utils/ImagePicker.kt"
+            line="68"
+            column="45"
+            message="Originally set here"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 26, or core library desugaring (current min is 24): `java.time.YearMonth#now`"
+        errorLine1="    val currentMonth = remember { mutableStateOf(YearMonth.now()) }"
+        errorLine2="                                                           ~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/ExerciseCalendarScreen.kt"
+            line="41"
+            column="60"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 26, or core library desugaring (current min is 24): `java.time.YearMonth#atDay`"
+        errorLine1="                val start = ym.atDay(1).toString() + &quot; 00:00:00&quot;"
+        errorLine2="                               ~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/ExerciseCalendarScreen.kt"
+            line="52"
+            column="32"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 26, or core library desugaring (current min is 24): `java.time.YearMonth#atDay`"
+        errorLine1="                val end = ym.plusMonths(1).atDay(1).toString() + &quot; 00:00:00&quot;"
+        errorLine2="                                           ~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/ExerciseCalendarScreen.kt"
+            line="53"
+            column="44"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 26, or core library desugaring (current min is 24): `java.time.YearMonth#plusMonths`"
+        errorLine1="                val end = ym.plusMonths(1).atDay(1).toString() + &quot; 00:00:00&quot;"
+        errorLine2="                             ~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/ExerciseCalendarScreen.kt"
+            line="53"
+            column="30"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 26, or core library desugaring (current min is 24): `java.time.LocalDate#parse`"
+        errorLine1="                        val d = LocalDate.parse(rs.getString(1))"
+        errorLine2="                                          ~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/ExerciseCalendarScreen.kt"
+            line="63"
+            column="43"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 26, or core library desugaring (current min is 24): `java.time.YearMonth#minusMonths`"
+        errorLine1="                IconButton(onClick = { currentMonth.value = currentMonth.value.minusMonths(1) }) {"
+        errorLine2="                                                                               ~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/ExerciseCalendarScreen.kt"
+            line="114"
+            column="80"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 26, or core library desugaring (current min is 24): `java.time.Month#getValue`"
+        errorLine1="                    text = &quot;${currentMonth.value.year}年 ${currentMonth.value.month.getValue()}月&quot;,"
+        errorLine2="                                                                                   ~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/ExerciseCalendarScreen.kt"
+            line="118"
+            column="84"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 26, or core library desugaring (current min is 24): `java.time.YearMonth#getMonth`"
+        errorLine1="                    text = &quot;${currentMonth.value.year}年 ${currentMonth.value.month.getValue()}月&quot;,"
+        errorLine2="                                                                             ~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/ExerciseCalendarScreen.kt"
+            line="118"
+            column="78"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 26, or core library desugaring (current min is 24): `java.time.YearMonth#getYear`"
+        errorLine1="                    text = &quot;${currentMonth.value.year}年 ${currentMonth.value.month.getValue()}月&quot;,"
+        errorLine2="                                                 ~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/ExerciseCalendarScreen.kt"
+            line="118"
+            column="50"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 26, or core library desugaring (current min is 24): `java.time.YearMonth#plusMonths`"
+        errorLine1="                IconButton(onClick = { currentMonth.value = currentMonth.value.plusMonths(1) }) {"
+        errorLine2="                                                                               ~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/ExerciseCalendarScreen.kt"
+            line="122"
+            column="80"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 26, or core library desugaring (current min is 24): `java.time.YearMonth#getYear`"
+        errorLine1="    calendar.set(Calendar.YEAR, yearMonth.year)"
+        errorLine2="                                          ~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/ExerciseCalendarScreen.kt"
+            line="200"
+            column="43"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 26, or core library desugaring (current min is 24): `java.time.YearMonth#getMonthValue`"
+        errorLine1="    calendar.set(Calendar.MONTH, yearMonth.monthValue - 1)"
+        errorLine2="                                           ~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/ExerciseCalendarScreen.kt"
+            line="201"
+            column="44"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 26, or core library desugaring (current min is 24): `java.time.YearMonth#lengthOfMonth`"
+        errorLine1="    val daysInMonth = yearMonth.lengthOfMonth()"
+        errorLine2="                                ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/ExerciseCalendarScreen.kt"
+            line="207"
+            column="33"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 26, or core library desugaring (current min is 24): `java.time.LocalDate#of`"
+        errorLine1="                        val date = LocalDate.of(yearMonth.year, yearMonth.month, dayOfMonth)"
+        errorLine2="                                             ~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/ExerciseCalendarScreen.kt"
+            line="220"
+            column="46"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 26, or core library desugaring (current min is 24): `java.time.YearMonth#getMonth`"
+        errorLine1="                        val date = LocalDate.of(yearMonth.year, yearMonth.month, dayOfMonth)"
+        errorLine2="                                                                          ~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/ExerciseCalendarScreen.kt"
+            line="220"
+            column="75"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 26, or core library desugaring (current min is 24): `java.time.YearMonth#getYear`"
+        errorLine1="                        val date = LocalDate.of(yearMonth.year, yearMonth.month, dayOfMonth)"
+        errorLine2="                                                          ~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/ExerciseCalendarScreen.kt"
+            line="220"
+            column="59"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 26, or core library desugaring (current min is 24): `java.time.YearMonth#now`"
+        errorLine1="                val ym = YearMonth.now()"
+        errorLine2="                                   ~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/RideRecordScreen.kt"
+            line="106"
+            column="36"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 26, or core library desugaring (current min is 24): `java.time.YearMonth#atDay`"
+        errorLine1="                val start = ym.atDay(1).toString() + &quot; 00:00:00&quot;"
+        errorLine2="                               ~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/RideRecordScreen.kt"
+            line="107"
+            column="32"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 26, or core library desugaring (current min is 24): `java.time.YearMonth#atDay`"
+        errorLine1="                val end = ym.plusMonths(1).atDay(1).toString() + &quot; 00:00:00&quot;"
+        errorLine2="                                           ~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/RideRecordScreen.kt"
+            line="108"
+            column="44"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 26, or core library desugaring (current min is 24): `java.time.YearMonth#plusMonths`"
+        errorLine1="                val end = ym.plusMonths(1).atDay(1).toString() + &quot; 00:00:00&quot;"
+        errorLine2="                             ~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/RideRecordScreen.kt"
+            line="108"
+            column="30"/>
+    </issue>
+
+    <issue
+        id="SuspiciousIndentation"
+        message="Suspicious indentation: This is indented but is not continuing the previous expression (`val item = Activity(`...)"
+        errorLine1="                    list.add(item)"
+        errorLine2="                    ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/ActivitiesScreen.kt"
+            line="147"
+            column="21"/>
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/ActivitiesScreen.kt"
+            line="136"
+            column="17"
+            message="Previous statement here"/>
+    </issue>
+
+    <issue
+        id="SuspiciousIndentation"
+        message="Suspicious indentation: This is indented but is not continuing the previous expression (`val authState = auth`...)"
+        errorLine1="        NavHost("
+        errorLine2="        ~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/navigation/AppNavGraph.kt"
+            line="48"
+            column="9"/>
+        <location
+            file="src/main/java/com/example/rideflow/navigation/AppNavGraph.kt"
+            line="46"
+            column="5"
+            message="Previous statement here"/>
+    </issue>
+
+    <issue
+        id="ForegroundServicePermission"
+        message="foregroundServiceType:location requires permission:[android.permission.FOREGROUND_SERVICE_LOCATION] AND any permission in list:[android.permission.ACCESS_COARSE_LOCATION, android.permission.ACCESS_FINE_LOCATION]"
+        errorLine1="        &lt;service"
+        errorLine2="        ^">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="48"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="QueryPermissionsNeeded"
+        message="Consider adding a `&lt;queries>` declaration to your manifest when calling this method; see https://g.co/dev/packagevisibility for details"
+        errorLine1="        pickPhotoIntent.resolveActivity(context.packageManager)?.let {"
+        errorLine2="                        ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/utils/ImagePicker.kt"
+            line="33"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="RedundantLabel"
+        message="Redundant label can be removed"
+        errorLine1="            android:label=&quot;@string/app_name&quot;"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="37"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.compose.runtime:runtime-livedata than 1.5.4 is available: 1.10.0"
+        errorLine1="    implementation(&quot;androidx.compose.runtime:runtime-livedata:1.5.4&quot;)"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="93"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.core:core-ktx than 1.10.1 is available: 1.16.0"
+        errorLine1="coreKtx = &quot;1.10.1&quot;"
+        errorLine2="          ~~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="4"
+            column="11"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.lifecycle:lifecycle-runtime-ktx than 2.6.1 is available: 2.9.4"
+        errorLine1="lifecycleRuntimeKtx = &quot;2.6.1&quot;"
+        errorLine2="                      ~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="8"
+            column="23"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.activity:activity-ktx than 1.9.0 is available: 1.11.0"
+        errorLine1="activityKtx = &quot;1.9.0&quot;"
+        errorLine2="              ~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="12"
+            column="15"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.lifecycle:lifecycle-service than 2.6.1 is available: 2.9.4"
+        errorLine1="lifecycleService = &quot;2.6.1&quot;"
+        errorLine2="                   ~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="14"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.lifecycle:lifecycle-viewmodel-compose than 2.6.1 is available: 2.9.4"
+        errorLine1="lifecycleViewModel = &quot;2.6.1&quot;"
+        errorLine2="                     ~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="15"
+            column="22"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of io.coil-kt:coil-compose than 2.4.0 is available: 2.7.0"
+        errorLine1="    implementation(&quot;io.coil-kt:coil-compose:2.4.0&quot;)"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="96"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of org.jetbrains.kotlin.android than 2.0.21 is available: 2.2.21"
+        errorLine1="kotlin = &quot;2.0.21&quot;"
+        errorLine2="         ~~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="3"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of org.jetbrains.kotlin.plugin.compose than 2.0.21 is available: 2.2.21"
+        errorLine1="kotlin = &quot;2.0.21&quot;"
+        errorLine2="         ~~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="3"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of io.insert-koin:koin-android than 3.5.3 is available: 4.1.1"
+        errorLine1="koin = &quot;3.5.3&quot;"
+        errorLine2="       ~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="19"
+            column="8"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of io.insert-koin:koin-androidx-compose than 3.5.3 is available: 4.1.1"
+        errorLine1="koin = &quot;3.5.3&quot;"
+        errorLine2="       ~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="19"
+            column="8"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of io.insert-koin:koin-core than 3.5.3 is available: 4.1.1"
+        errorLine1="koin = &quot;3.5.3&quot;"
+        errorLine2="       ~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="19"
+            column="8"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/components/ImageUploadComponent.kt"
+            line="43"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="UnusedMaterial3ScaffoldPaddingParameter"
+        message="Content padding parameter it is not used"
+        errorLine1="    ) {"
+        errorLine2="      ^">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/MainScreen.kt"
+            line="81"
+            column="7"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var selectedCategory by remember { mutableStateOf(0) }"
+        errorLine2="                                       ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/ActivitiesScreen.kt"
+            line="103"
+            column="40"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var currentPage by rememberSaveable { mutableStateOf(0) }"
+        errorLine2="                                          ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/community/CommunityScreen.kt"
+            line="57"
+            column="43"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableDoubleStateOf` instead of `mutableStateOf`"
+        errorLine1="    var totalDistanceKm by remember { mutableStateOf(0.0) }"
+        errorLine2="                                      ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/ExerciseCalendarScreen.kt"
+            line="43"
+            column="39"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var totalDurationSec by remember { mutableStateOf(0) }"
+        errorLine2="                                       ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/ExerciseCalendarScreen.kt"
+            line="44"
+            column="40"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var totalCount by remember { mutableStateOf(0) }"
+        errorLine2="                                 ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/ExerciseCalendarScreen.kt"
+            line="45"
+            column="34"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="        var completedCount by remember { mutableStateOf(0) }"
+        errorLine2="                                         ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/MyActivitiesScreen.kt"
+            line="89"
+            column="42"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="        var inProgressCount by remember { mutableStateOf(0) }"
+        errorLine2="                                          ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/MyActivitiesScreen.kt"
+            line="90"
+            column="43"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="        var upcomingCount by remember { mutableStateOf(0) }"
+        errorLine2="                                        ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/MyActivitiesScreen.kt"
+            line="91"
+            column="41"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var selectedTab by remember { mutableStateOf(0) }"
+        errorLine2="                                  ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/MyRouteBookScreen.kt"
+            line="24"
+            column="35"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var likeCount by remember { mutableStateOf(0) }"
+        errorLine2="                                ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/community/PostDetailScreen.kt"
+            line="37"
+            column="33"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var visibleCount by remember { mutableStateOf(10) }"
+        errorLine2="                                   ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/community/PostDetailScreen.kt"
+            line="39"
+            column="36"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var monthlyDurationSec by remember { mutableStateOf(0) }"
+        errorLine2="                                         ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/ProfileScreen.kt"
+            line="64"
+            column="42"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableDoubleStateOf` instead of `mutableStateOf`"
+        errorLine1="    var monthlyDistanceKm by remember { mutableStateOf(0.0) }"
+        errorLine2="                                        ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/ProfileScreen.kt"
+            line="65"
+            column="41"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var monthlyCalories by remember { mutableStateOf(0) }"
+        errorLine2="                                      ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/ProfileScreen.kt"
+            line="66"
+            column="39"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var followersCount by remember { mutableStateOf(0) }"
+        errorLine2="                                     ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/ProfileScreen.kt"
+            line="67"
+            column="38"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var followingCount by remember { mutableStateOf(0) }"
+        errorLine2="                                     ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/ProfileScreen.kt"
+            line="68"
+            column="38"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var clubsCount by remember { mutableStateOf(0) }"
+        errorLine2="                                 ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/ProfileScreen.kt"
+            line="69"
+            column="34"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="                var selectedTab by remember { mutableStateOf(0) }"
+        errorLine2="                                              ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/RaceDetailScreen.kt"
+            line="194"
+            column="47"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var selectedCategory by remember { mutableStateOf(0) }"
+        errorLine2="                                       ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/RaceScreen.kt"
+            line="82"
+            column="40"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableDoubleStateOf` instead of `mutableStateOf`"
+        errorLine1="    var monthlyDistanceKm by remember { mutableStateOf(0.0) }"
+        errorLine2="                                        ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/RideRecordScreen.kt"
+            line="73"
+            column="41"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var monthlyDurationSec by remember { mutableStateOf(0) }"
+        errorLine2="                                         ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/RideRecordScreen.kt"
+            line="74"
+            column="42"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableLongStateOf` instead of `mutableStateOf`"
+        errorLine1="    var elapsedSeconds by remember { mutableStateOf(0L) }"
+        errorLine2="                                     ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/RideScreen.kt"
+            line="319"
+            column="38"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableLongStateOf` instead of `mutableStateOf`"
+        errorLine1="    val reportSeconds = remember { mutableStateOf(0L) }"
+        errorLine2="                                   ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/RideScreen.kt"
+            line="320"
+            column="36"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableDoubleStateOf` instead of `mutableStateOf`"
+        errorLine1="    var totalDistance = remember { mutableStateOf(0.0) } // 米"
+        errorLine2="                                   ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/RideScreen.kt"
+            line="339"
+            column="36"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableDoubleStateOf` instead of `mutableStateOf`"
+        errorLine1="    var maxSpeedValue = remember { mutableStateOf(0.0) } // 用于计算最大速度"
+        errorLine2="                                   ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/RideScreen.kt"
+            line="340"
+            column="36"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var selectedTab by remember { mutableStateOf(0) }"
+        errorLine2="                                  ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/RiderScreen.kt"
+            line="87"
+            column="35"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableDoubleStateOf` instead of `mutableStateOf`"
+        errorLine1="    var distanceKm by remember { mutableStateOf(0.0) }"
+        errorLine2="                                 ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/RouteBookDetailScreen.kt"
+            line="30"
+            column="34"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var elevationM by remember { mutableStateOf(0) }"
+        errorLine2="                                 ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/RouteBookDetailScreen.kt"
+            line="31"
+            column="34"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var favoriteCount by remember { mutableStateOf(0) }"
+        errorLine2="                                    ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/RouteBookDetailScreen.kt"
+            line="36"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var selectedCategory by remember { mutableStateOf(0) }"
+        errorLine2="                                       ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/RouteBookScreen.kt"
+            line="49"
+            column="40"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.purple_200` appears to be unused"
+        errorLine1="    &lt;color name=&quot;purple_200&quot;>#FFBB86FC&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="3"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.purple_500` appears to be unused"
+        errorLine1="    &lt;color name=&quot;purple_500&quot;>#FF6200EE&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="4"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.purple_700` appears to be unused"
+        errorLine1="    &lt;color name=&quot;purple_700&quot;>#FF3700B3&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="5"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.teal_200` appears to be unused"
+        errorLine1="    &lt;color name=&quot;teal_200&quot;>#FF03DAC5&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="6"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.teal_700` appears to be unused"
+        errorLine1="    &lt;color name=&quot;teal_700&quot;>#FF018786&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="7"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.black` appears to be unused"
+        errorLine1="    &lt;color name=&quot;black&quot;>#FF000000&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="8"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.white` appears to be unused"
+        errorLine1="    &lt;color name=&quot;white&quot;>#FFFFFFFF&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="9"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.drawable.ic_avatar_placeholder` appears to be unused"
+        errorLine1="&lt;vector xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;"
+        errorLine2="^">
+        <location
+            file="src/main/res/drawable/ic_avatar_placeholder.xml"
+            line="2"
+            column="1"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.mipmap.ic_launcher` appears to be unused">
+        <location
+            file="src/main/res/mipmap-hdpi/ic_launcher.webp"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.drawable.ic_launcher_background` appears to be unused"
+        errorLine1="&lt;vector xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;"
+        errorLine2="^">
+        <location
+            file="src/main/res/drawable/ic_launcher_background.xml"
+            line="2"
+            column="1"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.mipmap.ic_launcher_round` appears to be unused">
+        <location
+            file="src/main/res/mipmap-hdpi/ic_launcher_round.webp"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.drawable.sample_post_image` appears to be unused"
+        errorLine1="&lt;vector xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;"
+        errorLine2="^">
+        <location
+            file="src/main/res/drawable/sample_post_image.xml"
+            line="2"
+            column="1"/>
+    </issue>
+
+    <issue
+        id="IconLauncherShape"
+        message="Launcher icon used as round icon did not have a circular shape">
+        <location
+            file="src/main/res/drawable/rideflow.jpg"/>
+    </issue>
+
+    <issue
+        id="IconLocation"
+        message="Found bitmap drawable `res/drawable/ic_discover_activity.png` in densityless folder">
+        <location
+            file="src/main/res/drawable/ic_discover_activity.png"/>
+    </issue>
+
+    <issue
+        id="IconLocation"
+        message="Found bitmap drawable `res/drawable/ic_discover_club.png` in densityless folder">
+        <location
+            file="src/main/res/drawable/ic_discover_club.png"/>
+    </issue>
+
+    <issue
+        id="IconLocation"
+        message="Found bitmap drawable `res/drawable/ic_discover_race.png` in densityless folder">
+        <location
+            file="src/main/res/drawable/ic_discover_race.png"/>
+    </issue>
+
+    <issue
+        id="IconLocation"
+        message="Found bitmap drawable `res/drawable/ic_discover_rider.png` in densityless folder">
+        <location
+            file="src/main/res/drawable/ic_discover_rider.png"/>
+    </issue>
+
+    <issue
+        id="IconLocation"
+        message="Found bitmap drawable `res/drawable/ic_discover_routebook.png` in densityless folder">
+        <location
+            file="src/main/res/drawable/ic_discover_routebook.png"/>
+    </issue>
+
+    <issue
+        id="IconLocation"
+        message="Found bitmap drawable `res/drawable/rideflow.jpg` in densityless folder">
+        <location
+            file="src/main/res/drawable/rideflow.jpg"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="    sp.edit().putString(&quot;community_first_page&quot;, lines).apply()"
+        errorLine2="    ~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/community/CommunityScreen.kt"
+            line="368"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="    sp.edit().putString(&quot;discover_races_first&quot;, r).putString(&quot;discover_activities_first&quot;, a).putString(&quot;discover_clubs_first&quot;, c).apply()"
+        errorLine2="    ~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/ui/screens/DiscoverScreen.kt"
+            line="541"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `Bitmap.scale` instead?"
+        errorLine1="        return Bitmap.createScaledBitmap(bitmap, width, height, true)"
+        errorLine2="               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/example/rideflow/utils/ImageUploadUtils.kt"
+            line="95"
+            column="16"/>
+    </issue>
+
+    <issue
+        id="UseTomlInstead"
+        message="Use version catalog instead"
+        errorLine1="    implementation(&quot;androidx.compose.material:material-icons-extended&quot;)"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="62"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="UseTomlInstead"
+        message="Use version catalog instead"
+        errorLine1="    implementation(&quot;androidx.compose.runtime:runtime-livedata:1.5.4&quot;)"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="93"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="UseTomlInstead"
+        message="Use version catalog instead"
+        errorLine1="    implementation(&quot;io.coil-kt:coil-compose:2.4.0&quot;)"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="96"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="UseTomlInstead"
+        message="Use version catalog instead"
+        errorLine1="    implementation(&quot;com.amap.api:map2d:latest.integration&quot;)"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="99"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="UseTomlInstead"
+        message="Use version catalog instead"
+        errorLine1="    implementation(&quot;com.amap.api:search:latest.integration&quot;)"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="100"
+            column="20"/>
+    </issue>
+
+</issues>
