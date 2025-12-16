@@ -2,6 +2,7 @@ package com.example.rideflow.auth
 
 import com.example.rideflow.backend.AuthDatabaseHelper
 import com.example.rideflow.model.UserData
+import com.example.rideflow.auth.session.SessionManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,7 +13,7 @@ import kotlinx.coroutines.Dispatchers
  * 认证仓库
  * 处理用户登录、注册、登出等核心认证逻辑
  */
-class AuthRepository {
+class AuthRepository(private val sessionManager: SessionManager) {
     // 认证状态的可变状态流
     private val _authState = MutableStateFlow<AuthState>(AuthState.Unauthenticated)
 
@@ -39,6 +40,7 @@ class AuthRepository {
             }
 
             if (userData != null) {
+                sessionManager.loginSuccess(userData.userId)
                 _authState.value = AuthState.Authenticated(userData)
             } else {
                 throw Exception("用户名或密码错误，请重试")
@@ -121,5 +123,12 @@ class AuthRepository {
      */
     fun getCurrentUserId(): String? {
         return getCurrentUser()?.userId
+    }
+
+    suspend fun resumeSession(userId: String) {
+        val user = withContext(Dispatchers.IO) { AuthDatabaseHelper.getUserById(userId) }
+        if (user != null) {
+            _authState.value = AuthState.Authenticated(user)
+        }
     }
 }

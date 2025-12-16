@@ -7,12 +7,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import com.example.rideflow.auth.session.SessionManager
+import kotlinx.coroutines.flow.first
 
 /**
  * 认证ViewModel
  * 连接UI层和认证仓库，处理UI相关的认证逻辑
  */
-class AuthViewModel(val authRepository: AuthRepository) : ViewModel() {
+class AuthViewModel(val authRepository: AuthRepository, private val sessionManager: SessionManager) : ViewModel() {
 
     // 暴露认证状态流供UI层观察
     val authState: StateFlow<AuthState> = authRepository.authState
@@ -66,6 +68,15 @@ class AuthViewModel(val authRepository: AuthRepository) : ViewModel() {
      * 获取当前用户数据
      */
     fun getCurrentUser() = authRepository.getCurrentUser()
+
+    fun checkSession() {
+        viewModelScope.launch {
+            val s = sessionManager.sessionFlow().first()
+            if (s != null && s.isValid(System.currentTimeMillis())) {
+                authRepository.resumeSession(s.userId)
+            }
+        }
+    }
 }
 
 /**

@@ -59,25 +59,31 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
     val authViewModel = org.koin.androidx.compose.koinViewModel<com.example.rideflow.auth.AuthViewModel>()
     var nickname by remember { mutableStateOf("") }
     var avatarUrl by remember { mutableStateOf("") }
+    var bio by remember { mutableStateOf("") }
     var badgeItems by remember { mutableStateOf<List<ProfileAchievementItem>>(emptyList()) }
     var monthlyDurationSec by remember { mutableStateOf(0) }
     var monthlyDistanceKm by remember { mutableStateOf(0.0) }
     var monthlyCalories by remember { mutableStateOf(0) }
+    var followersCount by remember { mutableStateOf(0) }
+    var followingCount by remember { mutableStateOf(0) }
+    var clubsCount by remember { mutableStateOf(0) }
     val handler = Handler(Looper.getMainLooper())
     LaunchedEffect(userId) {
         val uid = userId.toIntOrNull()
         if (uid != null) {
             Thread {
                 DatabaseHelper.processQuery(
-                    "SELECT nickname, avatar_url, user_id FROM users WHERE user_id = ?",
+                    "SELECT nickname, avatar_url, bio, user_id FROM users WHERE user_id = ?",
                     listOf(uid)
                 ) { rs ->
                     if (rs.next()) {
                         val n = rs.getString(1) ?: ""
                         val a = rs.getString(2) ?: ""
+                        val b = rs.getString(3) ?: ""
                         handler.post {
                             nickname = n
                             avatarUrl = a ?: ""
+                            bio = b
                         }
                     }
                     Unit
@@ -135,6 +141,36 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
                             monthlyDurationSec = dur
                             monthlyCalories = calo
                         }
+                    }
+                    Unit
+                }
+                DatabaseHelper.processQuery(
+                    "SELECT COUNT(*) FROM user_follows WHERE followed_user_id = ?",
+                    listOf(uid)
+                ) { frs ->
+                    if (frs.next()) {
+                        val c = frs.getInt(1)
+                        handler.post { followersCount = c }
+                    }
+                    Unit
+                }
+                DatabaseHelper.processQuery(
+                    "SELECT COUNT(*) FROM user_follows WHERE follower_user_id = ?",
+                    listOf(uid)
+                ) { frs2 ->
+                    if (frs2.next()) {
+                        val c = frs2.getInt(1)
+                        handler.post { followingCount = c }
+                    }
+                    Unit
+                }
+                DatabaseHelper.processQuery(
+                    "SELECT COUNT(*) FROM club_members WHERE user_id = ?",
+                    listOf(uid)
+                ) { crs ->
+                    if (crs.next()) {
+                        val c = crs.getInt(1)
+                        handler.post { clubsCount = c }
                     }
                     Unit
                 }
@@ -205,6 +241,14 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
                                     color = Color.White.copy(alpha = 0.8f),
                                     modifier = Modifier.clickable(onClick = { navigateToEditProfile() })
                                 )
+                                if (bio.isNotBlank()) {
+                                    Text(
+                                        text = bio,
+                                        fontSize = 14.sp,
+                                        color = Color.White.copy(alpha = 0.9f),
+                                        modifier = Modifier.padding(top = 4.dp)
+                                    )
+                                }
                             }
                         }
                         Column(
@@ -221,18 +265,6 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
                                     tint = Color.White,
                                     modifier = Modifier.size(24.dp)
                                 )
-                            }
-                            Button(
-                                onClick = { navController.navigate(AppRoutes.EDIT_PROFILE) },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color.White.copy(alpha = 0.2f),
-                                    contentColor = Color.White
-                                ),
-                                shape = RoundedCornerShape(20.dp),
-                                modifier = Modifier.size(width = 100.dp, height = 36.dp),
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                            ) {
-                                Text(text = "编辑资料", fontSize = 18.sp, maxLines = 1)
                             }
                         }
                     }
@@ -264,6 +296,40 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
                             color = Color.White,
                             fontSize = 18.sp,
                             modifier = Modifier.padding(start = 12.dp)
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val unlockedCount = badgeItems.count { it.unlocked }
+                        SocialStatChip(
+                            label = "粉丝",
+                            count = followersCount,
+                            icon = Icons.Default.Group,
+                            onClick = { navController.navigate("${AppRoutes.MAIN}?tab=community") }
+                        )
+                        SocialStatChip(
+                            label = "关注",
+                            count = followingCount,
+                            icon = Icons.Default.PersonAdd,
+                            onClick = { navController.navigate("${AppRoutes.MAIN}?tab=community") }
+                        )
+                        SocialStatChip(
+                            label = "俱乐部",
+                            count = clubsCount,
+                            icon = Icons.Default.Home,
+                            onClick = { navController.navigate(AppRoutes.CLUB_SCREEN) }
+                        )
+                        SocialStatChip(
+                            label = "徽章",
+                            count = unlockedCount,
+                            icon = Icons.Default.Star,
+                            onClick = { navController.navigate(AppRoutes.ACHIEVEMENTS) }
                         )
                     }
                 }
@@ -577,6 +643,29 @@ fun SettingItem(
     ) {
         Icon(imageVector = icon, contentDescription = label, modifier = Modifier.size(24.dp), tint = iconTint)
         Text(text = label, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp), color = labelColor)
+    }
+}
+
+@Composable
+fun SocialStatChip(
+    label: String,
+    count: Int,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = Color.White.copy(alpha = 0.2f),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.3f)),
+        modifier = Modifier.clickable(onClick = onClick)
+    ) {
+        Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(imageVector = icon, contentDescription = label, tint = Color.White, modifier = Modifier.size(18.dp))
+            Column(modifier = Modifier.padding(start = 8.dp)) {
+                Text(text = count.toString(), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text(text = label, color = Color.White.copy(alpha = 0.9f), fontSize = 12.sp)
+            }
+        }
     }
 }
 

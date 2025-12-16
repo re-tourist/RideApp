@@ -2,6 +2,7 @@ package com.example.rideflow.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
@@ -11,9 +12,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
 
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -37,6 +42,8 @@ fun LoginScreen(navController: NavController? = null) {
     var usernameOrEmail by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
+    val passwordFocusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
     
     // 判断输入是否为邮箱
     fun isEmail(input: String): Boolean {
@@ -120,7 +127,11 @@ fun LoginScreen(navController: NavController? = null) {
                     )
                 },
                 keyboardOptions = KeyboardOptions(
-                    keyboardType = if (isEmail(usernameOrEmail)) KeyboardType.Email else KeyboardType.Text
+                    keyboardType = if (isEmail(usernameOrEmail)) KeyboardType.Email else KeyboardType.Text,
+                    imeAction = ImeAction.Next
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { passwordFocusRequester.requestFocus() }
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -137,10 +148,14 @@ fun LoginScreen(navController: NavController? = null) {
                     Icon(imageVector = Icons.Filled.Lock, contentDescription = null)
                 },
                 visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(
+                    onDone = { handleLogin() }
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 24.dp),
+                    .padding(bottom = 24.dp)
+                    .focusRequester(passwordFocusRequester),
                 singleLine = true
             )
 
