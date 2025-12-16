@@ -7,10 +7,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -22,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -72,7 +67,6 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
     var followersCount by remember { mutableStateOf(0) }
     var followingCount by remember { mutableStateOf(0) }
     var clubsCount by remember { mutableStateOf(0) }
-    var postsCount by remember { mutableStateOf(0) }
     val handler = Handler(Looper.getMainLooper())
     LaunchedEffect(userId) {
         val uid = userId.toIntOrNull()
@@ -180,16 +174,6 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
                     }
                     Unit
                 }
-                DatabaseHelper.processQuery(
-                    "SELECT COUNT(*) FROM community_posts WHERE author_user_id = ?",
-                    listOf(uid)
-                ) { prs ->
-                    if (prs.next()) {
-                        val c = prs.getInt(1)
-                        handler.post { postsCount = c }
-                    }
-                    Unit
-                }
             }.start()
         }
     }
@@ -203,93 +187,116 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF5F5F5))
-            .padding(top = 8.dp),
-        contentPadding = PaddingValues(bottom = 96.dp)
+            .padding(top = 24.dp)
     ) {
         item {
-            Column(
-                modifier = Modifier
+            // 个人信息区域
+            Box(modifier = Modifier.fillMaxWidth()
+                .background(Color(0xFF3498DB))
+                .padding(top = 20.dp, bottom = 30.dp)) {
+                Column(modifier = Modifier
                     .fillMaxWidth()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(Color(0xFF5A5A5A), Color(0xFF3C3C3C))
-                        )
-                    )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = { navController.navigate("${AppRoutes.MAIN}?tab=community") }) {
-                        Icon(imageVector = Icons.Default.PersonAdd, contentDescription = "添加好友", tint = Color.White)
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = { showNotificationsDialog = true }) {
-                            Icon(imageVector = Icons.Default.Chat, contentDescription = "消息列表", tint = Color.White)
-                        }
-                        Spacer(modifier = Modifier.width(4.dp))
-                        IconButton(onClick = { showSettingsDialog = true }) {
-                            Icon(imageVector = Icons.Default.Settings, contentDescription = "设置", tint = Color.White)
-                        }
-                    }
-                }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(72.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFFCCCCCC))
-                            .clickable(onClick = { navigateToEditProfile() }),
-                        contentAlignment = Alignment.Center
+                    .padding(horizontal = 20.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (avatarUrl.isNotBlank()) {
-                            AsyncImage(
-                                model = avatarUrl,
-                                contentDescription = "用户头像",
-                                modifier = Modifier.size(72.dp).clip(CircleShape),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = "用户头像",
-                                tint = Color(0xFF9E9E9E),
-                                modifier = Modifier.size(36.dp)
-                            )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(60.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White)
+                                    .clickable(onClick = { navigateToEditProfile() }),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (avatarUrl.isNotBlank()) {
+                                    AsyncImage(
+                                        model = avatarUrl,
+                                        contentDescription = "用户头像",
+                                        modifier = Modifier.size(60.dp).clip(CircleShape),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.Person,
+                                        contentDescription = "用户头像，点击编辑资料",
+                                        tint = Color(0xFF3498DB),
+                                        modifier = Modifier.size(36.dp)
+                                    )
+                                }
+                            }
+                            Column(modifier = Modifier.padding(start = 16.dp)) {
+                                Text(
+                                    text = if (nickname.isNotBlank()) nickname else "",
+                                    fontSize = 24.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
+                                    modifier = Modifier.clickable(onClick = { navigateToEditProfile() })
+                                )
+                                Text(
+                                    text = "用户ID: ${userId}",
+                                    fontSize = 15.sp,
+                                    color = Color.White.copy(alpha = 0.8f),
+                                    modifier = Modifier.clickable(onClick = { navigateToEditProfile() })
+                                )
+                                if (bio.isNotBlank()) {
+                                    Text(
+                                        text = bio,
+                                        fontSize = 14.sp,
+                                        color = Color.White.copy(alpha = 0.9f),
+                                        modifier = Modifier.padding(top = 4.dp)
+                                    )
+                                }
+                            }
+                        }
+                        Column(
+                            modifier = Modifier,
+                            horizontalAlignment = Alignment.End
+                        ) {
+                            IconButton(
+                                onClick = { showNotificationsDialog = true },
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Notifications,
+                                    contentDescription = "系统公告和信息",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
                         }
                     }
-                    Column(modifier = Modifier.padding(start = 16.dp).weight(1f)) {
+
+                    // 成就勋章
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 20.dp)
+                            .clickable { navController.navigate(AppRoutes.ACHIEVEMENTS) },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .padding(horizontal = 18.dp, vertical = 6.dp)
+                                .background(Color.White)
+                                .clip(RoundedCornerShape(18.dp))
+                        ) {
+                            Text(
+                                text = "铜",
+                                color = Color(0xFFCD7F32),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 24.sp,
+                                modifier = Modifier.padding(horizontal = 18.dp, vertical = 4.dp)
+                            )
+                        }
                         Text(
-                            text = if (nickname.isNotBlank()) nickname else "",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            text = "成就勋章",
                             color = Color.White,
-                            modifier = Modifier.clickable(onClick = { navigateToEditProfile() })
+                            fontSize = 18.sp,
+                            modifier = Modifier.padding(start = 12.dp)
                         )
-                        if (bio.isNotBlank()) {
-                            Text(
-                                text = bio,
-                                fontSize = 13.sp,
-                                color = Color(0xFFDDDDDD),
-                                modifier = Modifier.padding(top = 4.dp)
-                            )
-                        }
-                        if (userId.isNotBlank()) {
-                            Text(
-                                text = "ID: ${userId}",
-                                fontSize = 12.sp,
-                                color = Color(0xFFBBBBBB)
-                            )
-                        }
                     }
 
                     Row(
@@ -326,26 +333,25 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
                         )
                     }
                 }
-                HeaderSocialStatsRow(postsCount = postsCount, followingCount = followingCount, followersCount = followersCount)
-                AchievementsPreviewRow(
-                    badgeItems = badgeItems,
-                    onClickDetails = { navController.navigate(AppRoutes.ACHIEVEMENTS) }
-                )
             }
         }
         
         item {
-            Column(
+            // 11月骑行统计
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .padding(16.dp),
+                shape = RoundedCornerShape(12.dp),
+                elevation = CardDefaults.cardElevation(2.dp)
             ) {
-                Text(
-                    text = "本月骑行",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Gray
-                )
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "本月骑行",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Gray
+                    )
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -355,154 +361,133 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
                                 text = String.format(Locale.getDefault(), "%02d:%02d", monthlyDurationSec / 3600, (monthlyDurationSec % 3600) / 60),
-                                fontSize = 26.sp,
+                                fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.Black
                             )
                             Text(
                                 text = "运动时间",
-                                fontSize = 12.sp,
+                                fontSize = 14.sp,
                                 color = Color.Gray,
                                 modifier = Modifier.padding(top = 8.dp)
                             )
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Row(verticalAlignment = Alignment.Bottom) {
-                                Text(
-                                    text = String.format(Locale.getDefault(), "%.1f", monthlyDistanceKm),
-                                    fontSize = 28.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF3498DB)
-                                )
-                                Text(
-                                    text = " km",
-                                    fontSize = 11.sp,
-                                    color = Color.Gray,
-                                    modifier = Modifier.padding(start = 4.dp)
-                                )
-                            }
+                            Text(
+                                text = String.format(Locale.getDefault(), "%.1f KM", monthlyDistanceKm),
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF3498DB)
+                            )
                             Text(
                                 text = "总距离",
-                                fontSize = 12.sp,
+                                fontSize = 14.sp,
                                 color = Color.Gray,
                                 modifier = Modifier.padding(top = 8.dp)
                             )
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Row(verticalAlignment = Alignment.Bottom) {
-                                Text(
-                                    text = monthlyCalories.toString(),
-                                    fontSize = 26.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.Black
-                                )
-                                Text(
-                                    text = " kcal",
-                                    fontSize = 11.sp,
-                                    color = Color.Gray,
-                                    modifier = Modifier.padding(start = 4.dp)
-                                )
-                            }
+                            Text(
+                                text = monthlyCalories.toString(),
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black
+                            )
                             Text(
                                 text = "卡路里",
-                                fontSize = 12.sp,
+                                fontSize = 14.sp,
                                 color = Color.Gray,
                                 modifier = Modifier.padding(top = 8.dp)
                             )
                         }
                     }
-                    val tone = if (monthlyDistanceKm < 1.0) "你正在积累这个月的第一公里" else "继续保持，骑行会记住你"
-                    Text(
-                        text = tone,
-                        fontSize = 12.sp,
-                        color = Color(0xFF606060),
-                        modifier = Modifier.padding(top = 12.dp)
-                    )
                 }
             }
+        }
         
         item {
-            Column(
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                shape = RoundedCornerShape(12.dp),
+                elevation = CardDefaults.cardElevation(2.dp)
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .clickable { navController.navigate(AppRoutes.RIDE_PREFERENCE) },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.Default.Star, contentDescription = "骑行偏好", tint = Color(0xFF606060), modifier = Modifier.size(24.dp))
-                        Text(text = "骑行偏好", fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(text = "0 KM", fontSize = 12.sp, color = Color.Gray)
-                        Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .clickable { navController.navigate(AppRoutes.RIDE_PREFERENCE) },
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.Star, contentDescription = "骑行偏好", tint = Color(0xFF3498DB), modifier = Modifier.size(24.dp))
+                            Text(text = "骑行偏好", fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
+                        }
                         Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "更多", tint = Color.Gray, modifier = Modifier.size(24.dp))
                     }
-                }
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .clickable { navController.navigate(AppRoutes.RIDE_RECORD) },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.Default.Home, contentDescription = "骑行记录", tint = Color(0xFF606060), modifier = Modifier.size(24.dp))
-                        Text(text = "骑行记录", fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .clickable { navController.navigate(AppRoutes.RIDE_RECORD) },
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.Home, contentDescription = "骑行记录", tint = Color(0xFF3498DB), modifier = Modifier.size(24.dp))
+                            Text(text = "骑行记录", fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
+                        }
+                        Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "更多", tint = Color.Gray, modifier = Modifier.size(24.dp))
                     }
-                    Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "更多", tint = Color.Gray, modifier = Modifier.size(24.dp))
-                }
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .clickable { navController.navigate(AppRoutes.EXERCISE_CALENDAR) },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.Default.Menu, contentDescription = "运动日历", tint = Color(0xFF606060), modifier = Modifier.size(24.dp))
-                        Text(text = "运动日历", fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .clickable { navController.navigate(AppRoutes.EXERCISE_CALENDAR) },
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.Menu, contentDescription = "运动日历", tint = Color(0xFF3498DB), modifier = Modifier.size(24.dp))
+                            Text(text = "运动日历", fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
+                        }
+                        Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "更多", tint = Color.Gray, modifier = Modifier.size(24.dp))
                     }
-                    Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "更多", tint = Color.Gray, modifier = Modifier.size(24.dp))
-                }
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .clickable { navController.navigate(AppRoutes.MY_ACTIVITIES) },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.Default.Home, contentDescription = "我的活动", tint = Color(0xFF606060), modifier = Modifier.size(24.dp))
-                        Text(text = "我的活动", fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .clickable { navController.navigate(AppRoutes.MY_ACTIVITIES) },
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.Home, contentDescription = "我的活动", tint = Color(0xFF3498DB), modifier = Modifier.size(24.dp))
+                            Text(text = "我的活动", fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
+                        }
+                        Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "更多", tint = Color.Gray, modifier = Modifier.size(24.dp))
                     }
-                    Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "更多", tint = Color.Gray, modifier = Modifier.size(24.dp))
-                }
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .clickable { showSettingsDialog = true },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.Default.Star, contentDescription = "系统设置", tint = Color(0xFF606060), modifier = Modifier.size(24.dp))
-                        Text(text = "系统设置", fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .clickable { showSettingsDialog = true },
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.Star, contentDescription = "系统设置", tint = Color(0xFF3498DB), modifier = Modifier.size(24.dp))
+                            Text(text = "系统设置", fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
+                        }
+                        Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "更多", tint = Color.Gray, modifier = Modifier.size(24.dp))
                     }
-                    Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "更多", tint = Color.Gray, modifier = Modifier.size(24.dp))
                 }
             }
         }
@@ -637,100 +622,6 @@ fun StatItem(label: String, value: String) {
 }
 
 @Composable
-fun HeaderStatsItem(value: String, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = value, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White)
-        Text(text = label, fontSize = 11.sp, color = Color(0xFFDDDDDD))
-    }
-}
-
-@Composable
-fun HeaderSocialStatsRow(postsCount: Int, followingCount: Int, followersCount: Int) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        HeaderStatsItem(value = postsCount.toString(), label = "动态")
-        HeaderStatsItem(value = followingCount.toString(), label = "关注")
-        HeaderStatsItem(value = followersCount.toString(), label = "粉丝")
-    }
-}
-
-@Composable
-fun AchievementsPreviewRow(
-    badgeItems: List<ProfileAchievementItem>,
-    onClickDetails: () -> Unit
-) {
-    var selectedBadgeId by remember { mutableStateOf<Int?>(null) }
-    val unlocked = badgeItems.filter { it.unlocked }
-    val displayBadges = unlocked.take(3)
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(
-            modifier = Modifier.weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            repeat(3) { index ->
-                val badge = displayBadges.getOrNull(index)
-                val isSelected = badge != null && (selectedBadgeId == null && index == 0 || selectedBadgeId == badge.id)
-                val size = if (isSelected) 52.dp else 44.dp
-                val bgColor = when {
-                    badge == null -> Color.White.copy(alpha = 0.18f)
-                    isSelected -> Color(0xFFFFD54F)
-                    else -> Color.White.copy(alpha = 0.35f)
-                }
-
-                Box(
-                    modifier = Modifier
-                        .size(size)
-                        .clip(CircleShape)
-                        .background(bgColor)
-                        .clickable(enabled = badge != null) { selectedBadgeId = badge?.id },
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (badge != null && badge.iconUrl.isNotBlank()) {
-                        AsyncImage(
-                            model = badge.iconUrl,
-                            contentDescription = badge.name,
-                            modifier = Modifier
-                                .size(size * 0.7f)
-                                .clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = "徽章",
-                            tint = Color.White,
-                            modifier = Modifier.size(size * 0.5f)
-                        )
-                    }
-                }
-            }
-        }
-
-        Text(
-            text = "成就详情 >",
-            fontSize = 13.sp,
-            color = Color.White,
-            modifier = Modifier
-                .padding(start = 12.dp)
-                .clickable(onClick = onClickDetails)
-        )
-    }
-}
-
-@Composable
 fun SettingItem(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
     SettingItem(label = label, icon = icon, onClick = null, iconTint = Color.Unspecified, labelColor = Color.Unspecified)
 }
@@ -763,38 +654,16 @@ fun SocialStatChip(
     onClick: () -> Unit
 ) {
     Surface(
-        shape = RoundedCornerShape(14.dp),
-        color = Color(0xFFF7F7F7),
-        border = BorderStroke(1.dp, Color(0xFFE5E5E5)),
+        shape = RoundedCornerShape(16.dp),
+        color = Color.White.copy(alpha = 0.2f),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.3f)),
         modifier = Modifier.clickable(onClick = onClick)
     ) {
         Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(imageVector = icon, contentDescription = label, tint = Color(0xFF606060), modifier = Modifier.size(18.dp))
+            Icon(imageVector = icon, contentDescription = label, tint = Color.White, modifier = Modifier.size(18.dp))
             Column(modifier = Modifier.padding(start = 8.dp)) {
-                Text(text = count.toString(), color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                Text(text = label, color = Color.Gray, fontSize = 12.sp)
-            }
-        }
-    }
-}
-
-@Composable
-fun AchievementsRow(items: List<ProfileAchievementItem>) {
-    val unlocked = items.filter { it.unlocked }
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Text(text = "已解锁 ${unlocked.size} 枚勋章", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color(0xFF606060))
-        LazyRow(modifier = Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(unlocked.take(12)) { badge ->
-                Surface(shape = RoundedCornerShape(12.dp), color = Color.White, border = BorderStroke(1.dp, Color(0xFFEAEAEA))) {
-                    Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        if (badge.iconUrl.isNotBlank()) {
-                            AsyncImage(model = badge.iconUrl, contentDescription = badge.name, modifier = Modifier.size(36.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
-                        } else {
-                            Icon(imageVector = Icons.Default.Star, contentDescription = badge.name, tint = Color(0xFF3498DB), modifier = Modifier.size(24.dp))
-                        }
-                        Text(text = badge.name, fontSize = 13.sp, color = Color.Black, modifier = Modifier.padding(start = 8.dp))
-                    }
-                }
+                Text(text = count.toString(), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text(text = label, color = Color.White.copy(alpha = 0.9f), fontSize = 12.sp)
             }
         }
     }
