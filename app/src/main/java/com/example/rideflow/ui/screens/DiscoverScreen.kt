@@ -38,8 +38,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
-import android.util.Base64
 import android.util.Log
+import org.json.JSONArray
+import org.json.JSONObject
+import com.example.rideflow.cache.AppCache
+import java.util.concurrent.TimeUnit
+
 
 // 模拟数据类
 object DiscoverNavigatorState { var openRouteBook: Boolean = false }
@@ -257,28 +261,28 @@ fun CategorySection(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceAround
     ) {
-        CategoryItem(
-            icon = Icons.Filled.Star,
+        CategoryItemDrawable(
+            imageRes = R.drawable.ic_discover_race,
             label = "赛事",
             onClick = { navController.navigate(AppRoutes.RACE) }
         )
-        CategoryItem(
-            icon = Icons.Filled.List,
+        CategoryItemDrawable(
+            imageRes = R.drawable.ic_discover_routebook,
             label = "路书",
             onClick = onRouteBookClick
         )
-        CategoryItem(
-            icon = Icons.Filled.Home,
+        CategoryItemDrawable(
+            imageRes = R.drawable.ic_discover_activity,
             label = "活动",
             onClick = { navController.navigate(AppRoutes.ACTIVITIES) }
         )
-        CategoryItem(
-            icon = Icons.Filled.Home,
+        CategoryItemDrawable(
+            imageRes = R.drawable.ic_discover_club,
             label = "俱乐部",
             onClick = onClubClick
         )
-        CategoryItem(
-            icon = Icons.Filled.Person,
+        CategoryItemDrawable(
+            imageRes = R.drawable.ic_discover_rider,
             label = "骑友",
             onClick = onRiderClick
         )
@@ -299,6 +303,56 @@ fun CategoryItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: S
                     contentDescription = label,
                     modifier = Modifier.size(32.dp),
                     tint = Color(0xFF007AFF)
+                )
+            }
+        }
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            modifier = Modifier.padding(top = 8.dp)
+        )
+    }
+}
+
+@Composable
+fun CategoryItemDrawable(imageRes: Int, label: String, onClick: () -> Unit = {}) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Card(
+            shape = androidx.compose.foundation.shape.CircleShape,
+            modifier = Modifier.size(72.dp).clickable { onClick() },
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F0F0))
+        ) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Image(
+                    painter = painterResource(id = imageRes),
+                    contentDescription = label,
+                    modifier = Modifier.size(44.dp),
+                    contentScale = ContentScale.Fit
+                )
+            }
+        }
+        Text(
+            text = label,
+            fontSize = 13.sp,
+            modifier = Modifier.padding(top = 10.dp)
+        )
+    }
+}
+
+@Composable
+fun CategoryItemUrl(iconUrl: String, label: String, onClick: () -> Unit = {}) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Card(
+            shape = androidx.compose.foundation.shape.CircleShape,
+            modifier = Modifier.size(56.dp).clickable { onClick() },
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F0F0))
+        ) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                coil.compose.AsyncImage(
+                    model = iconUrl,
+                    contentDescription = label,
+                    modifier = Modifier.size(32.dp),
+                    contentScale = ContentScale.Fit
                 )
             }
         }
@@ -482,35 +536,73 @@ fun ClubCardSkeleton() {
 }
 
 private fun saveDiscoverCache(context: android.content.Context, races: List<Race>, activities: List<Activity>, clubs: List<Club>) {
-    val sp = context.getSharedPreferences("rideflow_cache", android.content.Context.MODE_PRIVATE)
-    fun enc(s: String) = Base64.encodeToString(s.toByteArray(), Base64.NO_WRAP)
-    val r = races.take(10).joinToString("\n") { x -> listOf(x.id.toString(), enc(x.title), enc(x.date), enc(x.imageUrl ?: ""), enc(x.location)).joinToString("|") }
-    val a = activities.take(10).joinToString("\n") { x -> listOf(x.id.toString(), enc(x.title), enc(x.date), enc(x.imageUrl ?: ""), enc(x.location)).joinToString("|") }
-    val c = clubs.take(10).joinToString("\n") { x -> listOf(x.id.toString(), enc(x.name), enc(x.city), enc(x.logoUrl ?: ""), x.members.toString(), x.heat.toString()).joinToString("|") }
-    sp.edit().putString("discover_races_first", r).putString("discover_activities_first", a).putString("discover_clubs_first", c).apply()
+    val r = JSONArray()
+    races.take(10).forEach { x ->
+        val o = JSONObject()
+        o.put("id", x.id)
+        o.put("title", x.title)
+        o.put("date", x.date)
+        o.put("imageUrl", x.imageUrl ?: "")
+        o.put("location", x.location)
+        r.put(o)
+    }
+    val a = JSONArray()
+    activities.take(10).forEach { x ->
+        val o = JSONObject()
+        o.put("id", x.id)
+        o.put("title", x.title)
+        o.put("date", x.date)
+        o.put("imageUrl", x.imageUrl ?: "")
+        o.put("location", x.location)
+        a.put(o)
+    }
+    val c = JSONArray()
+    clubs.take(10).forEach { x ->
+        val o = JSONObject()
+        o.put("id", x.id)
+        o.put("name", x.name)
+        o.put("city", x.city)
+        o.put("logoUrl", x.logoUrl ?: "")
+        o.put("members", x.members)
+        o.put("heat", x.heat)
+        c.put(o)
+    }
+    AppCache.put(context, "discover_races", r.toString(), java.util.concurrent.TimeUnit.HOURS.toMillis(2))
+    AppCache.put(context, "discover_activities", a.toString(), java.util.concurrent.TimeUnit.HOURS.toMillis(2))
+    AppCache.put(context, "discover_clubs", c.toString(), java.util.concurrent.TimeUnit.HOURS.toMillis(2))
 }
 
 private fun loadDiscoverCache(context: android.content.Context): Triple<List<Race>, List<Activity>, List<Club>> {
-    val sp = context.getSharedPreferences("rideflow_cache", android.content.Context.MODE_PRIVATE)
-    fun dec(s: String) = String(Base64.decode(s, Base64.NO_WRAP))
-    val r = sp.getString("discover_races_first", null)?.lines()?.mapNotNull { line ->
-        val p = line.split("|")
-        if (p.size < 5) null else try {
-            Race(p[0].toInt(), dec(p[1]), dec(p[2]), dec(p[4]), emptyList(), R.drawable.ic_launcher_foreground, dec(p[3]).ifEmpty { null }, false, false)
-        } catch (e: Exception) { null }
-    } ?: emptyList()
-    val a = sp.getString("discover_activities_first", null)?.lines()?.mapNotNull { line ->
-        val p = line.split("|")
-        if (p.size < 5) null else try {
-            Activity(p[0].toInt(), dec(p[1]), dec(p[2]), dec(p[4]), emptyList(), R.drawable.ic_launcher_foreground, dec(p[3]).ifEmpty { null }, false, false)
-        } catch (e: Exception) { null }
-    } ?: emptyList()
-    val c = sp.getString("discover_clubs_first", null)?.lines()?.mapNotNull { line ->
-        val p = line.split("|")
-        if (p.size < 6) null else try {
-            Club(p[0].toInt(), dec(p[1]), dec(p[2]), p[4].toInt(), p[5].toInt(), R.drawable.ic_launcher_foreground, dec(p[3]).ifEmpty { null })
-        } catch (e: Exception) { null }
-    } ?: emptyList()
+    val rStr = AppCache.get(context, "discover_races")
+    val aStr = AppCache.get(context, "discover_activities")
+    val cStr = AppCache.get(context, "discover_clubs")
+    val r = if (rStr != null) {
+        val arr = JSONArray(rStr)
+        (0 until arr.length()).mapNotNull {
+            val o = arr.optJSONObject(it)
+            if (o == null) null else try {
+                Race(o.getInt("id"), o.getString("title"), o.getString("date"), o.getString("location"), emptyList(), R.drawable.ic_launcher_foreground, o.optString("imageUrl").ifEmpty { null }, false, false)
+            } catch (e: Exception) { null }
+        }
+    } else emptyList()
+    val a = if (aStr != null) {
+        val arr = JSONArray(aStr)
+        (0 until arr.length()).mapNotNull {
+            val o = arr.optJSONObject(it)
+            if (o == null) null else try {
+                Activity(o.getInt("id"), o.getString("title"), o.getString("date"), o.getString("location"), emptyList(), R.drawable.ic_launcher_foreground, o.optString("imageUrl").ifEmpty { null }, false, false)
+            } catch (e: Exception) { null }
+        }
+    } else emptyList()
+    val c = if (cStr != null) {
+        val arr = JSONArray(cStr)
+        (0 until arr.length()).mapNotNull {
+            val o = arr.optJSONObject(it)
+            if (o == null) null else try {
+                Club(o.getInt("id"), o.getString("name"), o.getString("city"), o.getInt("members"), o.getInt("heat"), R.drawable.ic_launcher_foreground, o.optString("logoUrl").ifEmpty { null })
+            } catch (e: Exception) { null }
+        }
+    } else emptyList()
     return Triple(r, a, c)
 }
 
