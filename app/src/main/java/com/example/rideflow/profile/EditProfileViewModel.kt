@@ -3,7 +3,6 @@ package com.example.rideflow.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.rideflow.auth.AuthRepository
-import com.example.rideflow.core.result.AppResult
 import com.example.rideflow.model.UserData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -49,27 +48,23 @@ class EditProfileViewModel(
             try {
                 val userId = authRepository.getCurrentUserId()
                 if (userId != null) {
-                    when (val result = profileRepository.getCurrentUserProfile(userId)) {
-                        is AppResult.Success -> {
-                            val userData = result.data
-                            _userProfile.value = userData
-                            _formData.value = EditProfileFormData(
-                                nickname = userData.nickname ?: "",
-                                email = userData.email ?: "",
-                                bio = userData.bio ?: "",
-                                gender = when (userData.gender) {
-                                    1 -> "male"
-                                    2 -> "female"
-                                    else -> "other"
-                                },
-                                birthday = userData.birthday ?: "",
-                                emergencyContact = userData.emergencyContact ?: ""
-                            )
-                        }
-                        is AppResult.Error -> {
-                            _errorMessage.value = result.error.message
-                        }
-                        AppResult.Loading -> {}
+                    val userData = profileRepository.getCurrentUserProfile(userId)
+                    _userProfile.value = userData
+                    
+                    // 将用户数据填充到表单
+                    userData?.let { user ->
+                        _formData.value = EditProfileFormData(
+                            nickname = user.nickname ?: "",
+                            email = user.email ?: "",
+                            bio = user.bio ?: "",
+                            gender = when (user.gender) {
+                                1 -> "male"
+                                2 -> "female"
+                                else -> "other"
+                            },
+                            birthday = user.birthday ?: "",
+                            emergencyContact = user.emergencyContact ?: ""
+                        )
                     }
                 } else {
                     _errorMessage.value = "用户未登录"
@@ -129,7 +124,8 @@ class EditProfileViewModel(
                     return@launch
                 }
                 
-                val result = profileRepository.updateUserProfile(
+                // 更新用户资料
+                val success = profileRepository.updateUserProfile(
                     nickname = currentFormData.nickname.ifBlank { null },
                     email = currentFormData.email.ifBlank { null },
                     bio = currentFormData.bio.ifBlank { null },
@@ -138,15 +134,12 @@ class EditProfileViewModel(
                     emergencyContact = currentFormData.emergencyContact.ifBlank { null }
                 )
 
-                when (result) {
-                    is AppResult.Success -> {
-                        _updateSuccess.value = true
-                        loadUserProfile()
-                    }
-                    is AppResult.Error -> {
-                        _errorMessage.value = result.error.message
-                    }
-                    AppResult.Loading -> {}
+                if (success) {
+                    _updateSuccess.value = true
+                    // 重新加载用户资料以获取最新数据
+                    loadUserProfile()
+                } else {
+                    _errorMessage.value = "保存用户资料失败"
                 }
             } catch (e: Exception) {
                 _errorMessage.value = "保存用户资料失败: ${e.message}"
