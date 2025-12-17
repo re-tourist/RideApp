@@ -27,6 +27,7 @@ import com.example.rideflow.ui.screens.ClubDetailScreen
 import com.example.rideflow.ui.screens.ClubScreen
 import com.example.rideflow.ui.screens.CreateClubScreen
 import com.example.rideflow.ui.screens.SetMainClubScreen
+import com.example.rideflow.ui.screens.PreparationScreen
 import androidx.navigation.navArgument
 import androidx.navigation.NavType
 import com.example.rideflow.ui.screens.community.TradeDetailScreen
@@ -44,14 +45,21 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
     // 获取认证状态
     val authState = authViewModel.collectAuthState()
 
-    NavHost(
-        navController = navController,
-        // 根据认证状态决定起始路由
-        startDestination = when (authState) {
-            is AuthState.Authenticated -> AppRoutes.MAIN
-            else -> AppRoutes.LOGIN
+        NavHost(
+            navController = navController,
+        startDestination = AppRoutes.PREPARATION
+        ) {
+        composable(AppRoutes.PREPARATION) {
+            PreparationScreen(onFinished = {
+                val target = when (authState) {
+                    is AuthState.Authenticated -> AppRoutes.MAIN
+                    else -> AppRoutes.LOGIN
+                }
+                navController.navigate(target) {
+                    popUpTo(AppRoutes.PREPARATION) { inclusive = true }
+                }
+            })
         }
-    ) {
         // 登录页面
         composable(AppRoutes.LOGIN) {
             LoginScreen(navController = navController)

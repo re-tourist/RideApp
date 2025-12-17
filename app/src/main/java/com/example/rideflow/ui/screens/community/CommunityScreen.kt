@@ -34,7 +34,10 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Star
 import android.util.Log
-import android.util.Base64
+import com.example.rideflow.cache.AppCache
+import org.json.JSONArray
+import org.json.JSONObject
+import java.util.concurrent.TimeUnit
 import androidx.compose.ui.platform.LocalContext
 
 // 用户详细信息数据类
@@ -352,46 +355,50 @@ private suspend fun loadPage(page: Int, pageSize: Int, currentUserId: Int? = nul
 }
 
 private fun saveCacheFirstPage(context: android.content.Context, posts: List<Post>) {
-    val sp = context.getSharedPreferences("rideflow_cache", android.content.Context.MODE_PRIVATE)
-    val lines = posts.take(40).joinToString("\n") { p ->
-        listOf(
-            p.id.toString(),
-            p.userId.toString(),
-            enc(p.userName),
-            enc(p.timeAgo),
-            enc(p.content),
-            enc(p.imagePlaceholder),
-            p.likes.toString(),
-            p.comments.toString()
-        ).joinToString("|")
+    val arr = JSONArray()
+    posts.take(40).forEach { p ->
+        val o = JSONObject()
+        o.put("id", p.id)
+        o.put("uid", p.userId)
+        o.put("name", p.userName)
+        o.put("time", p.timeAgo)
+        o.put("content", p.content)
+        o.put("img", p.imagePlaceholder)
+        o.put("likes", p.likes)
+        o.put("comments", p.comments)
+        o.put("aType", p.authorType)
+        o.put("avatarUrl", p.avatarUrl ?: "")
+        arr.put(o)
     }
-    sp.edit().putString("community_first_page", lines).apply()
+    AppCache.put(context, "community_first_page", arr.toString(), TimeUnit.HOURS.toMillis(2))
 }
 
 private fun loadCacheFirstPage(context: android.content.Context): List<Post> {
-    val sp = context.getSharedPreferences("rideflow_cache", android.content.Context.MODE_PRIVATE)
-    val s = sp.getString("community_first_page", null) ?: return emptyList()
-    return s.lines().mapNotNull { line ->
-        val parts = line.split("|")
-        if (parts.size < 8) return@mapNotNull null
-        try {
-            val id = parts[0].toInt()
-            val uid = parts[1].toInt()
-            val userName = dec(parts[2])
-            val timeAgo = dec(parts[3])
-            val content = dec(parts[4])
-            val imagePH = dec(parts[5])
-            val likes = parts[6].toInt()
-            val comments = parts[7].toInt()
-            Post(id, uid, Icons.Default.Person, userName, timeAgo, content, imagePH, likes, comments)
-        } catch (e: Exception) {
-            null
+    val s = AppCache.get(context, "community_first_page") ?: return emptyList()
+    return try {
+        val arr = JSONArray(s)
+        (0 until arr.length()).mapNotNull { i ->
+            val o = arr.optJSONObject(i) ?: return@mapNotNull null
+            try {
+                val id = o.optInt("id")
+                val uid = o.optInt("uid")
+                val name = o.optString("name")
+                val time = o.optString("time")
+                val content = o.optString("content")
+                val img = o.optString("img")
+                val likes = o.optInt("likes")
+                val comments = o.optInt("comments")
+                val aType = o.optString("aType", "user")
+                val avatar = o.optString("avatarUrl").ifEmpty { null }
+                Post(id, uid, Icons.Default.Person, name, time, content, img, likes, comments, false, aType, avatar)
+            } catch (_: Exception) {
+                null
+            }
         }
+    } catch (_: Exception) {
+        emptyList()
     }
 }
-
-private fun enc(s: String): String = Base64.encodeToString(s.toByteArray(), Base64.NO_WRAP)
-private fun dec(s: String): String = String(Base64.decode(s, Base64.NO_WRAP))
 
 @Composable
 fun UserDetailInfoDialog(

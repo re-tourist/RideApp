@@ -237,58 +237,62 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
                         }
                     }
                 }
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(72.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFFCCCCCC))
-                            .clickable(onClick = { navigateToEditProfile() }),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (avatarUrl.isNotBlank()) {
-                            AsyncImage(
-                                model = avatarUrl,
-                                contentDescription = "用户头像",
-                                modifier = Modifier.size(72.dp).clip(CircleShape),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = "用户头像",
-                                tint = Color(0xFF9E9E9E),
-                                modifier = Modifier.size(36.dp)
-                            )
+                        Box(
+                            modifier = Modifier
+                                .size(72.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFCCCCCC))
+                                .clickable(onClick = { navigateToEditProfile() }),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (avatarUrl.isNotBlank()) {
+                                AsyncImage(
+                                    model = avatarUrl,
+                                    contentDescription = "用户头像",
+                                    modifier = Modifier.size(72.dp).clip(CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Person,
+                                    contentDescription = "用户头像",
+                                    tint = Color(0xFF9E9E9E),
+                                    modifier = Modifier.size(36.dp)
+                                )
+                            }
                         }
-                    }
-                    Column(modifier = Modifier.padding(start = 16.dp).weight(1f)) {
-                        Text(
-                            text = if (nickname.isNotBlank()) nickname else "",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White,
-                            modifier = Modifier.clickable(onClick = { navigateToEditProfile() })
-                        )
-                        if (bio.isNotBlank()) {
+                        Column(modifier = Modifier.padding(start = 16.dp).weight(1f)) {
                             Text(
-                                text = bio,
-                                fontSize = 13.sp,
-                                color = Color(0xFFDDDDDD),
-                                modifier = Modifier.padding(top = 4.dp)
+                                text = if (nickname.isNotBlank()) nickname else "",
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White,
+                                modifier = Modifier.clickable(onClick = { navigateToEditProfile() })
                             )
-                        }
-                        if (userId.isNotBlank()) {
-                            Text(
-                                text = "ID: ${userId}",
-                                fontSize = 12.sp,
-                                color = Color(0xFFBBBBBB)
-                            )
+                            if (bio.isNotBlank()) {
+                                Text(
+                                    text = bio,
+                                    fontSize = 13.sp,
+                                    color = Color(0xFFDDDDDD),
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
+                            if (userId.isNotBlank()) {
+                                Text(
+                                    text = "ID: ${userId}",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFFBBBBBB)
+                                )
+                            }
                         }
                     }
                 }

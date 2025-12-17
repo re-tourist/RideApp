@@ -2,6 +2,7 @@ package com.example.rideflow.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
@@ -11,8 +12,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -38,6 +43,10 @@ fun RegisterScreen(navController: NavController? = null, authViewModel: AuthView
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var registerError by remember { mutableStateOf("") }
+    val nicknameFocusRequester = remember { FocusRequester() }
+    val passwordFocusRequester = remember { FocusRequester() }
+    val confirmFocusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
     
     // 验证邮箱格式
     fun isValidEmail(email: String): Boolean {
@@ -138,7 +147,8 @@ fun RegisterScreen(navController: NavController? = null, authViewModel: AuthView
                 leadingIcon = {
                     Icon(imageVector = Icons.Filled.Email, contentDescription = null)
                 },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { nicknameFocusRequester.requestFocus() }),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 16.dp),
@@ -153,10 +163,12 @@ fun RegisterScreen(navController: NavController? = null, authViewModel: AuthView
                 leadingIcon = {
                     Icon(imageVector = Icons.Filled.Person, contentDescription = null)
                 },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { passwordFocusRequester.requestFocus() }),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp),
+                    .padding(bottom = 16.dp)
+                    .focusRequester(nicknameFocusRequester),
                 singleLine = true
             )
 
@@ -169,10 +181,12 @@ fun RegisterScreen(navController: NavController? = null, authViewModel: AuthView
                     Icon(imageVector = Icons.Filled.Lock, contentDescription = null)
                 },
                 visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { confirmFocusRequester.requestFocus() }),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp),
+                    .padding(bottom = 16.dp)
+                    .focusRequester(passwordFocusRequester),
                 singleLine = true
             )
 
@@ -185,10 +199,12 @@ fun RegisterScreen(navController: NavController? = null, authViewModel: AuthView
                     Icon(imageVector = Icons.Filled.Lock, contentDescription = null)
                 },
                 visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { handleRegister() }),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 24.dp),
+                    .padding(bottom = 24.dp)
+                    .focusRequester(confirmFocusRequester),
                 singleLine = true
             )
 

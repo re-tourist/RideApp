@@ -5,6 +5,7 @@ package com.example.rideflow.navigation
  */
 object AppRoutes {
     // 基础路由
+    const val PREPARATION = "preparation"
     const val LOGIN = "login"
     const val REGISTER = "register"
     const val MAIN = "main"
