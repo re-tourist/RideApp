@@ -97,8 +97,9 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.4.0")
     implementation(libs.androidx.compose.foundation)
 
-    implementation("com.amap.api:map2d:latest.integration")
-    implementation("com.amap.api:search:latest.integration")
+    implementation("com.amap.api:map2d:6.0.0")
+    implementation("com.amap.api:search:9.4.0")
+    implementation("com.amap.api:location:6.4.7")
     
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
