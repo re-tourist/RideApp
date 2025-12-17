@@ -35,6 +35,9 @@ object AppRoutes {
     const val RACE_REGISTRATION = "race_registration"
     const val ACTIVITY_REGISTRATION = "activity_registration"
     const val ADD_REGISTRATION_CARD = "add_registration_card"
+
+    const val CHANGE_PASSWORD = "change_password"
+    const val SETTINGS_INFO = "settings_info"
     
     // 活动详情路由
     const val ACTIVITY_DETAIL = "activity_detail"
