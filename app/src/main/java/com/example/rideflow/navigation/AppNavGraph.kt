@@ -34,6 +34,8 @@ import com.example.rideflow.ui.screens.community.TradeDetailScreen
 import com.example.rideflow.ui.screens.community.CommunityPostDetailScreen
 import com.example.rideflow.ui.screens.community.CommunityClubDetailScreen
 import com.example.rideflow.ui.screens.UserProfileDetailScreen
+import com.example.rideflow.ui.screens.ChangePasswordScreen
+import com.example.rideflow.ui.screens.SettingsInfoScreen
 
 /**
  * 应用导航图
@@ -96,6 +98,18 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
         // 个人资料详情页面
         composable(AppRoutes.PROFILE_DETAIL) {
             ProfileDetailScreen(navController = navController)
+        }
+
+        composable(AppRoutes.CHANGE_PASSWORD) {
+            ChangePasswordScreen(navController = navController)
+        }
+
+        composable(
+            route = "${AppRoutes.SETTINGS_INFO}/{type}",
+            arguments = listOf(navArgument("type") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val type = backStackEntry.arguments?.getString("type") ?: "about"
+            SettingsInfoScreen(navController = navController, type = type)
         }
 
         composable(AppRoutes.RIDE_PREFERENCE) {

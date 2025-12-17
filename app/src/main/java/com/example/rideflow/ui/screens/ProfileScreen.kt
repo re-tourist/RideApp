@@ -60,6 +60,7 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
     var showAchievementDialog by remember { mutableStateOf(false) }
     var showCalendarDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
+    var showLogoutConfirmDialog by remember { mutableStateOf(false) }
     var showNotificationsDialog by remember { mutableStateOf(false) }
     val authViewModel = org.koin.androidx.compose.koinViewModel<com.example.rideflow.auth.AuthViewModel>()
     var nickname by remember { mutableStateOf("") }
@@ -224,7 +225,13 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = { navController.navigate("${AppRoutes.MAIN}?tab=community") }) {
+                    IconButton(onClick = {
+                        try {
+                            DiscoverNavigatorState.openRider = true
+                        } catch (_: Exception) {
+                        }
+                        navController.navigate("${AppRoutes.MAIN}?tab=discover")
+                    }) {
                         Icon(imageVector = Icons.Default.PersonAdd, contentDescription = "添加好友", tint = Color.White)
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -381,13 +388,6 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
                             )
                         }
                     }
-                    val tone = if (monthlyDistanceKm < 1.0) "你正在积累这个月的第一公里" else "继续保持，骑行会记住你"
-                    Text(
-                        text = tone,
-                        fontSize = 12.sp,
-                        color = Color(0xFF606060),
-                        modifier = Modifier.padding(top = 12.dp)
-                    )
                 }
             }
         
@@ -409,8 +409,6 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
                         Text(text = "骑行偏好", fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(text = "0 KM", fontSize = 12.sp, color = Color.Gray)
-                        Spacer(modifier = Modifier.width(8.dp))
                         Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "更多", tint = Color.Gray, modifier = Modifier.size(24.dp))
                     }
                 }
@@ -456,21 +454,6 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(imageVector = Icons.Default.Home, contentDescription = "我的活动", tint = Color(0xFF606060), modifier = Modifier.size(24.dp))
                         Text(text = "我的活动", fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
-                    }
-                    Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "更多", tint = Color.Gray, modifier = Modifier.size(24.dp))
-                }
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .clickable { showSettingsDialog = true },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.Default.Star, contentDescription = "系统设置", tint = Color(0xFF606060), modifier = Modifier.size(24.dp))
-                        Text(text = "系统设置", fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
                     }
                     Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "更多", tint = Color.Gray, modifier = Modifier.size(24.dp))
                 }
@@ -555,34 +538,43 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
     
     // 设置对话框
     if (showSettingsDialog) {
+        SettingsDialog(
+            onDismiss = { showSettingsDialog = false },
+            onChangePassword = {
+                showSettingsDialog = false
+                navController.navigate(AppRoutes.CHANGE_PASSWORD)
+            },
+            onOpenInfo = { type ->
+                showSettingsDialog = false
+                navController.navigate("${AppRoutes.SETTINGS_INFO}/$type")
+            },
+            onRequestLogout = { showLogoutConfirmDialog = true }
+        )
+    }
+
+    if (showLogoutConfirmDialog) {
         AlertDialog(
-            onDismissRequest = { showSettingsDialog = false },
-            title = { Text(text = "设置") },
-            text = {
-                Column {
-                    SettingItem(label = "修改密码", icon = Icons.Default.Person)
-                    SettingItem(label = "通知设置", icon = Icons.Default.Notifications)
-                    SettingItem(label = "隐私设置", icon = Icons.Default.Lock)
-                    SettingItem(label = "关于我们", icon = Icons.Default.Info)
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 12.dp))
-                    SettingItem(
-                        label = "退出登录",
-                        icon = Icons.Default.ExitToApp,
-                        onClick = {
-                            authViewModel.logout()
-                            navController.navigate(AppRoutes.LOGIN) {
-                                popUpTo(AppRoutes.MAIN) { inclusive = true }
-                            }
-                            showSettingsDialog = false
-                        },
-                        iconTint = Color(0xFFD32F2F),
-                        labelColor = Color(0xFFD32F2F)
-                    )
+            onDismissRequest = { showLogoutConfirmDialog = false },
+            title = { Text(text = "确认退出登录") },
+            text = { Text(text = "退出后将需要重新登录才能继续使用账号相关功能。") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        authViewModel.logout()
+                        showLogoutConfirmDialog = false
+                        showSettingsDialog = false
+                        navController.navigate(AppRoutes.LOGIN) {
+                            popUpTo(AppRoutes.MAIN) { inclusive = true }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F))
+                ) {
+                    Text(text = "退出登录", color = Color.White)
                 }
             },
-            confirmButton = {
-                Button(onClick = { showSettingsDialog = false }) {
-                    Text(text = "关闭")
+            dismissButton = {
+                Button(onClick = { showLogoutConfirmDialog = false }) {
+                    Text(text = "取消")
                 }
             }
         )
@@ -696,6 +688,122 @@ fun AchievementsPreviewRow(
             modifier = Modifier
                 .padding(start = 12.dp)
                 .clickable(onClick = onClickDetails)
+        )
+    }
+}
+
+private enum class SettingsRowKind {
+    Enabled,
+    Info,
+    Danger
+}
+
+@Composable
+private fun SettingsDialog(
+    onDismiss: () -> Unit,
+    onChangePassword: () -> Unit,
+    onOpenInfo: (String) -> Unit,
+    onRequestLogout: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = "系统设置", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    IconButton(onClick = onDismiss) {
+                        Icon(imageVector = Icons.Default.Close, contentDescription = "关闭")
+                    }
+                }
+                HorizontalDivider()
+                SettingsRow(
+                    title = "修改密码",
+                    icon = Icons.Default.Lock,
+                    kind = SettingsRowKind.Enabled,
+                    onClick = onChangePassword
+                )
+                HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
+                SettingsRow(
+                    title = "通知设置",
+                    icon = Icons.Default.Notifications,
+                    kind = SettingsRowKind.Info,
+                    onClick = { onOpenInfo("notifications") }
+                )
+                HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
+                SettingsRow(
+                    title = "隐私设置",
+                    icon = Icons.Default.Lock,
+                    kind = SettingsRowKind.Info,
+                    onClick = { onOpenInfo("privacy") }
+                )
+                HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
+                SettingsRow(
+                    title = "关于我们",
+                    icon = Icons.Default.Info,
+                    kind = SettingsRowKind.Info,
+                    onClick = { onOpenInfo("about") }
+                )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+                SettingsRow(
+                    title = "退出登录",
+                    icon = Icons.Default.ExitToApp,
+                    kind = SettingsRowKind.Danger,
+                    onClick = onRequestLogout
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsRow(
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    kind: SettingsRowKind,
+    onClick: () -> Unit
+) {
+    val dangerColor = Color(0xFFD32F2F)
+    val iconTint = when (kind) {
+        SettingsRowKind.Danger -> dangerColor
+        else -> Color(0xFF606060)
+    }
+    val textColor = when (kind) {
+        SettingsRowKind.Danger -> dangerColor
+        else -> Color(0xFF111111)
+    }
+    val chevronTint = when (kind) {
+        SettingsRowKind.Danger -> dangerColor
+        else -> Color.Gray
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(54.dp)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(imageVector = icon, contentDescription = title, tint = iconTint, modifier = Modifier.size(22.dp))
+            Text(text = title, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp), color = textColor)
+        }
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = chevronTint,
+            modifier = Modifier.size(22.dp)
         )
     }
 }

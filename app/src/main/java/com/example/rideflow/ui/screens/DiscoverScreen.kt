@@ -48,7 +48,10 @@ import java.util.concurrent.TimeUnit
 
 
 // 模拟数据类
-object DiscoverNavigatorState { var openRouteBook: Boolean = false }
+object DiscoverNavigatorState {
+    var openRouteBook: Boolean = false
+    var openRider: Boolean = false
+}
 data class Article(
     val id: Int,
     val title: String,
@@ -83,9 +86,16 @@ private suspend fun loadArticlesIO(): List<Article> {
 fun DiscoverScreen(navController: androidx.navigation.NavController, userId: String = "") {
     var subPage by remember { mutableStateOf(DiscoverSubPage.Main) }
     LaunchedEffect(Unit) {
-        if (DiscoverNavigatorState.openRouteBook) {
-            subPage = DiscoverSubPage.RouteBook
-            DiscoverNavigatorState.openRouteBook = false
+        when {
+            DiscoverNavigatorState.openRider -> {
+                subPage = DiscoverSubPage.Rider
+                DiscoverNavigatorState.openRider = false
+            }
+
+            DiscoverNavigatorState.openRouteBook -> {
+                subPage = DiscoverSubPage.RouteBook
+                DiscoverNavigatorState.openRouteBook = false
+            }
         }
     }
     val context = LocalContext.current
