@@ -81,6 +81,9 @@ import androidx.compose.runtime.setValue   // for by
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
 import com.example.rideflow.auth.AuthViewModel
 import com.example.rideflow.backend.RideRecordDatabaseHelper
@@ -98,6 +101,12 @@ import com.amap.api.location.AMapLocationClient
 import com.amap.api.location.AMapLocationClientOption
 import com.amap.api.location.AMapLocation
 import com.amap.api.location.AMapLocationListener
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.net.HttpURLConnection
+import java.net.URL
+import kotlin.coroutines.resume
+import org.json.JSONObject
  
 
 sealed class RideStatus {
@@ -405,6 +414,44 @@ fun RideMainContent(
         
         return earthRadius * c
     }
+
+    fun wgs84ToGcj02IfNeeded(latitude: Double, longitude: Double): LatLng {
+        fun outOfChina(lat: Double, lon: Double): Boolean {
+            return lon < 72.004 || lon > 137.8347 || lat < 0.8293 || lat > 55.8271
+        }
+        fun transformLat(x: Double, y: Double): Double {
+            var ret =
+                -100.0 + 2.0 * x + 3.0 * y + 0.2 * y * y + 0.1 * x * y + 0.2 * sqrt(abs(x))
+            ret += (20.0 * sin(6.0 * x * PI) + 20.0 * sin(2.0 * x * PI)) * 2.0 / 3.0
+            ret += (20.0 * sin(y * PI) + 40.0 * sin(y / 3.0 * PI)) * 2.0 / 3.0
+            ret += (160.0 * sin(y / 12.0 * PI) + 320.0 * sin(y * PI / 30.0)) * 2.0 / 3.0
+            return ret
+        }
+        fun transformLon(x: Double, y: Double): Double {
+            var ret =
+                300.0 + x + 2.0 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * sqrt(abs(x))
+            ret += (20.0 * sin(6.0 * x * PI) + 20.0 * sin(2.0 * x * PI)) * 2.0 / 3.0
+            ret += (20.0 * sin(x * PI) + 40.0 * sin(x / 3.0 * PI)) * 2.0 / 3.0
+            ret += (150.0 * sin(x / 12.0 * PI) + 300.0 * sin(x / 30.0 * PI)) * 2.0 / 3.0
+            return ret
+        }
+
+        if (outOfChina(latitude, longitude)) return LatLng(latitude, longitude)
+
+        val a = 6378245.0
+        val ee = 0.00669342162296594323
+        var dLat = transformLat(longitude - 105.0, latitude - 35.0)
+        var dLon = transformLon(longitude - 105.0, latitude - 35.0)
+        val radLat = latitude / 180.0 * PI
+        var magic = sin(radLat)
+        magic = 1 - ee * magic * magic
+        val sqrtMagic = sqrt(magic)
+        dLat = (dLat * 180.0) / ((a * (1 - ee)) / (magic * sqrtMagic) * PI)
+        dLon = (dLon * 180.0) / (a / sqrtMagic * cos(radLat) * PI)
+        val mgLat = latitude + dLat
+        val mgLon = longitude + dLon
+        return LatLng(mgLat, mgLon)
+    }
     
     // 辅助函数：获取骑行时长（小时）
     fun getRideDurationHours(): Double {
@@ -430,7 +477,7 @@ fun RideMainContent(
         if (granted) {
             fusedClient.lastLocation.addOnSuccessListener { loc ->
                 if (loc != null) {
-                    currentLocation.value = LatLng(loc.latitude, loc.longitude)
+                    currentLocation.value = wgs84ToGcj02IfNeeded(loc.latitude, loc.longitude)
                     currentAccuracy.value = loc.accuracy
                 } else {
                     // 使用杭州坐标作为fallback
@@ -457,10 +504,12 @@ fun RideMainContent(
         val callback = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
                 val loc = result.lastLocation ?: return
-                val latLng = LatLng(loc.latitude, loc.longitude)
+                val latLng = wgs84ToGcj02IfNeeded(loc.latitude, loc.longitude)
                 currentLocation.value = latLng
+                currentAccuracy.value = loc.accuracy
                 
-                if (rideStatus.value is RideStatus.InProgress) {
+                val useGmsForTracking = amapClientHolder.value == null
+                if (useGmsForTracking && rideStatus.value is RideStatus.InProgress) {
                     trackPoints.add(latLng)
                     
                     // 计算距离和速度
@@ -508,7 +557,7 @@ fun RideMainContent(
         } else {
             fusedClient.lastLocation.addOnSuccessListener { loc ->
                 if (loc != null) {
-                    currentLocation.value = LatLng(loc.latitude, loc.longitude)
+                    currentLocation.value = wgs84ToGcj02IfNeeded(loc.latitude, loc.longitude)
                     currentAccuracy.value = loc.accuracy
                 } else {
                     // 使用杭州坐标
@@ -530,7 +579,7 @@ fun RideMainContent(
                 fusedClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cts.token)
                     .addOnSuccessListener { loc ->
                         if (loc != null) {
-                            currentLocation.value = LatLng(loc.latitude, loc.longitude)
+                            currentLocation.value = wgs84ToGcj02IfNeeded(loc.latitude, loc.longitude)
                             currentAccuracy.value = loc.accuracy
                         }
                     }
@@ -560,6 +609,31 @@ fun RideMainContent(
                         }
                     }
                     if (aLoc != null && rideStatus.value is RideStatus.InProgress) {
+                        val latLng = LatLng(aLoc.latitude, aLoc.longitude)
+                        trackPoints.add(latLng)
+                        val prevLoc = previousLocation.value
+                        if (prevLoc != null) {
+                            val distance = calculateDistance(prevLoc, latLng)
+                            totalDistance.value += distance
+                            rideDistance.value = String.format("%.2f", totalDistance.value / 1000)
+
+                            val speed = aLoc.speed * 3.6
+                            currentSpeed.value = String.format("%.1f", speed)
+                            if (speed > maxSpeedValue.value) {
+                                maxSpeedValue.value = speed.toDouble()
+                                maxSpeed.value = String.format("%.1f", speed)
+                            }
+                            val durationHours = getRideDurationHours()
+                            if (durationHours > 0) {
+                                val avgSpeedValue = (totalDistance.value / 1000) / durationHours
+                                avgSpeed.value = String.format("%.1f", avgSpeedValue)
+                            }
+                            val caloriesValue = (totalDistance.value / 1000) * 50
+                            calories.value = caloriesValue.toInt().toString()
+                            updateRideDuration()
+                        }
+                        previousLocation.value = latLng
+
                         val alt = aLoc.altitude.toDouble()
                         if (!alt.isNaN() && alt > -1000 && alt < 10000) {
                             val alpha = 0.1
@@ -794,160 +868,196 @@ fun RideMainContent(
         if (enableSearch && dest != null && src != null) {
             try {
                 routeComputed.value = false
-                val routeSearch = RouteSearch(context)
-                fun buildOffsetPoints(s: LatLng, d: LatLng): List<LatLng> {
-                    val dx = d.longitude - s.longitude
-                    val dy = d.latitude - s.latitude
-                    val len = kotlin.math.sqrt(dx * dx + dy * dy)
-                    val px = if (len != 0.0) -dy / len else 0.0
-                    val py = if (len != 0.0) dx / len else 0.0
-                    fun lerp(t: Double): LatLng {
-                        val lat = s.latitude + dy * t
-                        val lng = s.longitude + dx * t
-                        return LatLng(lat, lng)
+                navRoutePoints.clear()
+
+                fun getAmapKeyFromManifest(): String? {
+                    return try {
+                        val appInfo = context.packageManager.getApplicationInfo(
+                            context.packageName,
+                            PackageManager.GET_META_DATA
+                        )
+                        appInfo.metaData?.getString("com.amap.api.v2.apikey")
+                    } catch (_: Throwable) {
+                        null
                     }
-                    val p1 = lerp(0.25)
-                    val p2 = lerp(0.5)
-                    val p3 = lerp(0.75)
-                    val off = 0.001
-                    val p1o = LatLng(p1.latitude + py * off, p1.longitude + px * off)
-                    val p2o = LatLng(p2.latitude - py * off, p2.longitude - px * off)
-                    val p3o = LatLng(p3.latitude + py * off * 0.5, p3.longitude + px * off * 0.5)
-                    return listOf(s, p1o, p2o, p3o, d)
                 }
-                fun segmentedDriveRoute(s: LatLng, d: LatLng, done: (List<LatLng>) -> Unit) {
-                    val nodes = buildOffsetPoints(s, d)
-                    val pts = mutableListOf<LatLng>()
-                    pts.add(s)
-                    var idx = 0
-                    val segSearch = RouteSearch(context)
-                    segSearch.setRouteSearchListener(object : RouteSearch.OnRouteSearchListener {
-                        override fun onDriveRouteSearched(r: com.amap.api.services.route.DriveRouteResult?, code: Int) {
-                            if (code == 1000 && r != null && !r.paths.isNullOrEmpty()) {
-                                try {
-                                    val path = r.paths.first()
-                                    path?.steps?.forEach { step ->
-                                        step?.polyline?.forEach { p ->
-                                            pts.add(LatLng(p.latitude, p.longitude))
-                                        }
-                                    }
-                                } catch (_: Exception) {}
-                            } else {
-                                pts.add(LatLng(nodes[idx + 1].latitude, nodes[idx + 1].longitude))
-                            }
-                            idx++
-                            if (idx >= nodes.size - 1) {
-                                done(pts)
-                            } else {
-                                val from = LatLonPoint(nodes[idx].latitude, nodes[idx].longitude)
-                                val to = LatLonPoint(nodes[idx + 1].latitude, nodes[idx + 1].longitude)
-                                val q = RouteSearch.DriveRouteQuery(RouteSearch.FromAndTo(from, to), RouteSearch.DRIVING_SINGLE_DEFAULT, null, null, "")
-                                segSearch.calculateDriveRouteAsyn(q)
-                            }
+
+                suspend fun fetchBicyclingRouteFromWebService(): List<LatLng>? {
+                    val key = getAmapKeyFromManifest()?.trim().orEmpty()
+                    if (key.isEmpty()) return null
+
+                    return withContext(Dispatchers.IO) {
+                        val origin = "${src.longitude},${src.latitude}"
+                        val destination = "${dest.longitude},${dest.latitude}"
+                        val u =
+                            URL("https://restapi.amap.com/v4/direction/bicycling?origin=$origin&destination=$destination&key=$key")
+                        val conn = (u.openConnection() as HttpURLConnection).apply {
+                            connectTimeout = 10000
+                            readTimeout = 15000
+                            requestMethod = "GET"
                         }
-                        override fun onWalkRouteSearched(r: WalkRouteResult?, code: Int) {}
-                        override fun onBusRouteSearched(r: com.amap.api.services.route.BusRouteResult?, code: Int) {}
-                        override fun onRideRouteSearched(r: com.amap.api.services.route.RideRouteResult?, code: Int) {}
-                    })
-                    val from0 = LatLonPoint(nodes[0].latitude, nodes[0].longitude)
-                    val to0 = LatLonPoint(nodes[1].latitude, nodes[1].longitude)
-                    val q0 = RouteSearch.DriveRouteQuery(RouteSearch.FromAndTo(from0, to0), RouteSearch.DRIVING_SINGLE_DEFAULT, null, null, "")
-                    segSearch.calculateDriveRouteAsyn(q0)
-                }
-                routeSearch.setRouteSearchListener(object : RouteSearch.OnRouteSearchListener {
-                    override fun onWalkRouteSearched(result: WalkRouteResult?, code: Int) {
-                        if (!routeComputed.value && code == 1000 && result != null && !result.paths.isNullOrEmpty()) {
-                            val points = mutableListOf<LatLng>()
+                        try {
+                            val code = conn.responseCode
+                            val stream =
+                                if (code in 200..299) conn.inputStream else conn.errorStream
+                                    ?: return@withContext null
+                            val body = BufferedReader(InputStreamReader(stream)).use { it.readText() }
+                            val json = JSONObject(body)
+                            val errcode = json.optInt("errcode", -1)
+                            if (errcode != 0) return@withContext null
+                            val data = json.optJSONObject("data") ?: return@withContext null
+                            val paths = data.optJSONArray("paths") ?: return@withContext null
+                            val path0 = paths.optJSONObject(0) ?: return@withContext null
+                            val steps = path0.optJSONArray("steps") ?: return@withContext null
+
+                            val points = ArrayList<LatLng>(512)
                             points.add(src)
-                            try {
-                                val path = result.paths.first()
-                                path?.steps?.forEach { step ->
-                                    step?.polyline?.forEach { p ->
-                                        points.add(LatLng(p.latitude, p.longitude))
-                                    }
+                            var last: LatLng? = null
+
+                            fun addPoint(p: LatLng) {
+                                if (last == null || last!!.latitude != p.latitude || last!!.longitude != p.longitude) {
+                                    points.add(p)
+                                    last = p
                                 }
-                            } catch (_: Exception) {}
-                            points.add(dest)
-                            navRoutePoints.clear()
-                            navRoutePoints.addAll(points)
-                            routeComputed.value = true
-                        } else {
-                            segmentedDriveRoute(src, dest) { pts ->
-                                navRoutePoints.clear()
-                                navRoutePoints.addAll(pts)
-                                routeComputed.value = true
                             }
+
+                            for (i in 0 until steps.length()) {
+                                val step = steps.optJSONObject(i) ?: continue
+                                val polyline = step.optString("polyline", "").trim()
+                                if (polyline.isEmpty()) continue
+                                val segs = polyline.split(';')
+                                for (seg in segs) {
+                                    val parts = seg.split(',')
+                                    if (parts.size != 2) continue
+                                    val lon = parts[0].toDoubleOrNull() ?: continue
+                                    val lat = parts[1].toDoubleOrNull() ?: continue
+                                    addPoint(LatLng(lat, lon))
+                                }
+                            }
+                            addPoint(dest)
+                            if (points.size >= 2) points else null
+                        } catch (_: Throwable) {
+                            null
+                        } finally {
+                            conn.disconnect()
                         }
                     }
-                    override fun onBusRouteSearched(result: com.amap.api.services.route.BusRouteResult?, code: Int) {}
-                    override fun onDriveRouteSearched(result: com.amap.api.services.route.DriveRouteResult?, code: Int) {
-                        if (!routeComputed.value && code == 1000 && result != null && !result.paths.isNullOrEmpty()) {
-                            val points = mutableListOf<LatLng>()
-                            points.add(src)
-                            try {
-                                val path = result.paths.first()
-                                path?.steps?.forEach { step ->
-                                    step?.polyline?.forEach { p ->
-                                        points.add(LatLng(p.latitude, p.longitude))
-                                    }
-                                }
-                            } catch (_: Exception) {}
-                            points.add(dest)
-                            navRoutePoints.clear()
-                            navRoutePoints.addAll(points)
-                            routeComputed.value = true
-                        } else if (!routeComputed.value) {
-                            segmentedDriveRoute(src, dest) { pts ->
-                                navRoutePoints.clear()
-                                navRoutePoints.addAll(pts)
-                                routeComputed.value = true
-                            }
-                        }
-                    }
-                    override fun onRideRouteSearched(result: com.amap.api.services.route.RideRouteResult?, code: Int) {}
-                })
-                val from = LatLonPoint(src.latitude, src.longitude)
-                val to = LatLonPoint(dest.latitude, dest.longitude)
-                val driveQuery = RouteSearch.DriveRouteQuery(
-                    RouteSearch.FromAndTo(from, to),
-                    RouteSearch.DRIVING_SINGLE_DEFAULT,
-                    null,
-                    null,
-                    ""
-                )
-                routeSearch.calculateDriveRouteAsyn(driveQuery)
-                val walkQuery = RouteSearch.WalkRouteQuery(RouteSearch.FromAndTo(from, to))
-                routeSearch.calculateWalkRouteAsyn(walkQuery)
-            } catch (_: Exception) {
-                try {
-                    val dx = dest.longitude - src.longitude
-                    val dy = dest.latitude - src.latitude
-                    val len = kotlin.math.sqrt(dx * dx + dy * dy)
-                    val px = if (len != 0.0) -dy / len else 0.0
-                    val py = if (len != 0.0) dx / len else 0.0
-                    fun lerp(t: Double): LatLng {
-                        val lat = src.latitude + dy * t
-                        val lng = src.longitude + dx * t
-                        return LatLng(lat, lng)
-                    }
-                    val p1 = lerp(0.25)
-                    val p2 = lerp(0.5)
-                    val p3 = lerp(0.75)
-                    val off = 0.001
-                    val p1o = LatLng(p1.latitude + py * off, p1.longitude + px * off)
-                    val p2o = LatLng(p2.latitude - py * off, p2.longitude - px * off)
-                    val p3o = LatLng(p3.latitude + py * off * 0.5, p3.longitude + px * off * 0.5)
-                    navRoutePoints.clear()
-                    navRoutePoints.add(src)
-                    navRoutePoints.add(p1o)
-                    navRoutePoints.add(p2o)
-                    navRoutePoints.add(p3o)
-                    navRoutePoints.add(dest)
-                } catch (_: Exception) {
-                    navRoutePoints.clear()
-                    navRoutePoints.add(src)
-                    navRoutePoints.add(dest)
                 }
+
+                fun parseDrive(result: com.amap.api.services.route.DriveRouteResult): List<LatLng>? {
+                    val path = result.paths?.firstOrNull() ?: return null
+                    val points = mutableListOf<LatLng>()
+                    points.add(src)
+                    path.steps?.forEach { step ->
+                        step?.polyline?.forEach { p -> points.add(LatLng(p.latitude, p.longitude)) }
+                    }
+                    points.add(dest)
+                    return if (points.size >= 2) points else null
+                }
+
+                fun parseWalk(result: WalkRouteResult): List<LatLng>? {
+                    val path = result.paths?.firstOrNull() ?: return null
+                    val points = mutableListOf<LatLng>()
+                    points.add(src)
+                    path.steps?.forEach { step ->
+                        step?.polyline?.forEach { p -> points.add(LatLng(p.latitude, p.longitude)) }
+                    }
+                    points.add(dest)
+                    return if (points.size >= 2) points else null
+                }
+
+                suspend fun calculateDriveRoutePoints(): List<LatLng>? {
+                    val from = LatLonPoint(src.latitude, src.longitude)
+                    val to = LatLonPoint(dest.latitude, dest.longitude)
+                    val fromAndTo = RouteSearch.FromAndTo(from, to)
+                    val routeSearch = RouteSearch(context)
+                    val query = RouteSearch.DriveRouteQuery(
+                        fromAndTo,
+                        RouteSearch.DRIVING_SINGLE_DEFAULT,
+                        null,
+                        null,
+                        ""
+                    )
+                    return withTimeoutOrNull(12000L) {
+                        suspendCancellableCoroutine { cont ->
+                            routeSearch.setRouteSearchListener(object : RouteSearch.OnRouteSearchListener {
+                                override fun onDriveRouteSearched(
+                                    result: com.amap.api.services.route.DriveRouteResult?,
+                                    code: Int
+                                ) {
+                                    if (cont.isCompleted) return
+                                    if (code == 1000 && result != null) cont.resume(result) else cont.resume(null)
+                                }
+
+                                override fun onWalkRouteSearched(result: WalkRouteResult?, code: Int) {}
+                                override fun onBusRouteSearched(
+                                    result: com.amap.api.services.route.BusRouteResult?,
+                                    code: Int
+                                ) {}
+                                override fun onRideRouteSearched(
+                                    result: com.amap.api.services.route.RideRouteResult?,
+                                    code: Int
+                                ) {}
+                            })
+                            try {
+                                routeSearch.calculateDriveRouteAsyn(query)
+                            } catch (_: Throwable) {
+                                if (!cont.isCompleted) cont.resume(null)
+                            }
+                        }
+                    }?.let { parseDrive(it) }
+                }
+
+                suspend fun calculateWalkRoutePoints(): List<LatLng>? {
+                    val from = LatLonPoint(src.latitude, src.longitude)
+                    val to = LatLonPoint(dest.latitude, dest.longitude)
+                    val fromAndTo = RouteSearch.FromAndTo(from, to)
+                    val routeSearch = RouteSearch(context)
+                    val query = RouteSearch.WalkRouteQuery(fromAndTo)
+                    return withTimeoutOrNull(12000L) {
+                        suspendCancellableCoroutine { cont ->
+                            routeSearch.setRouteSearchListener(object : RouteSearch.OnRouteSearchListener {
+                                override fun onWalkRouteSearched(result: WalkRouteResult?, code: Int) {
+                                    if (cont.isCompleted) return
+                                    if (code == 1000 && result != null) cont.resume(result) else cont.resume(null)
+                                }
+
+                                override fun onDriveRouteSearched(
+                                    result: com.amap.api.services.route.DriveRouteResult?,
+                                    code: Int
+                                ) {}
+                                override fun onBusRouteSearched(
+                                    result: com.amap.api.services.route.BusRouteResult?,
+                                    code: Int
+                                ) {}
+                                override fun onRideRouteSearched(
+                                    result: com.amap.api.services.route.RideRouteResult?,
+                                    code: Int
+                                ) {}
+                            })
+                            try {
+                                routeSearch.calculateWalkRouteAsyn(query)
+                            } catch (_: Throwable) {
+                                if (!cont.isCompleted) cont.resume(null)
+                            }
+                        }
+                    }?.let { parseWalk(it) }
+                }
+
+                val points =
+                    fetchBicyclingRouteFromWebService()
+                        ?: calculateDriveRoutePoints()
+                        ?: calculateWalkRoutePoints()
+                        ?: listOf(src, dest)
+
+                navRoutePoints.clear()
+                navRoutePoints.addAll(points)
+                routeComputed.value = true
+            } catch (_: Throwable) {
+                navRoutePoints.clear()
+                navRoutePoints.add(src)
+                navRoutePoints.add(dest)
+                routeComputed.value = true
             }
         } else {
             navRoutePoints.clear()
