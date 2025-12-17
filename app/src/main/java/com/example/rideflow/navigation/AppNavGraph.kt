@@ -198,6 +198,11 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
             val id = backStackEntry.arguments?.getString("id")?.toIntOrNull() ?: 0
             com.example.rideflow.ui.screens.RouteBookDetailScreen(navController = navController, routeId = id)
         }
+        
+        // 骑行导航页面（与骑行页内容相同，可返回）
+        composable(AppRoutes.RIDE_NAVIGATION) {
+            com.example.rideflow.ui.screens.RideNavigationScreen(navController = navController)
+        }
         composable("${AppRoutes.TRADE_DETAIL}/{id}") { backStackEntry ->
             val id = backStackEntry.arguments?.getString("id")?.toIntOrNull() ?: 0
             TradeDetailScreen(navController = navController, itemId = id)

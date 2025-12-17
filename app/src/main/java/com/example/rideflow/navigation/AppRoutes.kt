@@ -9,6 +9,7 @@ object AppRoutes {
     const val LOGIN = "login"
     const val REGISTER = "register"
     const val MAIN = "main"
+    const val RIDE_NAVIGATION = "ride_navigation"
     
     // 主页面下的子路由
     const val RIDE_RECORD = "ride_record"

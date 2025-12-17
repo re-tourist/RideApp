@@ -84,6 +84,20 @@ import kotlinx.coroutines.Dispatchers
 import org.koin.androidx.compose.koinViewModel
 import com.example.rideflow.auth.AuthViewModel
 import com.example.rideflow.backend.RideRecordDatabaseHelper
+import com.example.rideflow.navigation.AppRoutes
+import com.amap.api.services.geocoder.GeocodeSearch
+import com.amap.api.services.geocoder.RegeocodeQuery
+import com.amap.api.services.core.LatLonPoint
+import com.amap.api.services.geocoder.RegeocodeResult
+import com.amap.api.services.geocoder.GeocodeResult
+import com.amap.api.services.poisearch.PoiSearch
+import com.amap.api.services.poisearch.PoiResult
+import com.amap.api.services.route.RouteSearch
+import com.amap.api.services.route.WalkRouteResult
+import com.amap.api.location.AMapLocationClient
+import com.amap.api.location.AMapLocationClientOption
+import com.amap.api.location.AMapLocation
+import com.amap.api.location.AMapLocationListener
  
 
 sealed class RideStatus {
@@ -113,6 +127,7 @@ data class RideReport(
 private fun AMap2DContainer(
     modifier: Modifier = Modifier,
     myLocation: LatLng? = null,
+    accuracy: Float? = null,
     routePoints: List<LatLng> = emptyList(),
     selectedLocation: LatLng? = null
 ) {
@@ -140,10 +155,11 @@ private fun AMap2DContainer(
     
     // 记住上次的参数，避免重复更新
     val lastMyLocation = remember { mutableStateOf<LatLng?>(null) }
-    val lastRoutePoints = remember { mutableStateOf<List<LatLng>>(emptyList()) }
+    val lastRouteCount = remember { mutableStateOf(0) }
     val isInitialSetup = remember { mutableStateOf(true) }
     val mapInitialized = remember { mutableStateOf(false) }
     val lastSelectedLocation = remember { mutableStateOf<LatLng?>(null) }
+    val firstLocationCentered = remember { mutableStateOf(false) }
     
     // 简化的AndroidView实现
     AndroidView(
@@ -201,7 +217,7 @@ private fun AMap2DContainer(
                 
                 // 只在参数真正变化时更新，避免重复更新导致的闪烁
                 val locationChanged = myLocation != lastMyLocation.value
-                val routeChanged = routePoints != lastRoutePoints.value
+                val routeChanged = routePoints.size != lastRouteCount.value
                 val selectedChanged = selectedLocation != lastSelectedLocation.value
                 val shouldUpdate = locationChanged || routeChanged || selectedChanged || isInitialSetup.value
                 
@@ -222,10 +238,12 @@ private fun AMap2DContainer(
                             .icon(com.amap.api.maps2d.model.BitmapDescriptorFactory.defaultMarker(com.amap.api.maps2d.model.BitmapDescriptorFactory.HUE_BLUE))
                     )
                     
-                    // 只在初始设置时移动相机到当前位置
-                    if (isInitialSetup.value && routePoints.isEmpty()) {
-                        // 没有路线时，以当前位置为中心显示
-                        val cameraUpdate = CameraUpdateFactory.newLatLngZoom(myLocation, 14f) // 14f适合显示当前位置周围区域
+                    if (!firstLocationCentered.value && (accuracy == null || accuracy <= 20f)) {
+                        val cameraUpdate = CameraUpdateFactory.newLatLngZoom(myLocation, 16f)
+                        map.animateCamera(cameraUpdate)
+                        firstLocationCentered.value = true
+                    } else if (isInitialSetup.value && routePoints.isEmpty()) {
+                        val cameraUpdate = CameraUpdateFactory.newLatLngZoom(myLocation, 14f)
                         map.animateCamera(cameraUpdate)
                     }
                 }
@@ -242,46 +260,40 @@ private fun AMap2DContainer(
                     }
                 }
                 
-                // 添加路线 - 只在路线变化时更新
-                if (routeChanged || isInitialSetup.value) {
-                    if (routePoints.size >= 2) {
-                        map.addPolyline(
-                            PolylineOptions()
-                                .add(*routePoints.toTypedArray())
-                                .width(6f)
-                                .color(Color(0xFF007AFF).toArgb())
-                                .visible(true)
-                        )
-                        
-                        // 添加起点和终点标记
-                        map.addMarker(MarkerOptions().position(routePoints.first()).title("起点"))
-                        map.addMarker(MarkerOptions().position(routePoints.last()).title("终点"))
-                        
-                        // 有路线时调整视野以包含整个路线
-                        if (isInitialSetup.value) {
-                            try {
-                                val builder = com.amap.api.maps2d.model.LatLngBounds.Builder()
-                                routePoints.forEach { builder.include(it) }
-                                val bounds = builder.build()
-                                val padding = 100 // 像素
-                                val cameraUpdate = CameraUpdateFactory.newLatLngBounds(bounds, padding)
-                                map.moveCamera(cameraUpdate)
-                            } catch (e: Exception) {
-                                // 边界计算失败时退回到显示起点
-                                val cameraUpdate = CameraUpdateFactory.newLatLngZoom(routePoints.first(), 14f)
-                                map.moveCamera(cameraUpdate)
-                            }
+                // 添加路线
+                if (routePoints.size >= 2) {
+                    map.addPolyline(
+                        PolylineOptions()
+                            .add(*routePoints.toTypedArray())
+                            .width(6f)
+                            .color(Color(0xFF007AFF).toArgb())
+                            .visible(true)
+                    )
+                    
+                    map.addMarker(MarkerOptions().position(routePoints.first()).title("起点"))
+                    map.addMarker(MarkerOptions().position(routePoints.last()).title("终点"))
+                    
+                    if (isInitialSetup.value) {
+                        try {
+                            val builder = com.amap.api.maps2d.model.LatLngBounds.Builder()
+                            routePoints.forEach { builder.include(it) }
+                            val bounds = builder.build()
+                            val padding = 100
+                            val cameraUpdate = CameraUpdateFactory.newLatLngBounds(bounds, padding)
+                            map.moveCamera(cameraUpdate)
+                        } catch (e: Exception) {
+                            val cameraUpdate = CameraUpdateFactory.newLatLngZoom(routePoints.first(), 14f)
+                            map.moveCamera(cameraUpdate)
                         }
-                    } else if (myLocation != null && isInitialSetup.value) {
-                        // 没有路线但有当前位置时，显示当前位置
-                        val cameraUpdate = CameraUpdateFactory.newLatLngZoom(myLocation, 14f)
-                        map.animateCamera(cameraUpdate)
                     }
+                } else if (myLocation != null && isInitialSetup.value) {
+                    val cameraUpdate = CameraUpdateFactory.newLatLngZoom(myLocation, 14f)
+                    map.animateCamera(cameraUpdate)
                 }
                 
                 // 更新记住的值
                 lastMyLocation.value = myLocation
-                lastRoutePoints.value = routePoints
+                lastRouteCount.value = routePoints.size
                 lastSelectedLocation.value = selectedLocation
                 if (isInitialSetup.value) {
                     isInitialSetup.value = false
@@ -297,22 +309,44 @@ private fun AMap2DContainer(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RideScreen(navController: androidx.navigation.NavController) {
-    // 状态控制：是否显示历史记录页面
     var showHistoryScreen by remember { mutableStateOf(false) }
 
-    // 如果显示历史页面，则渲染历史页面，否则渲染主骑行页面
     if (showHistoryScreen) {
         RideHistoryScreen(onBack = { showHistoryScreen = false })
     } else {
         RideMainContent(
-            onShowHistory = { showHistoryScreen = true }
+            onShowHistory = { showHistoryScreen = true },
+            switchButtonText = "导航",
+            onSwitchClick = { navController.navigate(AppRoutes.RIDE_NAVIGATION) },
+            enableSearch = false
         )
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RideMainContent(onShowHistory: () -> Unit) {
+fun RideNavigationScreen(navController: androidx.navigation.NavController) {
+    var showHistoryScreen by remember { mutableStateOf(false) }
+    if (showHistoryScreen) {
+        RideHistoryScreen(onBack = { showHistoryScreen = false })
+    } else {
+        RideMainContent(
+            onShowHistory = { showHistoryScreen = true },
+            switchButtonText = "开始",
+            onSwitchClick = { navController.popBackStack() },
+            enableSearch = true
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RideMainContent(
+    onShowHistory: () -> Unit,
+    switchButtonText: String? = null,
+    onSwitchClick: (() -> Unit)? = null,
+    enableSearch: Boolean = false
+) {
     val authViewModel: com.example.rideflow.auth.AuthViewModel = org.koin.androidx.compose.koinViewModel()
     val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
     var rideStatus = remember { mutableStateOf<RideStatus>(RideStatus.NotStarted) }
@@ -343,7 +377,18 @@ fun RideMainContent(onShowHistory: () -> Unit) {
     val context = LocalContext.current
     val fusedClient = remember { LocationServices.getFusedLocationProviderClient(context) }
     val currentLocation = remember { mutableStateOf<LatLng?>(null) }
+    val currentAccuracy = remember { mutableStateOf<Float?>(null) }
     val trackPoints = remember { mutableStateListOf<LatLng>() }
+    var showSearchDialog by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    val searchResults = remember { mutableStateListOf<Tip>() }
+    val selectedPlace = remember { mutableStateOf<LatLng?>(null) }
+    val navRoutePoints = remember { mutableStateListOf<LatLng>() }
+    val routeComputed = remember { mutableStateOf(false) }
+    val totalClimb = remember { mutableStateOf(0.0) }
+    val lastAltitude = remember { mutableStateOf<Double?>(null) }
+    val lastSmoothedAltitude = remember { mutableStateOf<Double?>(null) }
+    val amapClientHolder = remember { mutableStateOf<AMapLocationClient?>(null) }
 
     // 辅助函数：计算两点之间的距离（米）
     fun calculateDistance(start: LatLng, end: LatLng): Double {
@@ -386,17 +431,21 @@ fun RideMainContent(onShowHistory: () -> Unit) {
             fusedClient.lastLocation.addOnSuccessListener { loc ->
                 if (loc != null) {
                     currentLocation.value = LatLng(loc.latitude, loc.longitude)
+                    currentAccuracy.value = loc.accuracy
                 } else {
                     // 使用杭州坐标作为fallback
                     currentLocation.value = LatLng(30.311664, 120.394605)
+                    currentAccuracy.value = null
                 }
             }.addOnFailureListener {
                 // 定位失败时使用杭州坐标
                 currentLocation.value = LatLng(30.311664, 120.394605)
+                currentAccuracy.value = null
             }
         } else {
             // 没有权限时使用杭州坐标
             currentLocation.value = LatLng(30.311664, 120.394605)
+            currentAccuracy.value = null
         }
     }
 
@@ -460,22 +509,90 @@ fun RideMainContent(onShowHistory: () -> Unit) {
             fusedClient.lastLocation.addOnSuccessListener { loc ->
                 if (loc != null) {
                     currentLocation.value = LatLng(loc.latitude, loc.longitude)
+                    currentAccuracy.value = loc.accuracy
                 } else {
                     // 使用杭州坐标
                     currentLocation.value = LatLng(30.311664, 120.394605)
+                    currentAccuracy.value = null
                 }
             }.addOnFailureListener {
                 // 定位失败时使用杭州坐标
                 currentLocation.value = LatLng(30.311664, 120.394605)
+                currentAccuracy.value = null
             }
-            val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 2000L)
-                .setMinUpdateIntervalMillis(1000L)
+            val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000L)
+                .setMinUpdateIntervalMillis(500L)
                 .setWaitForAccurateLocation(true)
                 .build()
             fusedClient.requestLocationUpdates(request, callback, Looper.getMainLooper())
+            try {
+                val cts = com.google.android.gms.tasks.CancellationTokenSource()
+                fusedClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cts.token)
+                    .addOnSuccessListener { loc ->
+                        if (loc != null) {
+                            currentLocation.value = LatLng(loc.latitude, loc.longitude)
+                            currentAccuracy.value = loc.accuracy
+                        }
+                    }
+            } catch (_: Exception) {}
+
+            try {
+                val aClient = AMapLocationClient(context.applicationContext)
+                val option = AMapLocationClientOption()
+                option.locationMode = AMapLocationClientOption.AMapLocationMode.Hight_Accuracy
+                option.isSensorEnable = true
+                option.isOnceLocation = false
+                option.interval = 1000L
+                option.isGpsFirst = true
+                option.isLocationCacheEnable = false
+                option.httpTimeOut = 20000
+                option.isMockEnable = false
+                aClient.setLocationOption(option)
+                val listener = AMapLocationListener { aLoc: AMapLocation? ->
+                    if (aLoc != null) {
+                        val acc = aLoc.accuracy
+                        if (acc > 0f) {
+                            val better = currentAccuracy.value == null || acc < (currentAccuracy.value ?: Float.MAX_VALUE)
+                            if (better || aLoc.locationType == AMapLocation.LOCATION_TYPE_GPS) {
+                                currentLocation.value = LatLng(aLoc.latitude, aLoc.longitude)
+                                currentAccuracy.value = acc
+                            }
+                        }
+                    }
+                    if (aLoc != null && rideStatus.value is RideStatus.InProgress) {
+                        val alt = aLoc.altitude.toDouble()
+                        if (!alt.isNaN() && alt > -1000 && alt < 10000) {
+                            val alpha = 0.1
+                            val smoothed = if (lastSmoothedAltitude.value == null) alt else alpha * alt + (1 - alpha) * (lastSmoothedAltitude.value ?: alt)
+                            lastSmoothedAltitude.value = smoothed
+                            val prev = lastAltitude.value
+                            if (prev != null) {
+                                val delta = smoothed - prev
+                                if (delta > 1.0) {
+                                    totalClimb.value += delta
+                                    elevation.value = totalClimb.value.roundToInt().toString()
+                                }
+                            }
+                            lastAltitude.value = smoothed
+                        }
+                    }
+                }
+                aClient.setLocationListener(listener)
+                aClient.startLocation()
+                amapClientHolder.value = aClient
+            } catch (_: Exception) {
+                // ignore AMap client init failure
+            }
         }
 
-        onDispose { fusedClient.removeLocationUpdates(callback) }
+        onDispose { 
+            fusedClient.removeLocationUpdates(callback)
+            try {
+                amapClientHolder.value?.stopLocation()
+                amapClientHolder.value?.onDestroy()
+                amapClientHolder.value = null
+            } catch (_: Exception) {}
+        }
     }
 
     val historyList = listOf(
@@ -603,6 +720,240 @@ fun RideMainContent(onShowHistory: () -> Unit) {
         }
     }
 
+    LaunchedEffect(searchQuery, enableSearch) {
+        if (!enableSearch) {
+            searchResults.clear()
+        } else {
+            val q = searchQuery.trim()
+            if (q.isEmpty()) {
+                searchResults.clear()
+            } else {
+                delay(300)
+                val query = InputtipsQuery(q, "")
+                query.cityLimit = false
+                val inputtips = Inputtips(context, query)
+                inputtips.setInputtipsListener { tips, code ->
+                    searchResults.clear()
+                    if (code == 1000) {
+                        if (tips != null) searchResults.addAll(tips)
+                    }
+                }
+                inputtips.requestInputtipsAsyn()
+            }
+        }
+    }
+
+    if (showSearchDialog && enableSearch) {
+        AlertDialog(
+            onDismissRequest = { showSearchDialog = false },
+            confirmButton = {
+                TextButton(onClick = { showSearchDialog = false }) { Text("关闭") }
+            },
+            title = { Text("地点查询") },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    TextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("输入关键词") }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LazyColumn(modifier = Modifier.fillMaxWidth().height(240.dp)) {
+                        items(searchResults) { tip ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        val p = tip.point
+                                        if (p != null) {
+                                            navRoutePoints.clear()
+                                            selectedPlace.value = LatLng(p.latitude, p.longitude)
+                                            showSearchDialog = false
+                                        }
+                                    }
+                                    .padding(vertical = 10.dp, horizontal = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    Text(tip.name)
+                                    val addr = (tip.district ?: "") + (tip.address ?: "")
+                                    Text(addr, fontSize = 12.sp, color = Color.Gray)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        )
+    }
+
+    LaunchedEffect(selectedPlace.value, currentLocation.value, enableSearch) {
+        val dest = selectedPlace.value
+        val src = currentLocation.value
+        if (enableSearch && dest != null && src != null) {
+            try {
+                routeComputed.value = false
+                val routeSearch = RouteSearch(context)
+                fun buildOffsetPoints(s: LatLng, d: LatLng): List<LatLng> {
+                    val dx = d.longitude - s.longitude
+                    val dy = d.latitude - s.latitude
+                    val len = kotlin.math.sqrt(dx * dx + dy * dy)
+                    val px = if (len != 0.0) -dy / len else 0.0
+                    val py = if (len != 0.0) dx / len else 0.0
+                    fun lerp(t: Double): LatLng {
+                        val lat = s.latitude + dy * t
+                        val lng = s.longitude + dx * t
+                        return LatLng(lat, lng)
+                    }
+                    val p1 = lerp(0.25)
+                    val p2 = lerp(0.5)
+                    val p3 = lerp(0.75)
+                    val off = 0.001
+                    val p1o = LatLng(p1.latitude + py * off, p1.longitude + px * off)
+                    val p2o = LatLng(p2.latitude - py * off, p2.longitude - px * off)
+                    val p3o = LatLng(p3.latitude + py * off * 0.5, p3.longitude + px * off * 0.5)
+                    return listOf(s, p1o, p2o, p3o, d)
+                }
+                fun segmentedDriveRoute(s: LatLng, d: LatLng, done: (List<LatLng>) -> Unit) {
+                    val nodes = buildOffsetPoints(s, d)
+                    val pts = mutableListOf<LatLng>()
+                    pts.add(s)
+                    var idx = 0
+                    val segSearch = RouteSearch(context)
+                    segSearch.setRouteSearchListener(object : RouteSearch.OnRouteSearchListener {
+                        override fun onDriveRouteSearched(r: com.amap.api.services.route.DriveRouteResult?, code: Int) {
+                            if (code == 1000 && r != null && !r.paths.isNullOrEmpty()) {
+                                try {
+                                    val path = r.paths.first()
+                                    path?.steps?.forEach { step ->
+                                        step?.polyline?.forEach { p ->
+                                            pts.add(LatLng(p.latitude, p.longitude))
+                                        }
+                                    }
+                                } catch (_: Exception) {}
+                            } else {
+                                pts.add(LatLng(nodes[idx + 1].latitude, nodes[idx + 1].longitude))
+                            }
+                            idx++
+                            if (idx >= nodes.size - 1) {
+                                done(pts)
+                            } else {
+                                val from = LatLonPoint(nodes[idx].latitude, nodes[idx].longitude)
+                                val to = LatLonPoint(nodes[idx + 1].latitude, nodes[idx + 1].longitude)
+                                val q = RouteSearch.DriveRouteQuery(RouteSearch.FromAndTo(from, to), RouteSearch.DRIVING_SINGLE_DEFAULT, null, null, "")
+                                segSearch.calculateDriveRouteAsyn(q)
+                            }
+                        }
+                        override fun onWalkRouteSearched(r: WalkRouteResult?, code: Int) {}
+                        override fun onBusRouteSearched(r: com.amap.api.services.route.BusRouteResult?, code: Int) {}
+                        override fun onRideRouteSearched(r: com.amap.api.services.route.RideRouteResult?, code: Int) {}
+                    })
+                    val from0 = LatLonPoint(nodes[0].latitude, nodes[0].longitude)
+                    val to0 = LatLonPoint(nodes[1].latitude, nodes[1].longitude)
+                    val q0 = RouteSearch.DriveRouteQuery(RouteSearch.FromAndTo(from0, to0), RouteSearch.DRIVING_SINGLE_DEFAULT, null, null, "")
+                    segSearch.calculateDriveRouteAsyn(q0)
+                }
+                routeSearch.setRouteSearchListener(object : RouteSearch.OnRouteSearchListener {
+                    override fun onWalkRouteSearched(result: WalkRouteResult?, code: Int) {
+                        if (!routeComputed.value && code == 1000 && result != null && !result.paths.isNullOrEmpty()) {
+                            val points = mutableListOf<LatLng>()
+                            points.add(src)
+                            try {
+                                val path = result.paths.first()
+                                path?.steps?.forEach { step ->
+                                    step?.polyline?.forEach { p ->
+                                        points.add(LatLng(p.latitude, p.longitude))
+                                    }
+                                }
+                            } catch (_: Exception) {}
+                            points.add(dest)
+                            navRoutePoints.clear()
+                            navRoutePoints.addAll(points)
+                            routeComputed.value = true
+                        } else {
+                            segmentedDriveRoute(src, dest) { pts ->
+                                navRoutePoints.clear()
+                                navRoutePoints.addAll(pts)
+                                routeComputed.value = true
+                            }
+                        }
+                    }
+                    override fun onBusRouteSearched(result: com.amap.api.services.route.BusRouteResult?, code: Int) {}
+                    override fun onDriveRouteSearched(result: com.amap.api.services.route.DriveRouteResult?, code: Int) {
+                        if (!routeComputed.value && code == 1000 && result != null && !result.paths.isNullOrEmpty()) {
+                            val points = mutableListOf<LatLng>()
+                            points.add(src)
+                            try {
+                                val path = result.paths.first()
+                                path?.steps?.forEach { step ->
+                                    step?.polyline?.forEach { p ->
+                                        points.add(LatLng(p.latitude, p.longitude))
+                                    }
+                                }
+                            } catch (_: Exception) {}
+                            points.add(dest)
+                            navRoutePoints.clear()
+                            navRoutePoints.addAll(points)
+                            routeComputed.value = true
+                        } else if (!routeComputed.value) {
+                            segmentedDriveRoute(src, dest) { pts ->
+                                navRoutePoints.clear()
+                                navRoutePoints.addAll(pts)
+                                routeComputed.value = true
+                            }
+                        }
+                    }
+                    override fun onRideRouteSearched(result: com.amap.api.services.route.RideRouteResult?, code: Int) {}
+                })
+                val from = LatLonPoint(src.latitude, src.longitude)
+                val to = LatLonPoint(dest.latitude, dest.longitude)
+                val driveQuery = RouteSearch.DriveRouteQuery(
+                    RouteSearch.FromAndTo(from, to),
+                    RouteSearch.DRIVING_SINGLE_DEFAULT,
+                    null,
+                    null,
+                    ""
+                )
+                routeSearch.calculateDriveRouteAsyn(driveQuery)
+                val walkQuery = RouteSearch.WalkRouteQuery(RouteSearch.FromAndTo(from, to))
+                routeSearch.calculateWalkRouteAsyn(walkQuery)
+            } catch (_: Exception) {
+                try {
+                    val dx = dest.longitude - src.longitude
+                    val dy = dest.latitude - src.latitude
+                    val len = kotlin.math.sqrt(dx * dx + dy * dy)
+                    val px = if (len != 0.0) -dy / len else 0.0
+                    val py = if (len != 0.0) dx / len else 0.0
+                    fun lerp(t: Double): LatLng {
+                        val lat = src.latitude + dy * t
+                        val lng = src.longitude + dx * t
+                        return LatLng(lat, lng)
+                    }
+                    val p1 = lerp(0.25)
+                    val p2 = lerp(0.5)
+                    val p3 = lerp(0.75)
+                    val off = 0.001
+                    val p1o = LatLng(p1.latitude + py * off, p1.longitude + px * off)
+                    val p2o = LatLng(p2.latitude - py * off, p2.longitude - px * off)
+                    val p3o = LatLng(p3.latitude + py * off * 0.5, p3.longitude + px * off * 0.5)
+                    navRoutePoints.clear()
+                    navRoutePoints.add(src)
+                    navRoutePoints.add(p1o)
+                    navRoutePoints.add(p2o)
+                    navRoutePoints.add(p3o)
+                    navRoutePoints.add(dest)
+                } catch (_: Exception) {
+                    navRoutePoints.clear()
+                    navRoutePoints.add(src)
+                    navRoutePoints.add(dest)
+                }
+            }
+        } else {
+            navRoutePoints.clear()
+        }
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -621,6 +972,18 @@ fun RideMainContent(onShowHistory: () -> Unit) {
                                     contentDescription = "骑行记录",
                                     tint = Color.White
                                 )
+                            }
+                            if (enableSearch) {
+                                TextButton(
+                                    onClick = { showSearchDialog = true },
+                                    colors = ButtonDefaults.textButtonColors(contentColor = Color.White)
+                                ) { Text("查询") }
+                            }
+                            if (switchButtonText != null && onSwitchClick != null) {
+                                TextButton(
+                                    onClick = onSwitchClick,
+                                    colors = ButtonDefaults.textButtonColors(contentColor = Color.White)
+                                ) { Text(switchButtonText) }
                             }
                         }
                     )
@@ -660,16 +1023,24 @@ fun RideMainContent(onShowHistory: () -> Unit) {
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
             when (rideStatus.value) {
-                RideStatus.NotStarted -> NotStartedContent(onStartClick = onStartClick, myLocation = currentLocation.value)
+                RideStatus.NotStarted -> NotStartedContent(
+                    onStartClick = onStartClick,
+                    myLocation = currentLocation.value,
+                    accuracy = currentAccuracy.value,
+                    selectedLocation = if (enableSearch) selectedPlace.value else null,
+                    routePoints = if (enableSearch) navRoutePoints else emptyList()
+                )
                 RideStatus.InProgress -> InProgressContent(
                     duration = rideDurationText,
                     distance = rideDistance.value,
                     currentSpeed = currentSpeed.value,
                     avgSpeed = avgSpeed.value,
                     calories = calories.value,
+                    elevation = elevation.value,
                     onPauseClick = onPauseClick,
                     onStopClick = onStopClick,
                     myLocation = currentLocation.value,
+                    accuracy = currentAccuracy.value,
                     routePoints = trackPoints
                 )
                 RideStatus.Paused -> PausedContent(
@@ -681,6 +1052,7 @@ fun RideMainContent(onShowHistory: () -> Unit) {
                     onResumeClick = onResumeClick,
                     onStopClick = onStopClick,
                     myLocation = currentLocation.value,
+                    accuracy = currentAccuracy.value,
                     routePoints = trackPoints
                 )
             }
@@ -691,13 +1063,83 @@ fun RideMainContent(onShowHistory: () -> Unit) {
 @Composable
 fun NotStartedContent(
     onStartClick: () -> Unit,
-    myLocation: LatLng?
+    myLocation: LatLng?,
+    accuracy: Float? = null,
+    selectedLocation: LatLng? = null,
+    routePoints: List<LatLng> = emptyList()
 ) {
     val context = LocalContext.current
-    var showSearchDialog by remember { mutableStateOf(false) }
-    var searchQuery by remember { mutableStateOf("") }
-    val searchResults = remember { mutableStateListOf<Tip>() }
-    val selectedPlace = remember { mutableStateOf<LatLng?>(null) }
+    val currentAddress = remember { mutableStateOf("定位中") }
+    LaunchedEffect(myLocation) {
+        val loc = myLocation
+        if (loc == null) {
+            currentAddress.value = "定位中"
+        } else {
+            try {
+                fun doReverse(center: LatLonPoint) {
+                    try {
+                        val geocodeSearch = GeocodeSearch(context)
+                        geocodeSearch.setOnGeocodeSearchListener(object : GeocodeSearch.OnGeocodeSearchListener {
+                            override fun onGeocodeSearched(result: GeocodeResult?, rCode: Int) {}
+                            override fun onRegeocodeSearched(result: RegeocodeResult?, rCode: Int) {
+                                if (rCode == 1000 && result != null) {
+                                    val addr = result.regeocodeAddress?.formatAddress ?: ""
+                                    currentAddress.value = if (addr.isNotEmpty()) addr else "地址获取失败"
+                                } else {
+                                    currentAddress.value = "地址获取失败"
+                                }
+                            }
+                        })
+                        val query = RegeocodeQuery(center, 30f, GeocodeSearch.AMAP)
+                        geocodeSearch.getFromLocationAsyn(query)
+                    } catch (_: Exception) {
+                        currentAddress.value = "地址获取失败"
+                    }
+                }
+                val center = LatLonPoint(loc.latitude, loc.longitude)
+                val poiQuery = PoiSearch.Query("", "", "")
+                poiQuery.pageSize = 10
+                poiQuery.pageNum = 1
+                val poiSearch = PoiSearch(context, poiQuery)
+                poiSearch.bound = PoiSearch.SearchBound(center, 30, true)
+                poiSearch.setOnPoiSearchListener(object : PoiSearch.OnPoiSearchListener {
+                    override fun onPoiSearched(result: PoiResult?, rCode: Int) {
+                        if (rCode == 1000 && result != null && result.pois != null && result.pois.isNotEmpty()) {
+                            val nearest = result.pois.first()
+                            val title = nearest.title ?: ""
+                            val snippet = nearest.snippet ?: ""
+                            val addr = if (title.isNotEmpty()) "$title $snippet" else snippet
+                            currentAddress.value = if (addr.isNotEmpty()) addr else "地址获取失败"
+                        } else {
+                            doReverse(center)
+                        }
+                    }
+                    override fun onPoiItemSearched(item: com.amap.api.services.core.PoiItem?, rCode: Int) {}
+                })
+                poiSearch.searchPOIAsyn()
+            } catch (_: Exception) {
+                val center = LatLonPoint(loc.latitude, loc.longitude)
+                fun fallback() { currentAddress.value = "地址获取失败" }
+                try {
+                    val geocodeSearch = GeocodeSearch(context)
+                    geocodeSearch.setOnGeocodeSearchListener(object : GeocodeSearch.OnGeocodeSearchListener {
+                        override fun onGeocodeSearched(result: GeocodeResult?, rCode: Int) {}
+                        override fun onRegeocodeSearched(result: RegeocodeResult?, rCode: Int) {
+                            if (rCode == 1000 && result != null) {
+                                val addr = result.regeocodeAddress?.formatAddress ?: ""
+                                currentAddress.value = if (addr.isNotEmpty()) addr else "地址获取失败"
+                            } else {
+                                fallback()
+                            }
+                        }
+                    })
+                    geocodeSearch.getFromLocationAsyn(RegeocodeQuery(center, 30f, GeocodeSearch.AMAP))
+                } catch (_: Exception) {
+                    fallback()
+                }
+            }
+        }
+    }
     val historyList = remember {
         listOf(
             RideHistory(
@@ -717,68 +1159,9 @@ fun NotStartedContent(
         )
     }
 
-    LaunchedEffect(searchQuery) {
-        val q = searchQuery.trim()
-        if (q.isEmpty()) {
-            searchResults.clear()
-        } else {
-            delay(300)
-            val query = InputtipsQuery(q, "")
-            query.cityLimit = false
-            val inputtips = Inputtips(context, query)
-            inputtips.setInputtipsListener { tips, code ->
-                searchResults.clear()
-                if (code == 1000) {
-                    if (tips != null) searchResults.addAll(tips)
-                }
-            }
-            inputtips.requestInputtipsAsyn()
-        }
-    }
+    
 
-    if (showSearchDialog) {
-        AlertDialog(
-            onDismissRequest = { showSearchDialog = false },
-            confirmButton = {
-                TextButton(onClick = { showSearchDialog = false }) { Text("关闭") }
-            },
-            title = { Text("地点查询") },
-            text = {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    TextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("输入关键词") }
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    LazyColumn(modifier = Modifier.fillMaxWidth().height(240.dp)) {
-                        items(searchResults) { tip ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        val p = tip.point
-                                        if (p != null) {
-                                            selectedPlace.value = LatLng(p.latitude, p.longitude)
-                                            showSearchDialog = false
-                                        }
-                                    }
-                                    .padding(vertical = 10.dp, horizontal = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.fillMaxWidth()) {
-                                    Text(tip.name)
-                                    val addr = (tip.district ?: "") + (tip.address ?: "")
-                                    Text(addr, fontSize = 12.sp, color = Color.Gray)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        )
-    }
+    
 
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         item {
@@ -791,7 +1174,9 @@ fun NotStartedContent(
                 AMap2DContainer(
                     modifier = Modifier.fillMaxSize(),
                     myLocation = myLocation,
-                    selectedLocation = selectedPlace.value
+                    accuracy = accuracy,
+                    routePoints = routePoints,
+                    selectedLocation = selectedLocation
                 )
             }
         }
@@ -802,10 +1187,11 @@ fun NotStartedContent(
                 elevation = CardDefaults.cardElevation(4.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("经度: ${myLocation?.longitude?.let { String.format("%.6f", it) } ?: "定位中"}", fontSize = 14.sp, color = Color.Gray)
-                    Text("纬度: ${myLocation?.latitude?.let { String.format("%.6f", it) } ?: "定位中"}", fontSize = 14.sp, color = Color.Gray)
+                    val lonText = myLocation?.longitude?.let { String.format("%.6f", it) } ?: "定位中"
+                    val latText = myLocation?.latitude?.let { String.format("%.6f", it) } ?: "定位中"
+                    Text("经度: $lonText", fontSize = 14.sp, color = Color.Gray)
+                    Text("纬度: $latText", fontSize = 14.sp, color = Color.Gray)
                     Text("精度: 30.0m", fontSize = 14.sp, color = Color.Gray)
-                    Text("浙江省杭州市钱塘区2号大街48-64号靠近工商大学云滨(地铁站)", fontSize = 14.sp, color = Color.Black, modifier = Modifier.padding(top = 4.dp))
                 }
             }
         }
@@ -818,15 +1204,7 @@ fun NotStartedContent(
             ) { Text("开始运动", fontSize = 18.sp, color = Color.White) }
             Spacer(modifier = Modifier.height(12.dp))
         }
-        item {
-            Button(
-                onClick = { showSearchDialog = true },
-                modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF34C759))
-            ) { Text("查询", fontSize = 18.sp, color = Color.White) }
-            Spacer(modifier = Modifier.height(24.dp))
-        }
+        
         item { Spacer(modifier = Modifier.height(32.dp)) }
     }
 }
@@ -838,9 +1216,11 @@ fun InProgressContent(
     currentSpeed: String,
     avgSpeed: String,
     calories: String,
+    elevation: String,
     onPauseClick: () -> Unit,
     onStopClick: () -> Unit,
     myLocation: LatLng?,
+    accuracy: Float?,
     routePoints: List<LatLng>
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
@@ -858,6 +1238,7 @@ fun InProgressContent(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(currentSpeed, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("速度(km/h)", fontSize = 12.sp, color = Color.Gray) }
                         Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(avgSpeed, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("均速(km/h)", fontSize = 12.sp, color = Color.Gray) }
                         Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(calories, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("卡路里", fontSize = 12.sp, color = Color.Gray) }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(elevation, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("爬升(m)", fontSize = 12.sp, color = Color.Gray) }
                     }
                 }
             }
@@ -872,6 +1253,7 @@ fun InProgressContent(
                 AMap2DContainer(
                     modifier = Modifier.fillMaxSize(),
                     myLocation = myLocation,
+                    accuracy = accuracy,
                     routePoints = routePoints
                 )
             }
@@ -920,6 +1302,7 @@ fun PausedContent(
     onResumeClick: () -> Unit,
     onStopClick: () -> Unit,
     myLocation: LatLng?,
+    accuracy: Float?,
     routePoints: List<LatLng>
 ) {
     // 将布局改为LazyColumn以支持滚动
@@ -955,6 +1338,7 @@ fun PausedContent(
                 AMap2DContainer(
                     modifier = Modifier.fillMaxSize(),
                     myLocation = myLocation,
+                    accuracy = accuracy,
                     routePoints = routePoints
                 )
             }
