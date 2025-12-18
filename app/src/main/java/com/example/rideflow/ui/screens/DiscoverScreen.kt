@@ -242,17 +242,28 @@ fun DiscoverScreen(navController: androidx.navigation.NavController, userId: Str
 @Composable
 fun PromoCarousel(images: List<String>) {
     val listState = rememberLazyListState()
-    LaunchedEffect(images, listState.isScrollInProgress) {
+    val displayImages = remember(images) { if (images.size > 1) images + listOf(images.first()) else images }
+    var autoIndex by rememberSaveable { mutableStateOf(0) }
+    LaunchedEffect(displayImages.size) {
+        if (displayImages.isEmpty()) return@LaunchedEffect
         while (true) {
-            delay(4000)
-            if (images.isNotEmpty() && !listState.isScrollInProgress) {
-                val next = (listState.firstVisibleItemIndex + 1) % images.size
-                listState.animateScrollToItem(next)
+            delay(2200)
+            if (!listState.isScrollInProgress && displayImages.size > 1) {
+                val target = (autoIndex + 1).coerceAtMost(displayImages.size - 1)
+                autoIndex = target
+                listState.animateScrollToItem(target)
+                if (target == displayImages.size - 1) {
+                    listState.scrollToItem(0)
+                    autoIndex = 0
+                }
             }
         }
     }
-    LazyRow(modifier = Modifier.fillMaxWidth(), state = listState) {
-        items(images) { url ->
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        state = listState
+    ) {
+        items(displayImages) { url ->
             Card(
                 modifier = Modifier
                     .width(320.dp)
