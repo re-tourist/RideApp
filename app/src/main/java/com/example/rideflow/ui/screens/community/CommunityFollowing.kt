@@ -21,6 +21,7 @@ fun CommunityFollowingScreen(
     onAvatarClick: (Int, String) -> Unit,
     onPostClick: (Int) -> Unit,
     onLikeToggle: (Int, Boolean) -> Unit,
+    onDislikeToggle: (Int, Boolean) -> Unit,
     hasMore: Boolean = false,
     isLoadingMore: Boolean = false,
     onLoadMore: () -> Unit = {}
@@ -47,7 +48,8 @@ fun CommunityFollowingScreen(
                 showFollowButton = true,
                 onAvatarClick = onAvatarClick,
                 onPostClick = onPostClick,
-                onLikeToggle = onLikeToggle
+                onLikeToggle = onLikeToggle,
+                onDislikeToggle = onDislikeToggle
             )
             Spacer(modifier = Modifier.height(8.dp).background(Color(0xFFF0F0F0)))
         }

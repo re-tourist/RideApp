@@ -11,7 +11,7 @@
  Target Server Version : 80044 (8.0.44-0ubuntu0.22.04.1)
  File Encoding         : 65001
 
- Date: 13/12/2025 15:19:29
+ Date: 18/12/2025 19:53:34
 */
 
 SET NAMES utf8mb4;
@@ -291,7 +291,7 @@ CREATE TABLE `post_comments`  (
   INDEX `fk_comments_user`(`user_id` ASC) USING BTREE,
   CONSTRAINT `fk_comments_post` FOREIGN KEY (`post_id`) REFERENCES `community_posts` (`post_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_comments_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 31 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 41 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of post_comments
@@ -326,6 +326,35 @@ INSERT INTO `post_comments` VALUES (27, 2, 1, '111', '2025-12-12 20:34:09');
 INSERT INTO `post_comments` VALUES (28, 2, 1, 'test', '2025-12-12 20:40:48');
 INSERT INTO `post_comments` VALUES (29, 6, 1, 'good', '2025-12-12 21:17:01');
 INSERT INTO `post_comments` VALUES (30, 5, 1, 'gooooood', '2025-12-12 21:17:22');
+INSERT INTO `post_comments` VALUES (31, 2, 8, 'good', '2025-12-16 15:06:08');
+INSERT INTO `post_comments` VALUES (32, 2, 1, '999', '2025-12-16 19:43:57');
+INSERT INTO `post_comments` VALUES (33, 2, 1, '999', '2025-12-16 19:44:08');
+INSERT INTO `post_comments` VALUES (34, 5, 1, '6666', '2025-12-16 19:47:04');
+INSERT INTO `post_comments` VALUES (35, 2, 11, '999', '2025-12-17 09:03:15');
+INSERT INTO `post_comments` VALUES (36, 2, 11, '123456', '2025-12-17 09:03:27');
+INSERT INTO `post_comments` VALUES (37, 2, 11, '12545568', '2025-12-17 09:14:28');
+INSERT INTO `post_comments` VALUES (38, 2, 11, '1', '2025-12-17 09:14:34');
+INSERT INTO `post_comments` VALUES (39, 2, 8, '123456', '2025-12-17 09:17:07');
+INSERT INTO `post_comments` VALUES (40, 1, 8, 'fddf', '2025-12-17 09:28:03');
+
+-- ----------------------------
+-- Table structure for post_dislikes
+-- ----------------------------
+DROP TABLE IF EXISTS `post_dislikes`;
+CREATE TABLE `post_dislikes`  (
+  `post_id` int NOT NULL,
+  `user_id` int NOT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`post_id`, `user_id`) USING BTREE,
+  INDEX `fk_dislikes_user`(`user_id` ASC) USING BTREE,
+  CONSTRAINT `fk_dislikes_post` FOREIGN KEY (`post_id`) REFERENCES `community_posts` (`post_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_dislikes_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of post_dislikes
+-- ----------------------------
+INSERT INTO `post_dislikes` VALUES (2, 1, '2025-12-17 12:00:52');
 
 -- ----------------------------
 -- Table structure for post_likes
@@ -344,13 +373,17 @@ CREATE TABLE `post_likes`  (
 -- ----------------------------
 -- Records of post_likes
 -- ----------------------------
-INSERT INTO `post_likes` VALUES (1, 1, '2025-12-05 08:15:00');
+INSERT INTO `post_likes` VALUES (1, 1, '2025-12-17 12:00:55');
 INSERT INTO `post_likes` VALUES (1, 2, '2025-12-05 09:00:00');
 INSERT INTO `post_likes` VALUES (1, 3, '2025-12-05 08:19:00');
 INSERT INTO `post_likes` VALUES (1, 7, '2025-12-05 08:21:00');
+INSERT INTO `post_likes` VALUES (1, 8, '2025-12-17 09:27:58');
+INSERT INTO `post_likes` VALUES (2, 1, '2025-12-18 15:58:45');
 INSERT INTO `post_likes` VALUES (2, 2, '2025-12-05 08:27:00');
 INSERT INTO `post_likes` VALUES (2, 3, '2025-12-05 08:40:00');
+INSERT INTO `post_likes` VALUES (2, 8, '2025-12-16 15:05:54');
 INSERT INTO `post_likes` VALUES (2, 9, '2025-12-05 08:45:00');
+INSERT INTO `post_likes` VALUES (2, 11, '2025-12-17 09:14:15');
 INSERT INTO `post_likes` VALUES (3, 1, '2025-12-05 07:35:00');
 INSERT INTO `post_likes` VALUES (3, 2, '2025-12-05 07:40:00');
 INSERT INTO `post_likes` VALUES (4, 1, '2025-12-12 20:26:07');
@@ -359,6 +392,7 @@ INSERT INTO `post_likes` VALUES (4, 3, '2025-12-04 09:15:00');
 INSERT INTO `post_likes` VALUES (5, 1, '2025-12-04 21:00:00');
 INSERT INTO `post_likes` VALUES (5, 2, '2025-12-04 21:10:00');
 INSERT INTO `post_likes` VALUES (5, 3, '2025-12-04 21:12:00');
+INSERT INTO `post_likes` VALUES (5, 12, '2025-12-16 15:08:37');
 INSERT INTO `post_likes` VALUES (6, 1, '2025-12-12 21:16:41');
 INSERT INTO `post_likes` VALUES (6, 2, '2025-12-03 07:00:00');
 INSERT INTO `post_likes` VALUES (6, 3, '2025-12-03 06:52:00');
@@ -680,13 +714,14 @@ CREATE TABLE `user_activities`  (
   INDEX `idx_user_activities_activity`(`activity_id` ASC) USING BTREE,
   CONSTRAINT `fk_user_activities_activity` FOREIGN KEY (`activity_id`) REFERENCES `activities` (`activity_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_user_activities_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 10 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户-活动关系' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 15 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户-活动关系' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of user_activities
 -- ----------------------------
-INSERT INTO `user_activities` VALUES (8, 1, 5, 'favorite', 'upcoming', '2025-12-09 11:20:02', '????');
 INSERT INTO `user_activities` VALUES (9, 1, 4, 'favorite', 'upcoming', '2025-12-12 18:12:46', '????');
+INSERT INTO `user_activities` VALUES (13, 1, 5, 'favorite', 'upcoming', '2025-12-17 09:27:02', '????');
+INSERT INTO `user_activities` VALUES (14, 1, 3, 'favorite', 'upcoming', '2025-12-17 09:39:05', '????');
 
 -- ----------------------------
 -- Table structure for user_activity_stats
@@ -786,9 +821,13 @@ CREATE TABLE `user_follows`  (
 -- ----------------------------
 -- Records of user_follows
 -- ----------------------------
-INSERT INTO `user_follows` VALUES (1, 1, '2025-12-12 20:26:34');
-INSERT INTO `user_follows` VALUES (1, 2, '2025-12-12 20:25:45');
-INSERT INTO `user_follows` VALUES (1, 3, '2025-12-10 10:54:36');
+INSERT INTO `user_follows` VALUES (1, 1, '2025-12-16 19:43:41');
+INSERT INTO `user_follows` VALUES (1, 2, '2025-12-16 19:43:36');
+INSERT INTO `user_follows` VALUES (1, 3, '2025-12-16 20:27:47');
+INSERT INTO `user_follows` VALUES (8, 1, '2025-12-16 17:05:05');
+INSERT INTO `user_follows` VALUES (8, 2, '2025-12-17 09:41:43');
+INSERT INTO `user_follows` VALUES (8, 3, '2025-12-16 16:07:09');
+INSERT INTO `user_follows` VALUES (11, 2, '2025-12-17 09:02:41');
 
 -- ----------------------------
 -- Table structure for user_race_stats
@@ -857,7 +896,7 @@ CREATE TABLE `user_ride_preferences`  (
   INDEX `idx_user_preferences_option_id`(`option_id` ASC) USING BTREE,
   CONSTRAINT `user_ride_preferences_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `user_ride_preferences_ibfk_2` FOREIGN KEY (`option_id`) REFERENCES `ride_preference_options` (`option_id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 52 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 116 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of user_ride_preferences
@@ -870,6 +909,20 @@ INSERT INTO `user_ride_preferences` VALUES (48, 1, 1, '2025-12-06 17:07:11');
 INSERT INTO `user_ride_preferences` VALUES (49, 1, 2, '2025-12-06 17:07:11');
 INSERT INTO `user_ride_preferences` VALUES (50, 1, 3, '2025-12-06 17:07:11');
 INSERT INTO `user_ride_preferences` VALUES (51, 1, 16, '2025-12-06 17:07:11');
+INSERT INTO `user_ride_preferences` VALUES (100, 8, 8, '2025-12-17 09:04:29');
+INSERT INTO `user_ride_preferences` VALUES (102, 8, 9, '2025-12-17 09:04:29');
+INSERT INTO `user_ride_preferences` VALUES (103, 8, 12, '2025-12-17 09:04:29');
+INSERT INTO `user_ride_preferences` VALUES (105, 8, 11, '2025-12-17 09:04:29');
+INSERT INTO `user_ride_preferences` VALUES (106, 8, 14, '2025-12-17 09:04:29');
+INSERT INTO `user_ride_preferences` VALUES (107, 8, 5, '2025-12-17 09:04:30');
+INSERT INTO `user_ride_preferences` VALUES (108, 8, 16, '2025-12-17 09:04:30');
+INSERT INTO `user_ride_preferences` VALUES (109, 11, 23, '2025-12-17 09:04:31');
+INSERT INTO `user_ride_preferences` VALUES (110, 11, 25, '2025-12-17 09:04:31');
+INSERT INTO `user_ride_preferences` VALUES (111, 11, 31, '2025-12-17 09:04:31');
+INSERT INTO `user_ride_preferences` VALUES (112, 11, 8, '2025-12-17 09:04:32');
+INSERT INTO `user_ride_preferences` VALUES (113, 11, 2, '2025-12-17 09:04:32');
+INSERT INTO `user_ride_preferences` VALUES (114, 11, 3, '2025-12-17 09:04:32');
+INSERT INTO `user_ride_preferences` VALUES (115, 11, 16, '2025-12-17 09:04:33');
 
 -- ----------------------------
 -- Table structure for user_ride_records
@@ -896,7 +949,7 @@ CREATE TABLE `user_ride_records`  (
   INDEX `idx_ride_records_start_time`(`start_time` ASC) USING BTREE,
   CONSTRAINT `user_ride_records_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `user_ride_records_ibfk_2` FOREIGN KEY (`route_id`) REFERENCES `routes` (`route_id`) ON DELETE SET NULL ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 116037533 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户骑行记录' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 818851204 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户骑行记录' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of user_ride_records
@@ -930,6 +983,59 @@ INSERT INTO `user_ride_records` VALUES (107112978, 1, NULL, '2025-12-10 11:51:11
 INSERT INTO `user_ride_records` VALUES (107180767, 1, NULL, '2025-12-10 11:52:19', 0, 55, 0.06, 3.90, 2, NULL, NULL, '2025-12-10 11:52:20', 0, 16.05);
 INSERT INTO `user_ride_records` VALUES (108412885, 1, NULL, '2025-12-10 12:12:51', 0, 0, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 12:12:53', 0, 0.00);
 INSERT INTO `user_ride_records` VALUES (116037532, 11, NULL, '2025-12-10 06:19:56', 0, 4, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 14:19:56', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (563172296, 11, NULL, '2025-12-15 10:32:10', 0, 2, 0.00, 0.00, 0, NULL, NULL, '2025-12-15 18:32:13', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (565878035, 1, NULL, '2025-12-15 19:17:16', 0, 18, 0.02, 4.10, 1, NULL, NULL, '2025-12-15 19:17:17', 0, 7.12);
+INSERT INTO `user_ride_records` VALUES (566008307, 1, NULL, '2025-12-15 19:19:26', 0, 2, 0.00, 0.00, 0, NULL, NULL, '2025-12-15 19:19:27', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (576081334, 1, NULL, '2025-12-15 22:07:19', 0, 0, 0.00, 0.00, 0, NULL, NULL, '2025-12-15 22:07:20', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (577649998, 11, NULL, '2025-12-15 22:33:28', 0, 10, 0.00, 0.00, 0, NULL, NULL, '2025-12-15 22:33:30', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (577852135, 1, NULL, '2025-12-15 22:36:50', 0, 11, 0.00, 0.00, 0, NULL, NULL, '2025-12-15 22:36:52', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (577955975, 1, NULL, '2025-12-15 22:38:34', 0, 0, 0.00, 0.00, 0, NULL, NULL, '2025-12-15 22:38:36', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (578309981, 11, NULL, '2025-12-15 22:44:28', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-15 22:44:30', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (581556357, 11, NULL, '2025-12-15 23:38:35', 0, 21, 0.03, 4.40, 1, NULL, NULL, '2025-12-15 23:38:35', 0, 5.69);
+INSERT INTO `user_ride_records` VALUES (581559488, 11, NULL, '2025-12-15 23:38:38', 0, 37, 0.00, 0.00, 0, NULL, NULL, '2025-12-15 23:38:38', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (637264043, 12, NULL, '2025-12-16 07:07:02', 0, 20, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 15:07:02', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (642581256, 1, NULL, '2025-12-16 08:35:39', 0, 17, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 16:35:39', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (652318713, 11, NULL, '2025-12-16 11:17:57', 0, 2, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 19:17:59', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (653895593, 11, NULL, '2025-12-16 11:44:14', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 19:44:16', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (654786094, 11, NULL, '2025-12-16 11:59:04', 0, 4, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 19:59:07', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (658168974, 11, NULL, '2025-12-16 20:55:27', 0, 6, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 20:55:27', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (658172197, 11, NULL, '2025-12-16 20:55:30', 0, 0, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 20:55:31', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (658178828, 11, NULL, '2025-12-16 20:55:37', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 20:55:37', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (658188614, 11, NULL, '2025-12-16 20:55:47', 0, 3, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 20:55:47', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (658353237, 11, NULL, '2025-12-16 20:58:31', 0, 25, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 20:58:32', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (658949345, 11, NULL, '2025-12-16 21:08:28', 0, 21, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 21:08:28', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (659260733, 1, NULL, '2025-12-16 21:13:39', 0, 164, 0.18, 3.90, 9, NULL, NULL, '2025-12-16 21:13:39', 0, 13.19);
+INSERT INTO `user_ride_records` VALUES (659661863, 1, NULL, '2025-12-16 13:20:20', 0, 58, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 21:20:20', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (659901185, 1, NULL, '2025-12-16 13:24:19', 0, 2, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 21:24:20', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (661147521, 11, NULL, '2025-12-16 21:45:06', 0, 728, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 21:45:06', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (699491936, 11, NULL, '2025-12-17 08:24:10', 0, 42, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:24:10', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (699681149, 11, NULL, '2025-12-17 08:27:19', 0, 180, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:27:20', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (699737931, 11, NULL, '2025-12-17 00:28:16', 0, 4, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:28:20', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (699890514, 11, NULL, '2025-12-17 08:30:49', 0, 3, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:30:49', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (700280303, 11, NULL, '2025-12-17 08:37:18', 0, 3, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:37:19', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (700286219, 11, NULL, '2025-12-17 08:37:24', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:37:25', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (700336146, 11, NULL, '2025-12-17 08:38:14', 0, 2, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:38:15', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (700357627, 11, NULL, '2025-12-17 08:38:36', 0, 5, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:38:36', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (700609712, 11, NULL, '2025-12-17 08:42:48', 0, 20, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:42:48', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (700807518, 11, NULL, '2025-12-17 08:46:06', 0, 2, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:46:06', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (701637376, 1, NULL, '2025-12-17 00:59:56', 0, 22, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:59:58', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (701787707, 11, NULL, '2025-12-17 09:02:26', 0, 22, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:02:26', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (702330200, 11, NULL, '2025-12-17 09:11:28', 0, 7, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:11:29', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (702401331, 8, NULL, '2025-12-17 09:12:39', 0, 17, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:12:41', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (702430593, 8, NULL, '2025-12-17 09:13:09', 0, 8, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:13:09', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (702445472, 8, NULL, '2025-12-17 09:13:24', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:13:24', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (702570705, 8, NULL, '2025-12-17 09:15:29', 0, 7, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:15:29', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (703261803, 11, NULL, '2025-12-17 09:27:00', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:27:01', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (703289524, 11, NULL, '2025-12-17 09:27:28', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:27:28', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (703897782, 11, NULL, '2025-12-17 09:37:36', 0, 4, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:37:36', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (703946872, 11, NULL, '2025-12-17 09:38:25', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:38:25', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (704046264, 11, NULL, '2025-12-17 09:40:04', 0, 82, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:40:05', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (704313850, 8, NULL, '2025-12-17 09:44:32', 0, 20, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:44:33', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (705460654, 1, NULL, '2025-12-17 02:03:39', 0, 0, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 10:04:11', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (811087845, 1, NULL, '2025-12-18 07:24:06', 0, 3, 0.00, 0.00, 0, NULL, NULL, '2025-12-18 15:24:07', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (811298996, 1, NULL, '2025-12-18 07:27:37', 0, 5, 0.00, 0.00, 0, NULL, NULL, '2025-12-18 15:27:37', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (813220565, 1, NULL, '2025-12-18 07:59:39', 0, 6, 0.00, 0.00, 0, NULL, NULL, '2025-12-18 15:59:39', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (818851203, 1, NULL, '2025-12-18 09:33:10', 0, 15, 0.00, 0.00, 0, NULL, NULL, '2025-12-18 17:33:57', 0, 0.00);
 
 -- ----------------------------
 -- Table structure for users
@@ -956,18 +1062,20 @@ CREATE TABLE `users`  (
   INDEX `idx_users_email`(`email` ASC) USING BTREE,
   INDEX `idx_users_nickname`(`nickname` ASC) USING BTREE,
   INDEX `idx_users_status`(`status` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 12 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 14 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of users
 -- ----------------------------
-INSERT INTO `users` VALUES (1, 'testuser', 'test@example.com', '123456', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', '222', 'female', '2025-12-03', '12345678900', 0, 1, '2025-12-13 15:18:28', '2025-11-27 20:58:42', '2025-12-13 15:18:28');
+INSERT INTO `users` VALUES (1, 'testuser', 'test@example.com', '1234567', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', 'ride and ride', 'female', '2025-12-03', '12345678900', 0, 1, '2025-12-17 11:42:06', '2025-11-27 20:58:42', '2025-12-17 11:42:06');
 INSERT INTO `users` VALUES (2, 'admin', 'admin@example.com', 'admin123', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/User%20Icon/1764739073797.png', NULL, 'other', NULL, NULL, 0, 1, NULL, '2025-11-27 20:58:42', '2025-12-09 23:50:26');
 INSERT INTO `users` VALUES (3, 'user1', 'user1@example.com', 'password1', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/User%20Icon/1764739073797.png', NULL, 'other', NULL, NULL, 0, 1, NULL, '2025-11-27 20:58:42', '2025-12-09 23:50:50');
 INSERT INTO `users` VALUES (7, 'a', 'a@qq.com', 'aaaaaa', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/User%20Icon/1764739092619.png', NULL, 'other', NULL, NULL, 0, 0, '2025-11-28 00:06:10', '2025-11-28 00:06:10', '2025-12-09 23:50:57');
-INSERT INTO `users` VALUES (8, '123456', '710963274@qq.com', '123456', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/User%20Icon/1764739092619.png', NULL, 'other', NULL, NULL, 0, 0, '2025-12-10 08:52:50', '2025-12-02 12:09:25', '2025-12-10 08:52:50');
+INSERT INTO `users` VALUES (8, '123456', '710963274@qq.com', '123456', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/User%20Icon/1764739092619.png', '1', 'male', '1000-01-01', '56588655633', 0, 0, '2025-12-17 09:07:38', '2025-12-02 12:09:25', '2025-12-17 09:07:38');
 INSERT INTO `users` VALUES (9, 'ddd', 'aaa@gmail.com', 'sssssss', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/User%20Icon/1764739110342.png', NULL, 'other', NULL, NULL, 0, 0, '2025-12-02 20:24:26', '2025-12-02 20:24:26', '2025-12-09 23:51:09');
-INSERT INTO `users` VALUES (10, '111', '111@gmail.com', '111111', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/User%20Icon/1764739127863.png', NULL, 'other', NULL, NULL, 0, 0, '2025-12-09 19:17:45', '2025-12-02 20:48:47', '2025-12-09 23:51:16');
-INSERT INTO `users` VALUES (11, '1', '1@gmail.com', '123123', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/User%20Icon/1764739143896.png', NULL, 'other', NULL, NULL, 0, 0, '2025-12-10 14:13:19', '2025-12-09 19:31:59', '2025-12-10 14:13:19');
+INSERT INTO `users` VALUES (10, '111', '111@gmail.com', '111111', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/User%20Icon/1764739127863.png', NULL, 'other', NULL, NULL, 0, 0, '2025-12-16 00:39:45', '2025-12-02 20:48:47', '2025-12-16 00:39:45');
+INSERT INTO `users` VALUES (11, '1', '1@gmail.com', '123123', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/User%20Icon/1764739143896.png', NULL, 'other', NULL, NULL, 0, 0, '2025-12-17 09:26:48', '2025-12-09 19:31:59', '2025-12-17 09:26:48');
+INSERT INTO `users` VALUES (12, 'as', 'test@qq.com', '123456', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-12-16 15:06:12', '2025-12-16 15:06:11', '2025-12-16 15:06:12');
+INSERT INTO `users` VALUES (13, '123456/', 'test6@example.com', '123456', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-12-17 08:55:24', '2025-12-17 08:53:10', '2025-12-17 08:55:24');
 
 SET FOREIGN_KEY_CHECKS = 1;
