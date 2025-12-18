@@ -7,13 +7,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -32,7 +38,9 @@ import java.util.Date
 import org.koin.androidx.compose.koinViewModel
 import com.example.rideflow.auth.AuthViewModel
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
+import android.widget.Toast
 
 // ------------------------------------
 // 1. 顶部搜索栏
@@ -192,202 +200,485 @@ fun PostCard(
     onPostClick: (Int) -> Unit = {},
     onLikeToggle: (Int, Boolean) -> Unit = { _, _ -> }
 ) {
-    var isLiked by remember { mutableStateOf(post.initialIsLiked) }
-    var showShareDialog by remember { mutableStateOf(false) }
-    var showCommentSection by remember { mutableStateOf(false) }
-    var latestComments by remember { mutableStateOf<List<Comment>>(emptyList()) }
-    val authViewModel = koinViewModel<AuthViewModel>()
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val authViewModel = koinViewModel<AuthViewModel>()
 
-    val onLikeClicked: () -> Unit = {
-        val newState = !isLiked
-        isLiked = newState
-        onLikeToggle(post.id, newState)
-    }
+    var isLiked by remember { mutableStateOf(post.initialIsLiked) }
+    var likeCount by remember { mutableStateOf(post.likes) }
+    var commentCount by remember { mutableStateOf(post.comments) }
+    var latestComments by remember { mutableStateOf<List<Comment>>(emptyList()) }
+    var showCommentSheet by remember { mutableStateOf(false) }
+    var contentExpanded by rememberSaveable(post.id) { mutableStateOf(false) }
 
-    if (showShareDialog) {
-        ShareDialog(onDismiss = { showShareDialog = false })
-    }
+    val likeScale = remember { Animatable(1f) }
+    var likePulseKey by remember { mutableStateOf(0) }
 
-    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-        // 头部信息
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(Color.LightGray)
-                    .clickable { onAvatarClick(post.userId, post.authorType) }
-            ) {
-                if (!post.avatarUrl.isNullOrBlank()) {
-                    AsyncImage(
-                        model = post.avatarUrl,
-                        contentDescription = "Avatar",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Icon(
-                        imageVector = post.userAvatar,
-                        contentDescription = "Avatar",
-                        tint = Color.Gray,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-            }
-            Spacer(Modifier.width(8.dp))
-            Column {
-                Text(
-                    text = post.userName,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    modifier = Modifier.clickable { onAvatarClick(post.userId, post.authorType) }
-                )
-                Text(post.timeAgo, color = Color.Gray, fontSize = 12.sp)
-            }
-            Spacer(Modifier.weight(1f))
+    LaunchedEffect(post.likes) { likeCount = post.likes }
+    LaunchedEffect(post.comments) { commentCount = post.comments }
 
-            if (showFollowButton) {
-                Button(
-                    onClick = { onFollowToggle(post.userId, !isFollowing) },
-                    colors = ButtonDefaults.buttonColors(containerColor = if (isFollowing) Color.Gray.copy(alpha = 0.5f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)),
-                    contentPadding = PaddingValues(horizontal = 10.dp),
-                    modifier = Modifier.height(30.dp)
-                ) {
-                    Text(if (isFollowing) "已关注" else "+ 关注", color = Color.White)
-                }
-            }
+    LaunchedEffect(likePulseKey) {
+        if (likePulseKey > 0) {
+            likeScale.snapTo(1f)
+            likeScale.animateTo(1.1f, tween(durationMillis = 90))
+            likeScale.animateTo(1f, tween(durationMillis = 120))
         }
+    }
 
-        Spacer(Modifier.height(8.dp))
+    LaunchedEffect(post.id) {
+        withContext(Dispatchers.IO) {
+            val list = mutableListOf<Comment>()
+            DatabaseHelper.processQuery(
+                "SELECT pc.comment_id, u.nickname, pc.content, pc.created_at FROM post_comments pc JOIN users u ON pc.user_id = u.user_id WHERE pc.post_id = ? ORDER BY pc.created_at DESC LIMIT 2",
+                listOf(post.id)
+            ) { rs ->
+                while (rs.next()) {
+                    val cid = rs.getInt(1)
+                    val nick = rs.getString(2) ?: "匿名"
+                    val ctt = rs.getString(3) ?: ""
+                    val created = rs.getTimestamp(4)
+                    val ts =
+                        if (created != null) SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(created) else ""
+                    list.add(Comment(cid, nick, ctt, ts))
+                }
+                Unit
+            }
+            latestComments = list
+        }
+    }
 
-        // 内容
-        Text(post.content, modifier = Modifier.fillMaxWidth().clickable { onPostClick(post.id) })
-        Spacer(Modifier.height(8.dp))
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            FeedHeader(
+                post = post,
+                isFollowing = isFollowing,
+                showFollowButton = showFollowButton,
+                onFollowToggle = onFollowToggle,
+                onAvatarClick = onAvatarClick
+            )
 
-        // 图片
+            Spacer(Modifier.height(10.dp))
+
+            FeedContent(
+                content = post.content,
+                expanded = contentExpanded,
+                onExpandedChange = { contentExpanded = it },
+                onClick = { onPostClick(post.id) }
+            )
+
+            FeedImage(
+                imageUrl = post.imagePlaceholder,
+                onClick = { onPostClick(post.id) }
+            )
+
+            Spacer(Modifier.height(10.dp))
+
+            FeedActions(
+                isLiked = isLiked,
+                likeCount = likeCount,
+                commentCount = commentCount,
+                likeScale = likeScale.value,
+                onLikeClick = {
+                    val newState = !isLiked
+                    isLiked = newState
+                    if (newState) {
+                        likeCount = likeCount + 1
+                        likePulseKey += 1
+                    } else {
+                        likeCount = (likeCount - 1).coerceAtLeast(0)
+                    }
+                    onLikeToggle(post.id, newState)
+                },
+                onCommentClick = { showCommentSheet = true },
+                onShareClick = {
+                    Toast.makeText(context, "已转发到你的动态", Toast.LENGTH_SHORT).show()
+                }
+            )
+
+            Spacer(Modifier.height(10.dp))
+
+            FeedCommentsPreview(
+                comments = latestComments,
+                commentCount = commentCount,
+                onViewAll = { onPostClick(post.id) }
+            )
+        }
+    }
+
+    if (showCommentSheet) {
+        CommentInputBottomSheet(
+            onDismiss = { showCommentSheet = false },
+            onSubmit = { text ->
+                val uid = authViewModel.getCurrentUser()?.userId?.toIntOrNull()
+                if (text.isBlank() || uid == null) return@CommentInputBottomSheet
+                val now = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
+                latestComments = listOf(Comment(-1, authViewModel.getCurrentUser()?.nickname ?: "我", text.trim(), now)) + latestComments.take(1)
+                commentCount += 1
+                showCommentSheet = false
+
+                scope.launch(Dispatchers.IO) {
+                    DatabaseHelper.insertAndReturnId(
+                        "INSERT INTO post_comments (post_id, user_id, content, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
+                        listOf(post.id, uid, text.trim())
+                    )
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun FeedHeader(
+    post: Post,
+    isFollowing: Boolean,
+    showFollowButton: Boolean,
+    onFollowToggle: (Int, Boolean) -> Unit,
+    onAvatarClick: (Int, String) -> Unit
+) {
+    val nameColor = MaterialTheme.colorScheme.onSurface
+    val timeColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val tagBg = MaterialTheme.colorScheme.surfaceVariant
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(200.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color.LightGray.copy(alpha = 0.2f))
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(tagBg)
+                .clickable { onAvatarClick(post.userId, post.authorType) }
         ) {
-            AsyncImage(
-                model = post.imagePlaceholder,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        // 最新三条评论
-        LaunchedEffect(post.id) {
-            withContext(Dispatchers.IO) {
-                val list = mutableListOf<Comment>()
-                DatabaseHelper.processQuery(
-                    "SELECT pc.comment_id, u.nickname, pc.content, pc.created_at FROM post_comments pc JOIN users u ON pc.user_id = u.user_id WHERE pc.post_id = ? ORDER BY pc.created_at DESC LIMIT 3",
-                    listOf(post.id)
-                ) { rs ->
-                    while (rs.next()) {
-                        val cid = rs.getInt(1)
-                        val nick = rs.getString(2) ?: "匿名"
-                        val ctt = rs.getString(3) ?: ""
-                        val created = rs.getTimestamp(4)
-                        val ts = if (created != null) SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(created) else ""
-                        list.add(Comment(cid, nick, ctt, ts))
-                    }
-                    Unit
-                }
-                latestComments = list
-            }
-        }
-
-        if (latestComments.isNotEmpty()) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text("最新评论", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Spacer(Modifier.height(6.dp))
-                latestComments.forEach { c ->
-                    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Person, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text(c.userName, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                            Spacer(Modifier.width(8.dp))
-                            Text(c.time, fontSize = 10.sp, color = Color.Gray)
-                        }
-                        Spacer(Modifier.height(2.dp))
-                        Text(c.content, fontSize = 13.sp)
-                    }
-                }
-            }
-            Spacer(Modifier.height(12.dp))
-        }
-
-        // 底部互动按钮
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceAround
-        ) {
-            InteractionButton(
-                icon = Icons.Default.Refresh,
-                text = "转发",
-                onClick = { showShareDialog = true }
-            )
-            InteractionButton(
-                icon = Icons.Default.MailOutline,
-                text = "评论",
-                onClick = { showCommentSection = !showCommentSection }
-            )
-            InteractionButton(
-                icon = Icons.Default.ThumbUp,
-                text = post.likes.toString(),
-                tint = if (isLiked) MaterialTheme.colorScheme.primary else Color.Gray,
-                onClick = onLikeClicked
-            )
-        }
-
-        if (showCommentSection) {
-            // 展开评论输入与发送
-            var myComment by remember { mutableStateOf("") }
-            Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                HorizontalDivider()
-                Text("发表评论", fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp))
-                OutlinedTextField(
-                    value = myComment,
-                    onValueChange = { myComment = it },
-                    label = { Text("发表你的评论...") },
-                    trailingIcon = {
-                        Icon(
-                            Icons.Default.Send,
-                            contentDescription = "发送",
-                            modifier = Modifier.clickable {
-                                val text = myComment.trim()
-                                val uid = authViewModel.getCurrentUser()?.userId?.toIntOrNull()
-                                if (text.isNotEmpty() && uid != null) {
-                                    scope.launch(Dispatchers.IO) {
-                                        val newId = DatabaseHelper.insertAndReturnId(
-                                            "INSERT INTO post_comments (post_id, user_id, content, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
-                                            listOf(post.id, uid, text)
-                                        )
-                                        if (newId != null) {
-                                            val now = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
-                                            withContext(Dispatchers.Main) {
-                                                latestComments = listOf(Comment(newId, authViewModel.getCurrentUser()?.nickname ?: "我", text, now)) + latestComments.take(2)
-                                                myComment = ""
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    singleLine = true
+            if (!post.avatarUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = post.avatarUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Icon(
+                    imageVector = post.userAvatar,
+                    contentDescription = null,
+                    tint = timeColor,
+                    modifier = Modifier.fillMaxSize().padding(8.dp)
                 )
             }
+        }
+        Spacer(Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = post.userName,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 15.sp,
+                    color = nameColor,
+                    modifier = Modifier.clickable { onAvatarClick(post.userId, post.authorType) }
+                )
+                val isOfficial = post.authorType == "admin" || post.authorType == "official"
+                if (isOfficial) {
+                    Spacer(Modifier.width(6.dp))
+                    Surface(
+                        color = tagBg,
+                        shape = RoundedCornerShape(6.dp)
+                    ) {
+                        Text(
+                            text = "官方",
+                            fontSize = 10.sp,
+                            color = timeColor,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
+            Text(post.timeAgo, color = timeColor, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+
+        if (showFollowButton) {
+            val container =
+                if (isFollowing) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary
+            val content =
+                if (isFollowing) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onPrimary
+            Button(
+                onClick = { onFollowToggle(post.userId, !isFollowing) },
+                colors = ButtonDefaults.buttonColors(containerColor = container),
+                contentPadding = PaddingValues(horizontal = 10.dp),
+                modifier = Modifier.height(30.dp)
+            ) {
+                Text(if (isFollowing) "已关注" else "+ 关注", color = content, fontSize = 12.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun FeedContent(
+    content: String,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    onClick: () -> Unit
+) {
+    val textColor = MaterialTheme.colorScheme.onSurface
+    val hintColor = MaterialTheme.colorScheme.primary
+    val mayOverflow = content.length >= 90
+
+    Text(
+        text = content,
+        fontSize = 14.sp,
+        color = textColor,
+        lineHeight = 20.sp,
+        maxLines = if (expanded) Int.MAX_VALUE else 3,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+    )
+
+    AnimatedVisibility(visible = mayOverflow) {
+        TextButton(
+            onClick = { onExpandedChange(!expanded) },
+            contentPadding = PaddingValues(0.dp)
+        ) {
+            Text(if (expanded) "收起" else "展开", fontSize = 12.sp, color = hintColor)
+        }
+    }
+}
+
+@Composable
+private fun FeedImage(
+    imageUrl: String,
+    onClick: () -> Unit
+) {
+    val hasImage = imageUrl.isNotBlank() && imageUrl != "[图片]"
+    AnimatedVisibility(visible = hasImage) {
+        Column {
+            Spacer(Modifier.height(10.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(16f / 9f)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable(onClick = onClick)
+            ) {
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FeedCommentsPreview(
+    comments: List<Comment>,
+    commentCount: Int,
+    onViewAll: () -> Unit
+) {
+    val bg = MaterialTheme.colorScheme.surfaceVariant
+    val nameColor = MaterialTheme.colorScheme.onSurface
+    val contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(bg)
+            .padding(horizontal = 12.dp, vertical = 10.dp)
+    ) {
+        if (comments.isEmpty()) {
+            Text(
+                text = "还没有评论，来聊聊你的感受吧",
+                fontSize = 12.sp,
+                color = contentColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        } else {
+            comments.take(2).forEachIndexed { idx, c ->
+                if (idx > 0) Spacer(Modifier.height(8.dp))
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = c.userName,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = nameColor
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = c.content,
+                            fontSize = 12.sp,
+                            color = contentColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                    }
+                    Text(
+                        text = c.time,
+                        fontSize = 10.sp,
+                        color = contentColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+
+        AnimatedVisibility(visible = commentCount > 2) {
+            Text(
+                text = "查看全部 $commentCount 条评论",
+                fontSize = 12.sp,
+                color = contentColor,
+                modifier = Modifier
+                    .padding(top = 10.dp)
+                    .clickable(onClick = onViewAll)
+            )
+        }
+    }
+}
+
+@Composable
+private fun FeedActions(
+    isLiked: Boolean,
+    likeCount: Int,
+    commentCount: Int,
+    likeScale: Float,
+    onLikeClick: () -> Unit,
+    onCommentClick: () -> Unit,
+    onShareClick: () -> Unit
+) {
+    val iconColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val activeColor = MaterialTheme.colorScheme.primary
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        FeedActionButton(
+            icon = Icons.Default.Share,
+            label = "转发",
+            count = null,
+            tint = iconColor,
+            onClick = onShareClick
+        )
+
+        FeedActionButton(
+            icon = Icons.Default.ChatBubbleOutline,
+            label = "评论",
+            count = if (commentCount > 0) commentCount else null,
+            tint = iconColor,
+            onClick = onCommentClick
+        )
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .clickable(onClick = onLikeClick)
+                .padding(horizontal = 8.dp, vertical = 6.dp)
+        ) {
+            Crossfade(targetState = isLiked, label = "like") { liked ->
+                Icon(
+                    imageVector = if (liked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    contentDescription = "点赞",
+                    tint = if (liked) activeColor else iconColor,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .graphicsLayer(scaleX = likeScale, scaleY = likeScale)
+                )
+            }
+            AnimatedVisibility(visible = likeCount > 0) {
+                Text(
+                    text = likeCount.toString(),
+                    fontSize = 12.sp,
+                    color = if (isLiked) activeColor else iconColor,
+                    modifier = Modifier.padding(start = 6.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FeedActionButton(
+    icon: ImageVector,
+    label: String,
+    count: Int?,
+    tint: Color,
+    onClick: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 6.dp)
+    ) {
+        Icon(imageVector = icon, contentDescription = label, tint = tint, modifier = Modifier.size(20.dp))
+        if (count != null) {
+            Text(
+                text = count.toString(),
+                fontSize = 12.sp,
+                color = tint,
+                modifier = Modifier.padding(start = 6.dp)
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CommentInputBottomSheet(
+    onDismiss: () -> Unit,
+    onSubmit: (String) -> Unit
+) {
+    var text by rememberSaveable { mutableStateOf("") }
+
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 20.dp)
+        ) {
+            Text(
+                text = "写下你的回应",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(Modifier.height(12.dp))
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                placeholder = { Text("还没有评论，来聊聊你的感受吧") },
+                modifier = Modifier.fillMaxWidth(),
+                maxLines = 4
+            )
+            Spacer(Modifier.height(12.dp))
+            Button(
+                onClick = {
+                    val t = text.trim()
+                    if (t.isNotEmpty()) {
+                        onSubmit(t)
+                        text = ""
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text("发送")
+            }
+            Spacer(Modifier.height(8.dp))
         }
     }
 }

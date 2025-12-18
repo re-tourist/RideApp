@@ -1,10 +1,18 @@
 package com.example.rideflow.ui.screens
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,30 +31,38 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.layout.width
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -61,10 +77,6 @@ import android.os.Looper
 import androidx.core.content.ContextCompat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.foundation.clickable
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextButton
 import com.amap.api.services.help.Inputtips
 import com.amap.api.services.help.InputtipsQuery
 import com.amap.api.services.help.Tip
@@ -74,11 +86,7 @@ import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.Priority
 import kotlin.math.*
-import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.delay
-import androidx.compose.runtime.getValue   // for by
-import androidx.compose.runtime.setValue   // for by
-import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withTimeoutOrNull
@@ -178,9 +186,9 @@ private fun AMap2DContainer(
                 val map = mapView.map
                 
                 // 基础设置 - 优化地图显示
-                map.uiSettings.isZoomControlsEnabled = true
+                map.uiSettings.isZoomControlsEnabled = false
                 map.uiSettings.isMyLocationButtonEnabled = false
-                map.uiSettings.isScaleControlsEnabled = true
+                map.uiSettings.isScaleControlsEnabled = false
                 map.uiSettings.isCompassEnabled = false
                 
                 // 设置地图类型为标准地图
@@ -358,8 +366,27 @@ fun RideMainContent(
 ) {
     val authViewModel: com.example.rideflow.auth.AuthViewModel = org.koin.androidx.compose.koinViewModel()
     val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
-    var rideStatus = remember { mutableStateOf<RideStatus>(RideStatus.NotStarted) }
-    var elapsedSeconds by remember { mutableStateOf(0L) }
+    val rideStatusStateSaver: Saver<androidx.compose.runtime.MutableState<RideStatus>, Int> = Saver(
+        save = { state ->
+            when (state.value) {
+                RideStatus.NotStarted -> 0
+                RideStatus.InProgress -> 1
+                RideStatus.Paused -> 2
+            }
+        },
+        restore = { saved ->
+            mutableStateOf(
+                when (saved) {
+                    1 -> RideStatus.InProgress
+                    2 -> RideStatus.Paused
+                    else -> RideStatus.NotStarted
+                }
+            )
+        }
+    )
+
+    var rideStatus = rememberSaveable(saver = rideStatusStateSaver) { mutableStateOf<RideStatus>(RideStatus.NotStarted) }
+    var elapsedSeconds by rememberSaveable { mutableStateOf(0L) }
     val reportSeconds = remember { mutableStateOf(0L) }
     val rideDurationText = remember(elapsedSeconds) {
         val h = elapsedSeconds / 3600
@@ -387,6 +414,7 @@ fun RideMainContent(
     val fusedClient = remember { LocationServices.getFusedLocationProviderClient(context) }
     val currentLocation = remember { mutableStateOf<LatLng?>(null) }
     val currentAccuracy = remember { mutableStateOf<Float?>(null) }
+    var locationErrorText by remember { mutableStateOf<String?>(null) }
     val trackPoints = remember { mutableStateListOf<LatLng>() }
     var showSearchDialog by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -718,13 +746,13 @@ fun RideMainContent(
     val onPauseClick = { rideStatus.value = RideStatus.Paused }
     val onResumeClick = { rideStatus.value = RideStatus.InProgress }
     val onStopClick: () -> Unit = {
+        val startMillis = startTime.value ?: System.currentTimeMillis()
         reportSeconds.value = elapsedSeconds      // 先记住
         elapsedSeconds = 0                        // 再清零
         startTime.value = null
         rideStatus.value = RideStatus.NotStarted
         showReportDialog.value = true
         val userId = authViewModel.getCurrentUser()?.userId?.toIntOrNull() ?: 0
-        val startMillis = startTime.value ?: System.currentTimeMillis()
         val durationSec = reportSeconds.value.toInt()
         val distanceKm = totalDistance.value / 1000.0
         val avg = avgSpeed.value.toDoubleOrNull() ?: run {
@@ -791,6 +819,17 @@ fun RideMainContent(
                 elapsedSeconds = 0
                 startTime.value = null
             }
+        }
+    }
+
+    LaunchedEffect(currentLocation.value) {
+        if (currentLocation.value != null) {
+            locationErrorText = null
+            return@LaunchedEffect
+        }
+        delay(2500)
+        if (currentLocation.value == null) {
+            locationErrorText = "位置获取失败，请检查网络"
         }
     }
 
@@ -1067,103 +1106,75 @@ fun RideMainContent(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            when (rideStatus.value) {
-                is RideStatus.NotStarted -> {
-                    TopAppBar(
-                        title = { Text("骑迹", color = Color.White) },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = Color(0xFF007AFF)
-                        ),
-                        // 添加右上角的历史记录按钮
-                        actions = {
-                            IconButton(onClick = onShowHistory) {
-                                Icon(
-                                    imageVector = Icons.Filled.DateRange, // 使用时钟/日历图标
-                                    contentDescription = "骑行记录",
-                                    tint = Color.White
-                                )
-                            }
-                            if (enableSearch) {
-                                TextButton(
-                                    onClick = { showSearchDialog = true },
-                                    colors = ButtonDefaults.textButtonColors(contentColor = Color.White)
-                                ) { Text("查询") }
-                            }
-                            if (switchButtonText != null && onSwitchClick != null) {
-                                TextButton(
-                                    onClick = onSwitchClick,
-                                    colors = ButtonDefaults.textButtonColors(contentColor = Color.White)
-                                ) { Text(switchButtonText) }
-                            }
-                        }
-                    )
-                }
-                is RideStatus.InProgress -> {
-                    TopAppBar(
-                        title = { Text("正在运动", color = Color.White) },
-                        navigationIcon = {
-                            Button(
-                                onClick = onStopClick,
-                                modifier = Modifier.size(40.dp),
-                                shape = RoundedCornerShape(4.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                                elevation = ButtonDefaults.buttonElevation(0.dp)
-                            ) { Text("结束", color = Color.White, fontSize = 14.sp) }
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF007AFF))
-                    )
-                }
-                is RideStatus.Paused -> {
-                    TopAppBar(
-                        title = { Text("已暂停", color = Color.White) },
-                        navigationIcon = {
-                            Button(
-                                onClick = onStopClick,
-                                modifier = Modifier.size(40.dp),
-                                shape = RoundedCornerShape(4.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                                elevation = ButtonDefaults.buttonElevation(0.dp)
-                            ) { Text("结束", color = Color.White, fontSize = 14.sp) }
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF007AFF))
-                    )
-                }
+            val titleText = when (rideStatus.value) {
+                RideStatus.NotStarted -> "运动"
+                RideStatus.InProgress -> "运动中"
+                RideStatus.Paused -> "已暂停"
             }
+            TopAppBar(
+                title = { Text(titleText, color = Color.White) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF007BFF)),
+                actions = {
+                    IconButton(onClick = onShowHistory) {
+                        Icon(
+                            imageVector = Icons.Filled.DateRange,
+                            contentDescription = "骑行记录",
+                            tint = Color.White
+                        )
+                    }
+                    if (enableSearch) {
+                        TextButton(
+                            onClick = { showSearchDialog = true },
+                            colors = ButtonDefaults.textButtonColors(contentColor = Color.White)
+                        ) { Text("查询") }
+                    }
+                    if (switchButtonText != null && onSwitchClick != null) {
+                        TextButton(
+                            onClick = onSwitchClick,
+                            colors = ButtonDefaults.textButtonColors(contentColor = Color.White)
+                        ) { Text(switchButtonText) }
+                    }
+                }
+            )
         }
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
             when (rideStatus.value) {
                 RideStatus.NotStarted -> NotStartedContent(
                     onStartClick = onStartClick,
+                    duration = rideDurationText,
+                    distance = rideDistance.value,
+                    currentSpeed = currentSpeed.value,
                     myLocation = currentLocation.value,
                     accuracy = currentAccuracy.value,
                     selectedLocation = if (enableSearch) selectedPlace.value else null,
-                    routePoints = if (enableSearch) navRoutePoints else emptyList()
+                    routePoints = if (enableSearch) navRoutePoints else emptyList(),
+                    isLoading = currentLocation.value == null,
+                    errorText = locationErrorText
                 )
                 RideStatus.InProgress -> InProgressContent(
                     duration = rideDurationText,
                     distance = rideDistance.value,
                     currentSpeed = currentSpeed.value,
-                    avgSpeed = avgSpeed.value,
-                    calories = calories.value,
-                    elevation = elevation.value,
                     onPauseClick = onPauseClick,
                     onStopClick = onStopClick,
                     myLocation = currentLocation.value,
                     accuracy = currentAccuracy.value,
-                    routePoints = trackPoints
+                    routePoints = trackPoints,
+                    isLoading = currentLocation.value == null,
+                    errorText = locationErrorText
                 )
                 RideStatus.Paused -> PausedContent(
                     duration = rideDurationText,
                     distance = rideDistance.value,
                     currentSpeed = currentSpeed.value,
-                    avgSpeed = avgSpeed.value,
-                    calories = calories.value,
                     onResumeClick = onResumeClick,
                     onStopClick = onStopClick,
                     myLocation = currentLocation.value,
                     accuracy = currentAccuracy.value,
-                    routePoints = trackPoints
+                    routePoints = trackPoints,
+                    isLoading = currentLocation.value == null,
+                    errorText = locationErrorText
                 )
             }
         }
@@ -1173,150 +1184,37 @@ fun RideMainContent(
 @Composable
 fun NotStartedContent(
     onStartClick: () -> Unit,
+    duration: String,
+    distance: String,
+    currentSpeed: String,
     myLocation: LatLng?,
     accuracy: Float? = null,
     selectedLocation: LatLng? = null,
-    routePoints: List<LatLng> = emptyList()
+    routePoints: List<LatLng> = emptyList(),
+    isLoading: Boolean,
+    errorText: String?
 ) {
-    val context = LocalContext.current
-    val currentAddress = remember { mutableStateOf("定位中") }
-    LaunchedEffect(myLocation) {
-        val loc = myLocation
-        if (loc == null) {
-            currentAddress.value = "定位中"
-        } else {
-            try {
-                fun doReverse(center: LatLonPoint) {
-                    try {
-                        val geocodeSearch = GeocodeSearch(context)
-                        geocodeSearch.setOnGeocodeSearchListener(object : GeocodeSearch.OnGeocodeSearchListener {
-                            override fun onGeocodeSearched(result: GeocodeResult?, rCode: Int) {}
-                            override fun onRegeocodeSearched(result: RegeocodeResult?, rCode: Int) {
-                                if (rCode == 1000 && result != null) {
-                                    val addr = result.regeocodeAddress?.formatAddress ?: ""
-                                    currentAddress.value = if (addr.isNotEmpty()) addr else "地址获取失败"
-                                } else {
-                                    currentAddress.value = "地址获取失败"
-                                }
-                            }
-                        })
-                        val query = RegeocodeQuery(center, 30f, GeocodeSearch.AMAP)
-                        geocodeSearch.getFromLocationAsyn(query)
-                    } catch (_: Exception) {
-                        currentAddress.value = "地址获取失败"
-                    }
-                }
-                val center = LatLonPoint(loc.latitude, loc.longitude)
-                val poiQuery = PoiSearch.Query("", "", "")
-                poiQuery.pageSize = 10
-                poiQuery.pageNum = 1
-                val poiSearch = PoiSearch(context, poiQuery)
-                poiSearch.bound = PoiSearch.SearchBound(center, 30, true)
-                poiSearch.setOnPoiSearchListener(object : PoiSearch.OnPoiSearchListener {
-                    override fun onPoiSearched(result: PoiResult?, rCode: Int) {
-                        if (rCode == 1000 && result != null && result.pois != null && result.pois.isNotEmpty()) {
-                            val nearest = result.pois.first()
-                            val title = nearest.title ?: ""
-                            val snippet = nearest.snippet ?: ""
-                            val addr = if (title.isNotEmpty()) "$title $snippet" else snippet
-                            currentAddress.value = if (addr.isNotEmpty()) addr else "地址获取失败"
-                        } else {
-                            doReverse(center)
-                        }
-                    }
-                    override fun onPoiItemSearched(item: com.amap.api.services.core.PoiItem?, rCode: Int) {}
-                })
-                poiSearch.searchPOIAsyn()
-            } catch (_: Exception) {
-                val center = LatLonPoint(loc.latitude, loc.longitude)
-                fun fallback() { currentAddress.value = "地址获取失败" }
-                try {
-                    val geocodeSearch = GeocodeSearch(context)
-                    geocodeSearch.setOnGeocodeSearchListener(object : GeocodeSearch.OnGeocodeSearchListener {
-                        override fun onGeocodeSearched(result: GeocodeResult?, rCode: Int) {}
-                        override fun onRegeocodeSearched(result: RegeocodeResult?, rCode: Int) {
-                            if (rCode == 1000 && result != null) {
-                                val addr = result.regeocodeAddress?.formatAddress ?: ""
-                                currentAddress.value = if (addr.isNotEmpty()) addr else "地址获取失败"
-                            } else {
-                                fallback()
-                            }
-                        }
-                    })
-                    geocodeSearch.getFromLocationAsyn(RegeocodeQuery(center, 30f, GeocodeSearch.AMAP))
-                } catch (_: Exception) {
-                    fallback()
-                }
-            }
-        }
-    }
-    val historyList = remember {
-        listOf(
-            RideHistory(
-                date = "2025-10-18 15:41",
-                duration = "00:08:08",
-                distance = "3.25 km",
-                avgSpeed = "24.1 km/h",
-                calories = "156 kcal"
-            ),
-            RideHistory(
-                date = "2025-10-17 22:33",
-                duration = "00:15:03",
-                distance = "5.67 km",
-                avgSpeed = "22.6 km/h",
-                calories = "210 kcal"
-            )
-        )
-    }
-
-    
-
-    
-
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
-        item {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp)
-                    .padding(horizontal = 16.dp)
-            ) {
-                AMap2DContainer(
-                    modifier = Modifier.fillMaxSize(),
-                    myLocation = myLocation,
-                    accuracy = accuracy,
-                    routePoints = routePoints,
-                    selectedLocation = selectedLocation
-                )
-            }
-        }
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                shape = RoundedCornerShape(12.dp),
-                elevation = CardDefaults.cardElevation(4.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    val lonText = myLocation?.longitude?.let { String.format("%.6f", it) } ?: "定位中"
-                    val latText = myLocation?.latitude?.let { String.format("%.6f", it) } ?: "定位中"
-                    Text("经度: $lonText", fontSize = 14.sp, color = Color.Gray)
-                    Text("纬度: $latText", fontSize = 14.sp, color = Color.Gray)
-                    Text("精度: 30.0m", fontSize = 14.sp, color = Color.Gray)
-                }
-            }
-        }
-        item {
-            Button(
+    RideWorkoutLayout(
+        duration = duration,
+        distance = distance,
+        currentSpeed = currentSpeed,
+        highlightData = false,
+        myLocation = myLocation,
+        accuracy = accuracy,
+        routePoints = routePoints,
+        selectedLocation = selectedLocation,
+        isLoading = isLoading,
+        errorText = errorText,
+        primaryButton = {
+            RidePrimaryButton(
+                text = "开始",
+                containerColor = Color(0xFF007BFF),
                 onClick = onStartClick,
-                modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF007AFF))
-            ) { Text("开始运动", fontSize = 18.sp, color = Color.White) }
-            Spacer(modifier = Modifier.height(12.dp))
-        }
-        
-        item { Spacer(modifier = Modifier.height(32.dp)) }
-    }
+                modifier = Modifier.fillMaxWidth(0.7f)
+            )
+        },
+        secondaryButton = null
+    )
 }
 
 @Composable
@@ -1324,82 +1222,63 @@ fun InProgressContent(
     duration: String,
     distance: String,
     currentSpeed: String,
-    avgSpeed: String,
-    calories: String,
-    elevation: String,
     onPauseClick: () -> Unit,
     onStopClick: () -> Unit,
     myLocation: LatLng?,
     accuracy: Float?,
-    routePoints: List<LatLng>
+    routePoints: List<LatLng>,
+    isLoading: Boolean,
+    errorText: String?
 ) {
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                shape = RoundedCornerShape(12.dp),
-                elevation = CardDefaults.cardElevation(8.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(duration, fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color(0xFF007AFF), modifier = Modifier.align(Alignment.CenterHorizontally))
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(distance, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("距离(km)", fontSize = 12.sp, color = Color.Gray) }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(currentSpeed, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("速度(km/h)", fontSize = 12.sp, color = Color.Gray) }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(avgSpeed, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("均速(km/h)", fontSize = 12.sp, color = Color.Gray) }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(calories, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("卡路里", fontSize = 12.sp, color = Color.Gray) }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(elevation, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("爬升(m)", fontSize = 12.sp, color = Color.Gray) }
-                    }
-                }
-            }
-            
-            // 地图区域使用固定高度和最小化重绘
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp)
-                    .padding(horizontal = 16.dp)
-            ) {
-                AMap2DContainer(
-                    modifier = Modifier.fillMaxSize(),
-                    myLocation = myLocation,
-                    accuracy = accuracy,
-                    routePoints = routePoints
-                )
-            }
-        }
-        
-        // 下半部分：按钮区域，固定在导航栏上方
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 100.dp)
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 24.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+    var showStopConfirm by rememberSaveable { mutableStateOf(false) }
+    if (showStopConfirm) {
+        AlertDialog(
+            onDismissRequest = { showStopConfirm = false },
+            title = { Text("结束运动") },
+            text = { Text("确认结束本次运动？") },
+            confirmButton = {
                 Button(
-                    onClick = onPauseClick,
-                    modifier = Modifier.size(80.dp, 50.dp),
-                    shape = RoundedCornerShape(25.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9500))
-                ) {
-                    Text("暂停", color = Color.White, fontSize = 14.sp)
-                }
-                Spacer(modifier = Modifier.width(40.dp))
-                Button(
-                    onClick = onStopClick,
-                    modifier = Modifier.size(80.dp, 50.dp),
-                    shape = RoundedCornerShape(25.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF3B30))
-                ) {
-                    Text("结束", color = Color.White, fontSize = 14.sp)
-                }
+                    onClick = {
+                        showStopConfirm = false
+                        onStopClick()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC3545))
+                ) { Text("结束", color = Color.White) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showStopConfirm = false }) { Text("取消") }
             }
-        }
+        )
     }
+
+    RideWorkoutLayout(
+        duration = duration,
+        distance = distance,
+        currentSpeed = currentSpeed,
+        highlightData = true,
+        myLocation = myLocation,
+        accuracy = accuracy,
+        routePoints = routePoints,
+        selectedLocation = null,
+        isLoading = isLoading,
+        errorText = errorText,
+        primaryButton = {
+            RidePrimaryButton(
+                text = "暂停",
+                containerColor = Color(0xFF007BFF),
+                onClick = onPauseClick,
+                modifier = Modifier.weight(1.2f)
+            )
+        },
+        secondaryButton = {
+            RideSecondaryButton(
+                text = "结束",
+                containerColor = Color(0xFFDC3545),
+                onClick = { showStopConfirm = true },
+                modifier = Modifier.weight(1f)
+            )
+        }
+    )
 }
 
 @Composable
@@ -1407,65 +1286,308 @@ fun PausedContent(
     duration: String,
     distance: String,
     currentSpeed: String,
-    avgSpeed: String,
-    calories: String,
     onResumeClick: () -> Unit,
     onStopClick: () -> Unit,
     myLocation: LatLng?,
     accuracy: Float?,
-    routePoints: List<LatLng>
+    routePoints: List<LatLng>,
+    isLoading: Boolean,
+    errorText: String?
 ) {
-    // 将布局改为LazyColumn以支持滚动
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                shape = RoundedCornerShape(12.dp),
-                elevation = CardDefaults.cardElevation(8.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(duration, fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF9500), modifier = Modifier.align(Alignment.CenterHorizontally))
-                    Text("已暂停", fontSize = 16.sp, color = Color(0xFFFF9500), modifier = Modifier.align(Alignment.CenterHorizontally))
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(distance, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("距离(km)", fontSize = 12.sp, color = Color.Gray) }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(currentSpeed, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("速度(km/h)", fontSize = 12.sp, color = Color.Gray) }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(avgSpeed, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("均速(km/h)", fontSize = 12.sp, color = Color.Gray) }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(calories, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("卡路里", fontSize = 12.sp, color = Color.Gray) }
+    var showStopConfirm by rememberSaveable { mutableStateOf(false) }
+    if (showStopConfirm) {
+        AlertDialog(
+            onDismissRequest = { showStopConfirm = false },
+            title = { Text("结束运动") },
+            text = { Text("确认结束本次运动？") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showStopConfirm = false
+                        onStopClick()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC3545))
+                ) { Text("结束", color = Color.White) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showStopConfirm = false }) { Text("取消") }
+            }
+        )
+    }
+
+    RideWorkoutLayout(
+        duration = duration,
+        distance = distance,
+        currentSpeed = currentSpeed,
+        highlightData = false,
+        myLocation = myLocation,
+        accuracy = accuracy,
+        routePoints = routePoints,
+        selectedLocation = null,
+        isLoading = isLoading,
+        errorText = errorText,
+        primaryButton = {
+            RidePrimaryButton(
+                text = "继续",
+                containerColor = Color(0xFF28A745),
+                onClick = onResumeClick,
+                modifier = Modifier.weight(1.2f)
+            )
+        },
+        secondaryButton = {
+            RideSecondaryButton(
+                text = "结束",
+                containerColor = Color(0xFFDC3545),
+                onClick = { showStopConfirm = true },
+                modifier = Modifier.weight(1f)
+            )
+        }
+    )
+}
+
+@Composable
+private fun RideWorkoutLayout(
+    duration: String,
+    distance: String,
+    currentSpeed: String,
+    highlightData: Boolean,
+    myLocation: LatLng?,
+    accuracy: Float?,
+    routePoints: List<LatLng>,
+    selectedLocation: LatLng?,
+    isLoading: Boolean,
+    errorText: String?,
+    primaryButton: @Composable RowScope.() -> Unit,
+    secondaryButton: (@Composable RowScope.() -> Unit)?
+) {
+    val background = Color(0xFFF8F9FA)
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(background)
+    ) {
+        val mapHeight = maxHeight * 0.62f
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(mapHeight)
+                .align(Alignment.TopCenter)
+        ) {
+            AMap2DContainer(
+                modifier = Modifier.fillMaxSize(),
+                myLocation = myLocation,
+                accuracy = accuracy,
+                routePoints = routePoints,
+                selectedLocation = selectedLocation
+            )
+
+            AnimatedVisibility(visible = isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Card(
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White)
+                    ) {
+                        Box(modifier = Modifier.padding(12.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = Color(0xFF007BFF), strokeWidth = 3.dp)
+                        }
                     }
                 }
             }
         }
 
-        item {
-            // 地图区域改为固定高度，不再使用weight
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp)
-                    .padding(horizontal = 16.dp)
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 96.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            if (secondaryButton == null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    primaryButton()
+                }
+            } else {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    primaryButton()
+                    secondaryButton()
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            RideRealtimeDataCard(
+                duration = duration,
+                distance = distance,
+                currentSpeed = currentSpeed,
+                highlight = highlightData
+            )
+        }
+
+        AnimatedVisibility(
+            visible = !errorText.isNullOrBlank(),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 24.dp)
+        ) {
+            Card(
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
             ) {
-                AMap2DContainer(
-                    modifier = Modifier.fillMaxSize(),
-                    myLocation = myLocation,
-                    accuracy = accuracy,
-                    routePoints = routePoints
+                Text(
+                    text = errorText.orEmpty(),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    fontSize = 12.sp,
+                    color = Color(0xFF6C757D)
                 )
             }
         }
+    }
+}
 
-        item {
-            Row(modifier = Modifier.fillMaxWidth().padding(24.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                Button(onClick = onResumeClick, modifier = Modifier.size(64.dp), shape = RoundedCornerShape(50), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF34C759))) { Text("继续", color = Color.White, fontSize = 14.sp) }
-                Spacer(modifier = Modifier.width(40.dp))
-                Button(onClick = onStopClick, modifier = Modifier.size(64.dp), shape = RoundedCornerShape(50), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF3B30))) { Text("结束", color = Color.White, fontSize = 14.sp) }
+@Composable
+private fun RidePrimaryButton(
+    text: String,
+    containerColor: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val scale = remember { Animatable(1f) }
+    var pulseKey by remember { mutableStateOf(0) }
+    LaunchedEffect(pulseKey) {
+        if (pulseKey > 0) {
+            scale.snapTo(1f)
+            scale.animateTo(1.1f, tween(durationMillis = 90))
+            scale.animateTo(1f, tween(durationMillis = 120))
+        }
+    }
+    Button(
+        onClick = {
+            pulseKey += 1
+            onClick()
+        },
+        modifier = modifier
+            .height(56.dp)
+            .scale(scale.value),
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = containerColor)
+    ) {
+        Text(text = text, fontSize = 18.sp, color = Color.White, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+private fun RideSecondaryButton(
+    text: String,
+    containerColor: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val scale = remember { Animatable(1f) }
+    var pulseKey by remember { mutableStateOf(0) }
+    LaunchedEffect(pulseKey) {
+        if (pulseKey > 0) {
+            scale.snapTo(1f)
+            scale.animateTo(1.08f, tween(durationMillis = 90))
+            scale.animateTo(1f, tween(durationMillis = 120))
+        }
+    }
+    Button(
+        onClick = {
+            pulseKey += 1
+            onClick()
+        },
+        modifier = modifier
+            .height(56.dp)
+            .scale(scale.value),
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = containerColor)
+    ) {
+        Text(text = text, fontSize = 18.sp, color = Color.White, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+private fun RideRealtimeDataCard(
+    duration: String,
+    distance: String,
+    currentSpeed: String,
+    highlight: Boolean
+) {
+    val borderColor = if (highlight) Color(0xFF007BFF) else Color(0xFFE9ECEF)
+    val containerColor = if (highlight) Color(0xFFF2F7FF) else Color.White
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, borderColor, RoundedCornerShape(12.dp)),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(4.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            RideDataItem(
+                label = "当前速度",
+                value = currentSpeed,
+                unit = "km/h",
+                modifier = Modifier.weight(1f)
+            )
+            RideDataItem(
+                label = "总距离",
+                value = distance,
+                unit = "km",
+                modifier = Modifier.weight(1f)
+            )
+            RideDataItem(
+                label = "用时",
+                value = duration,
+                unit = "",
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun RideDataItem(
+    label: String,
+    value: String,
+    unit: String,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(verticalAlignment = Alignment.Bottom) {
+            AnimatedContent(targetState = value, label = "ride-data") { v ->
+                Text(
+                    text = v,
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF212529)
+                )
+            }
+            if (unit.isNotEmpty()) {
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(text = unit, fontSize = 13.sp, color = Color(0xFF6C757D))
             }
         }
-
-        // 增加此处的留白高度，防止被底部导航栏遮挡，允许用户上滑
-        item {
-            Spacer(modifier = Modifier.height(120.dp))
-        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(text = label, fontSize = 12.sp, color = Color(0xFF6C757D))
     }
 }
 
