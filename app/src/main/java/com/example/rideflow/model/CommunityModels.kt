@@ -47,7 +47,8 @@ data class Comment(
     val id: Int,
     val userName: String,
     val content: String,
-    val time: String
+    val time: String,
+    val avatarUrl: String? = null
 )
 
 // 好友模型
