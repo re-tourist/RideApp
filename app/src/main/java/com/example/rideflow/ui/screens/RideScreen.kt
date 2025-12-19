@@ -7,6 +7,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -14,19 +15,27 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -35,7 +44,10 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -58,12 +70,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.ContentScale
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.amap.api.maps2d.MapView
@@ -95,7 +111,10 @@ import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
 import com.example.rideflow.auth.AuthViewModel
 import com.example.rideflow.backend.RideRecordDatabaseHelper
+import com.example.rideflow.backend.DatabaseHelper
 import com.example.rideflow.navigation.AppRoutes
+import coil.compose.AsyncImage
+import com.example.rideflow.R
 import com.amap.api.services.geocoder.GeocodeSearch
 import com.amap.api.services.geocoder.RegeocodeQuery
 import com.amap.api.services.core.LatLonPoint
@@ -121,6 +140,11 @@ sealed class RideStatus {
     object NotStarted : RideStatus()
     object InProgress : RideStatus()
     object Paused : RideStatus()
+}
+
+private enum class RideStartMode {
+    FreeRide,
+    TargetRide
 }
 
 data class RideHistory(
@@ -327,16 +351,31 @@ private fun AMap2DContainer(
 @Composable
 fun RideScreen(navController: androidx.navigation.NavController) {
     var showHistoryScreen by remember { mutableStateOf(false) }
+    var showRouteSelect by rememberSaveable { mutableStateOf(false) }
+    var selectedRouteId by rememberSaveable { mutableStateOf<Int?>(null) }
 
-    if (showHistoryScreen) {
-        RideHistoryScreen(onBack = { showHistoryScreen = false })
-    } else {
-        RideMainContent(
-            onShowHistory = { showHistoryScreen = true },
-            switchButtonText = "导航",
-            onSwitchClick = { navController.navigate(AppRoutes.RIDE_NAVIGATION) },
-            enableSearch = false
-        )
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (showHistoryScreen) {
+            RideHistoryScreen(onBack = { showHistoryScreen = false })
+        } else {
+            RideMainContent(
+                onShowHistory = { showHistoryScreen = true },
+                routeButtonText = "路线",
+                onRouteClick = { showRouteSelect = true },
+                enableSearch = false
+            )
+        }
+
+        if (showRouteSelect) {
+            RouteSelectBottomSheet(
+                selectedRouteId = selectedRouteId,
+                onDismiss = { showRouteSelect = false },
+                onSelectRouteId = { id ->
+                    selectedRouteId = id
+                    showRouteSelect = false
+                }
+            )
+        }
     }
 }
 
@@ -351,6 +390,8 @@ fun RideNavigationScreen(navController: androidx.navigation.NavController) {
             onShowHistory = { showHistoryScreen = true },
             switchButtonText = "开始",
             onSwitchClick = { navController.popBackStack() },
+            routeButtonText = null,
+            onRouteClick = null,
             enableSearch = true
         )
     }
@@ -362,6 +403,8 @@ fun RideMainContent(
     onShowHistory: () -> Unit,
     switchButtonText: String? = null,
     onSwitchClick: (() -> Unit)? = null,
+    routeButtonText: String? = null,
+    onRouteClick: (() -> Unit)? = null,
     enableSearch: Boolean = false
 ) {
     val authViewModel: com.example.rideflow.auth.AuthViewModel = org.koin.androidx.compose.koinViewModel()
@@ -1106,45 +1149,46 @@ fun RideMainContent(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            val titleText = when (rideStatus.value) {
-                RideStatus.NotStarted -> "运动"
-                RideStatus.InProgress -> "运动中"
-                RideStatus.Paused -> "已暂停"
-            }
-            TopAppBar(
-                title = { Text(titleText, color = Color.White) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF007BFF)),
-                actions = {
-                    IconButton(onClick = onShowHistory) {
-                        Icon(
-                            imageVector = Icons.Filled.DateRange,
-                            contentDescription = "骑行记录",
-                            tint = Color.White
-                        )
-                    }
-                    if (enableSearch) {
-                        TextButton(
-                            onClick = { showSearchDialog = true },
-                            colors = ButtonDefaults.textButtonColors(contentColor = Color.White)
-                        ) { Text("查询") }
-                    }
-                    if (switchButtonText != null && onSwitchClick != null) {
-                        TextButton(
-                            onClick = onSwitchClick,
-                            colors = ButtonDefaults.textButtonColors(contentColor = Color.White)
-                        ) { Text(switchButtonText) }
-                    }
+            if (rideStatus.value != RideStatus.NotStarted) {
+                val titleText = when (rideStatus.value) {
+                    RideStatus.NotStarted -> "运动"
+                    RideStatus.InProgress -> "运动中"
+                    RideStatus.Paused -> "已暂停"
                 }
-            )
+                TopAppBar(
+                    title = { Text(titleText, color = Color.White) },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF007BFF)),
+                    actions = {
+                        IconButton(onClick = onShowHistory) {
+                            Icon(
+                                imageVector = Icons.Filled.DateRange,
+                                contentDescription = "骑行记录",
+                                tint = Color.White
+                            )
+                        }
+                        if (enableSearch) {
+                            TextButton(
+                                onClick = { showSearchDialog = true },
+                                colors = ButtonDefaults.textButtonColors(contentColor = Color.White)
+                            ) { Text("查询") }
+                        }
+                        if (switchButtonText != null && onSwitchClick != null) {
+                            TextButton(
+                                onClick = onSwitchClick,
+                                colors = ButtonDefaults.textButtonColors(contentColor = Color.White)
+                            ) { Text(switchButtonText) }
+                        }
+                    }
+                )
+            }
         }
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
             when (rideStatus.value) {
                 RideStatus.NotStarted -> NotStartedContent(
                     onStartClick = onStartClick,
-                    duration = rideDurationText,
-                    distance = rideDistance.value,
-                    currentSpeed = currentSpeed.value,
+                    routeButtonText = routeButtonText,
+                    onRouteClick = onRouteClick,
                     myLocation = currentLocation.value,
                     accuracy = currentAccuracy.value,
                     selectedLocation = if (enableSearch) selectedPlace.value else null,
@@ -1184,9 +1228,8 @@ fun RideMainContent(
 @Composable
 fun NotStartedContent(
     onStartClick: () -> Unit,
-    duration: String,
-    distance: String,
-    currentSpeed: String,
+    routeButtonText: String?,
+    onRouteClick: (() -> Unit)?,
     myLocation: LatLng?,
     accuracy: Float? = null,
     selectedLocation: LatLng? = null,
@@ -1194,27 +1237,684 @@ fun NotStartedContent(
     isLoading: Boolean,
     errorText: String?
 ) {
-    RideWorkoutLayout(
-        duration = duration,
-        distance = distance,
-        currentSpeed = currentSpeed,
-        highlightData = false,
-        myLocation = myLocation,
-        accuracy = accuracy,
-        routePoints = routePoints,
-        selectedLocation = selectedLocation,
-        isLoading = isLoading,
-        errorText = errorText,
-        primaryButton = {
-            RidePrimaryButton(
-                text = "开始",
-                containerColor = Color(0xFF007BFF),
-                onClick = onStartClick,
-                modifier = Modifier.fillMaxWidth(0.7f)
+    val background = Color(0xFFF6F7F9)
+    val primaryGreen = Color(0xFF00C56E)
+    val moodTexts = remember {
+        listOf(
+            "把风留在身后",
+            "出发前，先听一听链条的声音",
+            "今天的路，刚好适合慢慢骑",
+            "先把自己带到路上",
+            "准备好了，就走"
+        )
+    }
+    val moodText = remember {
+        val index = (System.currentTimeMillis() / (1000L * 60L * 60L)).toInt().let { kotlin.math.abs(it) } % moodTexts.size
+        moodTexts[index]
+    }
+
+    var mode by rememberSaveable { mutableStateOf(RideStartMode.FreeRide) }
+    var targetDistanceKm by rememberSaveable { mutableStateOf(10.0) }
+    var showTargetSheet by rememberSaveable { mutableStateOf(false) }
+
+    if (showTargetSheet) {
+        TargetDistanceBottomSheet(
+            initialDistanceKm = targetDistanceKm,
+            onDismiss = { showTargetSheet = false },
+            onConfirm = { km ->
+                targetDistanceKm = km
+                showTargetSheet = false
+            },
+            primaryGreen = primaryGreen
+        )
+    }
+
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(background)
+    ) {
+        val mapHeight = maxHeight * 0.60f
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
+                .padding(top = 14.dp)
+        ) {
+            Text(
+                text = moodText,
+                fontSize = 14.sp,
+                color = Color.Black.copy(alpha = 0.60f),
+                fontWeight = FontWeight.Medium
             )
-        },
-        secondaryButton = null
-    )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            AnimatedContent(targetState = mode, label = "ride_start_mode") { targetMode ->
+                when (targetMode) {
+                    RideStartMode.FreeRide -> {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(mapHeight),
+                            shape = RoundedCornerShape(20.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.White)
+                        ) {
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                AMap2DContainer(
+                                    modifier = Modifier.fillMaxSize(),
+                                    myLocation = myLocation,
+                                    accuracy = accuracy,
+                                    routePoints = routePoints,
+                                    selectedLocation = selectedLocation
+                                )
+
+                                androidx.compose.animation.AnimatedVisibility(visible = isLoading) {
+                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        Card(
+                                            shape = RoundedCornerShape(12.dp),
+                                            colors = CardDefaults.cardColors(containerColor = Color.White)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier.padding(12.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                CircularProgressIndicator(color = primaryGreen, strokeWidth = 3.dp)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    RideStartMode.TargetRide -> {
+                        TargetDistanceHeroCard(
+                            height = mapHeight,
+                            distanceKm = targetDistanceKm,
+                            onClick = { showTargetSheet = true },
+                            primaryGreen = primaryGreen
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            RideModeTabs(
+                selected = mode,
+                onSelect = { mode = it },
+                primaryGreen = primaryGreen
+            )
+
+            Spacer(modifier = Modifier.weight(1f))
+        }
+
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 96.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            val routeGap = 10.dp
+            var routeWidthPx by remember { mutableStateOf(0) }
+            val routeWidthDp = with(LocalDensity.current) { routeWidthPx.toDp() }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (!routeButtonText.isNullOrBlank() && onRouteClick != null) {
+                    Spacer(modifier = Modifier.width(routeWidthDp + routeGap))
+                }
+
+                Card(
+                    shape = CircleShape,
+                    colors = CardDefaults.cardColors(containerColor = primaryGreen),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(96.dp)
+                            .clickable(onClick = onStartClick),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "GO",
+                            color = Color.White,
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                    }
+                }
+
+                if (!routeButtonText.isNullOrBlank() && onRouteClick != null) {
+                    Spacer(modifier = Modifier.width(routeGap))
+                    Card(
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+                        modifier = Modifier
+                            .onSizeChanged { routeWidthPx = it.width }
+                            .clickable(onClick = onRouteClick)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Map,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = Color.Black.copy(alpha = 0.72f)
+                            )
+                            Text(
+                                text = routeButtonText,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.Black.copy(alpha = 0.78f)
+                            )
+                        }
+                    }
+                }
+            }
+
+            androidx.compose.animation.AnimatedVisibility(visible = !errorText.isNullOrBlank()) {
+                Card(
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    modifier = Modifier.padding(top = 12.dp)
+                ) {
+                    Text(
+                        text = errorText.orEmpty(),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                        fontSize = 13.sp,
+                        color = Color.Black.copy(alpha = 0.75f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RideModeTabs(
+    selected: RideStartMode,
+    onSelect: (RideStartMode) -> Unit,
+    primaryGreen: Color
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(999.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(4.dp)
+                .height(40.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            RideModeTabItem(
+                text = "自由骑",
+                selected = selected == RideStartMode.FreeRide,
+                onClick = { onSelect(RideStartMode.FreeRide) },
+                primaryGreen = primaryGreen,
+                modifier = Modifier.weight(1f)
+            )
+            RideModeTabItem(
+                text = "目标骑",
+                selected = selected == RideStartMode.TargetRide,
+                onClick = { onSelect(RideStartMode.TargetRide) },
+                primaryGreen = primaryGreen,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun RideModeTabItem(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    primaryGreen: Color,
+    modifier: Modifier = Modifier
+) {
+    val bg = if (selected) primaryGreen.copy(alpha = 0.14f) else Color.Transparent
+    val fg = if (selected) primaryGreen else Color.Black.copy(alpha = 0.62f)
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(bg, RoundedCornerShape(999.dp))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            fontSize = 14.sp,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+            color = fg
+        )
+    }
+}
+
+@Composable
+private fun TargetDistanceHeroCard(
+    height: Dp,
+    distanceKm: Double,
+    onClick: () -> Unit,
+    primaryGreen: Color
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(height)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = primaryGreen),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 18.dp, vertical = 16.dp)
+        ) {
+            Column(modifier = Modifier.align(Alignment.Center)) {
+                Text(
+                    text = "目标距离",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White.copy(alpha = 0.88f)
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    Text(
+                        text = String.format("%.2f", distanceKm),
+                        fontSize = 56.sp,
+                        fontWeight = FontWeight.Black,
+                        color = Color.White
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "km",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White.copy(alpha = 0.90f)
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "点击设置（公里）",
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.White.copy(alpha = 0.80f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TargetDistanceCard(
+    distanceKm: Double,
+    onClick: () -> Unit,
+    primaryGreen: Color
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+            Text(
+                text = "目标距离",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color.Black.copy(alpha = 0.58f)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    text = String.format("%.1f", distanceKm),
+                    fontSize = 40.sp,
+                    fontWeight = FontWeight.Black,
+                    color = Color.Black.copy(alpha = 0.86f)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "km",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = primaryGreen
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "点击设置",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color.Black.copy(alpha = 0.48f)
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TargetDistanceBottomSheet(
+    initialDistanceKm: Double,
+    onDismiss: () -> Unit,
+    onConfirm: (Double) -> Unit,
+    primaryGreen: Color
+) {
+    var distanceKm by rememberSaveable { mutableStateOf(initialDistanceKm) }
+    val quick = remember { listOf(5.0, 10.0, 20.0, 50.0) }
+
+    fun clamp(v: Double): Double = v.coerceIn(1.0, 300.0)
+
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 20.dp)
+        ) {
+            Text(
+                text = "设置目标距离",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.Black.copy(alpha = 0.86f)
+            )
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Card(
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    IconButton(onClick = { distanceKm = clamp(distanceKm - 0.5) }) {
+                        Icon(imageVector = Icons.Filled.Remove, contentDescription = "减少")
+                    }
+
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Row(verticalAlignment = Alignment.Bottom) {
+                            Text(
+                                text = String.format("%.1f", distanceKm),
+                                fontSize = 36.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color.Black.copy(alpha = 0.86f)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "km",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = primaryGreen
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "支持 0.5 km 步进",
+                            fontSize = 12.sp,
+                            color = Color.Black.copy(alpha = 0.48f)
+                        )
+                    }
+
+                    IconButton(onClick = { distanceKm = clamp(distanceKm + 0.5) }) {
+                        Icon(imageVector = Icons.Filled.Add, contentDescription = "增加")
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                quick.forEach { km ->
+                    AssistChip(
+                        onClick = { distanceKm = km },
+                        label = { Text(text = "${km.toInt()} km") },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = if (distanceKm == km) primaryGreen.copy(alpha = 0.14f) else Color.White,
+                            labelColor = if (distanceKm == km) primaryGreen else Color.Black.copy(alpha = 0.70f)
+                        ),
+                        border = AssistChipDefaults.assistChipBorder(
+                            enabled = true,
+                            borderColor = Color.Black.copy(alpha = 0.08f)
+                        )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Button(
+                onClick = { onConfirm(distanceKm) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = primaryGreen)
+            ) {
+                Text(text = "确认", fontWeight = FontWeight.SemiBold, color = Color.White)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RouteSelectBottomSheet(
+    selectedRouteId: Int?,
+    onDismiss: () -> Unit,
+    onSelectRouteId: (Int) -> Unit
+) {
+    val primaryGreen = Color(0xFF00C56E)
+    var sortIndex by rememberSaveable { mutableStateOf(0) }
+    val sortLabels = remember { listOf("附近路线", "长度", "累计爬升", "地点类型") }
+
+    var routes by remember { mutableStateOf<List<RouteBook>>(emptyList()) }
+
+    LaunchedEffect(Unit) {
+        val loaded = withContext(Dispatchers.IO) {
+            val list = mutableListOf<RouteBook>()
+            DatabaseHelper.processQuery(
+                "SELECT route_id, title, distance_km, elevation_m, location, difficulty, cover_image_url FROM routes ORDER BY updated_at DESC LIMIT 200"
+            ) { rs ->
+                while (rs.next()) {
+                    val id = rs.getInt(1)
+                    val title = rs.getString(2)
+                    val dist = rs.getDouble(3)
+                    val elev = rs.getInt(4)
+                    val loc = rs.getString(5) ?: ""
+                    val diff = rs.getString(6) ?: "简单"
+                    val img = rs.getString(7)
+                    list.add(RouteBook(id, title, dist, elev, loc, emptyList(), R.drawable.ic_launcher_foreground, img, diff))
+                }
+                Unit
+            }
+            list
+        }
+        routes = loaded
+    }
+
+    val displayRoutes = remember(routes, sortIndex) {
+        when (sortIndex) {
+            1 -> routes.sortedByDescending { it.distanceKm }
+            2 -> routes.sortedByDescending { it.elevationM }
+            3 -> routes.sortedBy { it.location }
+            else -> routes
+        }
+    }
+
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val sheetMaxHeight = maxHeight * 0.82f
+        val interactionSource = remember { MutableInteractionSource() }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.32f))
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = onDismiss
+                )
+        )
+
+        Surface(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = 12.dp)
+                .padding(bottom = 96.dp)
+                .fillMaxWidth()
+                .heightIn(max = sheetMaxHeight),
+            shape = RoundedCornerShape(22.dp),
+            tonalElevation = 2.dp,
+            shadowElevation = 10.dp,
+            color = Color.White
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 14.dp, bottom = 16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "选择路线",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Black,
+                        color = Color.Black.copy(alpha = 0.86f)
+                    )
+                    AssistChip(
+                        onClick = {},
+                        label = { Text(text = "我创建的") },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = primaryGreen.copy(alpha = 0.12f),
+                            labelColor = primaryGreen
+                        )
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(sortLabels.size) { index ->
+                        AssistChip(
+                            onClick = { sortIndex = index },
+                            label = { Text(text = sortLabels[index]) },
+                            colors = AssistChipDefaults.assistChipColors(
+                                containerColor = if (sortIndex == index) Color.Black.copy(alpha = 0.06f) else Color.White,
+                                labelColor = Color.Black.copy(alpha = if (sortIndex == index) 0.86f else 0.64f)
+                            ),
+                            border = AssistChipDefaults.assistChipBorder(
+                                enabled = true,
+                                borderColor = Color.Black.copy(alpha = 0.08f)
+                            )
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(displayRoutes) { route ->
+                        RouteSelectRow(
+                            route = route,
+                            selected = selectedRouteId == route.id,
+                            onClick = { onSelectRouteId(route.id) }
+                        )
+                    }
+                    item { Spacer(modifier = Modifier.height(12.dp)) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RouteSelectRow(
+    route: RouteBook,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            AsyncImage(
+                model = route.coverImageUrl ?: "",
+                contentDescription = route.title,
+                modifier = Modifier
+                    .size(width = 76.dp, height = 54.dp)
+                    .background(Color.Black.copy(alpha = 0.04f), RoundedCornerShape(12.dp)),
+                contentScale = ContentScale.Crop
+            )
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = route.title,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.Black.copy(alpha = 0.86f)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "${String.format("%.1f", route.distanceKm)} 公里 · 爬升 ${route.elevationM} 米 · ${route.location}",
+                    fontSize = 12.sp,
+                    color = Color.Black.copy(alpha = 0.56f)
+                )
+            }
+
+            RadioButton(selected = selected, onClick = onClick)
+        }
+    }
 }
 
 @Composable
