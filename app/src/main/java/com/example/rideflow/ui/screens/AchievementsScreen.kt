@@ -35,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -44,14 +45,15 @@ import com.example.rideflow.navigation.AppRoutes
 import android.os.Handler
 import android.os.Looper
 import com.example.rideflow.backend.DatabaseHelper
+import coil.compose.AsyncImage
 
 data class AchievementItem(
     val id: Int,
     val title: String,
     val description: String,
-    val iconRes: Int? = null,
-    val isUnlocked: Boolean = true,
-    val progress: Int = 100
+    val iconUrl: String,
+    val isUnlocked: Boolean,
+    val progress: Int
 )
 
 enum class AchievementTab { SPORT_LIFE, TIME_LIMITED_CHALLENGE, PERSONAL_BEST }
@@ -72,18 +74,26 @@ fun AchievementsScreen(navController: NavController, userId: String = "") {
                 val timeLimited = mutableListOf<AchievementItem>()
                 val personal = mutableListOf<AchievementItem>()
                 DatabaseHelper.processQuery(
-                    "SELECT b.badge_id, b.name, b.description, b.rule_type, COALESCE(p.is_unlocked,0), COALESCE(p.progress_percent,0) FROM achievement_badges b LEFT JOIN user_achievement_progress p ON p.badge_id = b.badge_id AND p.user_id = ? ORDER BY b.badge_id",
+                    "SELECT b.badge_id, b.name, b.description, b.icon_url, b.rule_type, COALESCE(p.is_unlocked,0), COALESCE(p.progress_percent,0) FROM achievement_badges b LEFT JOIN user_achievement_progress p ON p.badge_id = b.badge_id AND p.user_id = ? ORDER BY b.badge_id",
                     listOf(uid)
                 ) { rs ->
                     while (rs.next()) {
                         val id = rs.getInt(1)
                         val title = rs.getString(2) ?: ""
                         val desc = rs.getString(3) ?: ""
-                        val rule = rs.getString(4) ?: ""
-                        val unlocked = rs.getInt(5) == 1
-                        val progressPercent = rs.getDouble(6)
+                        val iconUrl = rs.getString(4) ?: ""
+                        val rule = rs.getString(5) ?: ""
+                        val unlocked = rs.getInt(6) == 1
+                        val progressPercent = rs.getDouble(7)
                         val progressInt = kotlin.math.round(progressPercent).toInt().coerceIn(0, 100)
-                        val item = AchievementItem(id = id, title = title, description = desc, iconRes = null, isUnlocked = unlocked, progress = progressInt)
+                        val item = AchievementItem(
+                            id = id,
+                            title = title,
+                            description = desc,
+                            iconUrl = iconUrl,
+                            isUnlocked = unlocked,
+                            progress = progressInt
+                        )
                         when (rule) {
                             "first_ride", "total_rides", "night_rides" -> sport.add(item)
                             "streak_days", "monthly_rides" -> timeLimited.add(item)
@@ -169,20 +179,69 @@ fun AchievementsScreen(navController: NavController, userId: String = "") {
 
 @Composable
 fun AchievementItemCard(achievement: AchievementItem) {
-    Column(modifier = Modifier.fillMaxWidth().padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    val outerColor = if (achievement.isUnlocked) Color(0xFFE3F2FD) else Color(0xFFEEEEEE)
+    val borderColor = if (achievement.isUnlocked) Color(0xFF3498DB) else Color(0xFFBDBDBD)
+    val imageAlpha = if (achievement.isUnlocked) 1f else 0.4f
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         Box(
-            modifier = Modifier.size(80.dp).clip(CircleShape).background(if (achievement.isUnlocked) Color(0xFFF3E5F5) else Color.Gray).padding(8.dp),
+            modifier = Modifier
+                .size(80.dp)
+                .clip(CircleShape)
+                .background(outerColor)
+                .padding(4.dp),
             contentAlignment = Alignment.Center
         ) {
-            Box(modifier = Modifier.fillMaxSize().clip(CircleShape).background(Color(0xFF9C27B0)), contentAlignment = Alignment.Center) {
-                Text(text = achievement.id.toString(), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(CircleShape)
+                    .background(borderColor),
+                contentAlignment = Alignment.Center
+            ) {
+                AsyncImage(
+                    model = achievement.iconUrl,
+                    contentDescription = achievement.title,
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(CircleShape),
+                    alpha = imageAlpha,
+                    contentScale = ContentScale.Crop
+                )
             }
         }
-        Text(text = achievement.title, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp), textAlign = TextAlign.Center)
-        Text(text = achievement.description, fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(top = 4.dp), textAlign = TextAlign.Center)
+        Text(
+            text = achievement.title,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(top = 8.dp),
+            textAlign = TextAlign.Center
+        )
+        Text(
+            text = achievement.description,
+            fontSize = 12.sp,
+            color = Color.Gray,
+            modifier = Modifier.padding(top = 4.dp),
+            textAlign = TextAlign.Center
+        )
         if (!achievement.isUnlocked) {
-            LinearProgressIndicator(progress = achievement.progress / 100f, modifier = Modifier.fillMaxWidth().padding(top = 8.dp), color = Color(0xFF3498DB))
-            Text(text = "${achievement.progress}%", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(top = 4.dp))
+            LinearProgressIndicator(
+                progress = achievement.progress / 100f,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                color = Color(0xFF3498DB)
+            )
+            Text(
+                text = "${achievement.progress}%",
+                fontSize = 12.sp,
+                color = Color.Gray,
+                modifier = Modifier.padding(top = 4.dp)
+            )
         }
     }
 }
