@@ -10,9 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -146,27 +143,33 @@ fun AchievementsScreen(navController: NavController, userId: String = "") {
             }
             when (selectedTab.value) {
                 AchievementTab.SPORT_LIFE -> {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(3),
+                    LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(24.dp)
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        items(sportLifeAchievements.value) { item ->
+                        items(items = sportLifeAchievements.value) { item ->
                             AchievementItemCard(achievement = item)
                         }
                     }
                 }
                 AchievementTab.TIME_LIMITED_CHALLENGE -> {
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
                         items(items = timeLimitedAchievements.value) { item ->
                             AchievementItemCard(achievement = item)
                         }
                     }
                 }
                 AchievementTab.PERSONAL_BEST -> {
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
                         items(items = personalBestAchievements.value) { item ->
                             AchievementItemCard(achievement = item)
                         }
@@ -185,12 +188,12 @@ fun AchievementItemCard(achievement: AchievementItem) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
+            .padding(horizontal = 4.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
             modifier = Modifier
-                .size(80.dp)
+                .size(96.dp)
                 .clip(CircleShape)
                 .background(outerColor)
                 .padding(4.dp),
@@ -198,7 +201,7 @@ fun AchievementItemCard(achievement: AchievementItem) {
         ) {
             Box(
                 modifier = Modifier
-                    .size(72.dp)
+                    .size(84.dp)
                     .clip(CircleShape)
                     .background(borderColor),
                 contentAlignment = Alignment.Center
@@ -207,7 +210,7 @@ fun AchievementItemCard(achievement: AchievementItem) {
                     model = achievement.iconUrl,
                     contentDescription = achievement.title,
                     modifier = Modifier
-                        .size(64.dp)
+                        .size(76.dp)
                         .clip(CircleShape),
                     alpha = imageAlpha,
                     contentScale = ContentScale.Crop
@@ -216,14 +219,14 @@ fun AchievementItemCard(achievement: AchievementItem) {
         }
         Text(
             text = achievement.title,
-            fontSize = 14.sp,
+            fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(top = 8.dp),
             textAlign = TextAlign.Center
         )
         Text(
             text = achievement.description,
-            fontSize = 12.sp,
+            fontSize = 13.sp,
             color = Color.Gray,
             modifier = Modifier.padding(top = 4.dp),
             textAlign = TextAlign.Center
