@@ -3,6 +3,7 @@ package com.example.rideflow.ui.screens.community
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -32,6 +33,7 @@ import java.util.Date
 fun CommunityPostDetailScreen(navController: NavController, postId: Int) {
     var userName by remember { mutableStateOf("") }
     var timeAgo by remember { mutableStateOf("") }
+    var avatarUrl by remember { mutableStateOf<String?>(null) }
     var content by remember { mutableStateOf("[图片]") }
     var imagePlaceholder by remember { mutableStateOf("[图片]") }
     var likeCount by remember { mutableStateOf(0) }
@@ -44,7 +46,7 @@ fun CommunityPostDetailScreen(navController: NavController, postId: Int) {
         val handler = Handler(Looper.getMainLooper())
         Thread {
             DatabaseHelper.processQuery(
-                "SELECT p.content_text, p.image_url, p.created_at, COALESCE(c.name, u.nickname) AS author_name FROM community_posts p LEFT JOIN clubs c ON p.club_id = c.club_id LEFT JOIN users u ON p.author_user_id = u.user_id WHERE p.post_id = ?",
+                "SELECT p.content_text, p.image_url, p.created_at, COALESCE(c.name, u.nickname) AS author_name, COALESCE(c.logo_url, u.avatar_url) AS avatar_url FROM community_posts p LEFT JOIN clubs c ON p.club_id = c.club_id LEFT JOIN users u ON p.author_user_id = u.user_id WHERE p.post_id = ?",
                 listOf(postId)
             ) { rs ->
                 if (rs.next()) {
@@ -52,12 +54,14 @@ fun CommunityPostDetailScreen(navController: NavController, postId: Int) {
                     val img = rs.getString(2) ?: "[图片]"
                     val created = rs.getTimestamp(3)
                     val name = rs.getString(4) ?: "未知用户"
+                    val avatar = rs.getString(5)
                     val ts = if (created != null) SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(created) else ""
                     handler.post {
                         content = ct
                         imagePlaceholder = img
                         userName = name
                         timeAgo = ts
+                        avatarUrl = avatar
                     }
                 }
                 Unit
@@ -73,7 +77,7 @@ fun CommunityPostDetailScreen(navController: NavController, postId: Int) {
                 Unit
             }
             DatabaseHelper.processQuery(
-                "SELECT pc.comment_id, u.nickname, pc.content, pc.created_at FROM post_comments pc JOIN users u ON pc.user_id = u.user_id WHERE pc.post_id = ? ORDER BY pc.created_at DESC",
+                "SELECT pc.comment_id, u.nickname, pc.content, pc.created_at, u.avatar_url FROM post_comments pc JOIN users u ON pc.user_id = u.user_id WHERE pc.post_id = ? ORDER BY pc.created_at DESC",
                 listOf(postId)
             ) { crs ->
                 val list = mutableListOf<Comment>()
@@ -83,7 +87,8 @@ fun CommunityPostDetailScreen(navController: NavController, postId: Int) {
                     val ctt = crs.getString(3) ?: ""
                     val created = crs.getTimestamp(4)
                     val ts = if (created != null) SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(created) else ""
-                    list.add(Comment(cid, nick, ctt, ts))
+                    val cAvatar = crs.getString(5)
+                    list.add(Comment(cid, nick, ctt, ts, cAvatar))
                 }
                 handler.post { comments = list }
                 Unit
@@ -111,7 +116,29 @@ fun CommunityPostDetailScreen(navController: NavController, postId: Int) {
         ) {
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(imageVector = Icons.Filled.Person, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(40.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        val hasAvatar = !avatarUrl.isNullOrBlank()
+                        if (hasAvatar) {
+                            coil.compose.AsyncImage(
+                                model = avatarUrl,
+                                contentDescription = null,
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Filled.Person,
+                                contentDescription = null,
+                                tint = Color.Gray,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
                     Spacer(Modifier.width(8.dp))
                     Column {
                         Text(userName.ifEmpty { "未知用户" }, fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -146,7 +173,29 @@ fun CommunityPostDetailScreen(navController: NavController, postId: Int) {
             items(comments.take(visibleCount)) { c ->
                 Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.Filled.Person, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(24.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            val hasAvatar = !c.avatarUrl.isNullOrBlank()
+                            if (hasAvatar) {
+                                coil.compose.AsyncImage(
+                                    model = c.avatarUrl,
+                                    contentDescription = null,
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Filled.Person,
+                                    contentDescription = null,
+                                    tint = Color.Gray,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
                         Spacer(Modifier.width(6.dp))
                         Text(text = c.userName, fontWeight = FontWeight.Medium)
                         Spacer(Modifier.width(8.dp))
@@ -189,8 +238,9 @@ fun CommunityPostDetailScreen(navController: NavController, postId: Int) {
                                 )
                                 if (newId != null) {
                                     val now = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
+                                    val avatar = currentUser.avatarUrl
                                     handler.post {
-                                        comments = listOf(Comment(newId, currentUser.nickname, text, now)) + comments
+                                        comments = listOf(Comment(newId, currentUser.nickname, text, now, avatar)) + comments
                                         newCommentText = ""
                                     }
                                 }

@@ -37,7 +37,9 @@ data class SimpleClubInfo(
 @Composable
 fun CommunityClubPortalScreen(
     navController: NavController,
-    allPosts: List<Post>
+    allPosts: List<Post>,
+    onLikeToggle: (Int, Boolean) -> Unit,
+    onDislikeToggle: (Int, Boolean) -> Unit
 ) {
     // 关键修改：使用 rememberSaveable 保存标签页状态
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
@@ -101,7 +103,7 @@ fun CommunityClubPortalScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         when (selectedTab) {
-            0 -> ClubDynamicsTab(posts = clubPosts, navController = navController)
+            0 -> ClubDynamicsTab(posts = clubPosts, navController = navController, onLikeToggle = onLikeToggle, onDislikeToggle = onDislikeToggle)
             1 -> ClubListTab(clubs = clubs, onClubClick = { clubId ->
                 navController.navigate("${com.example.rideflow.navigation.AppRoutes.COMMUNITY_CLUB_DETAIL}/$clubId")
             })
@@ -110,7 +112,12 @@ fun CommunityClubPortalScreen(
 }
 
 @Composable
-fun ClubDynamicsTab(posts: List<Post>, navController: NavController) {
+fun ClubDynamicsTab(
+    posts: List<Post>,
+    navController: NavController,
+    onLikeToggle: (Int, Boolean) -> Unit,
+    onDislikeToggle: (Int, Boolean) -> Unit
+) {
     if (posts.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("暂无俱乐部动态", color = Color.Gray)
@@ -127,7 +134,9 @@ fun ClubDynamicsTab(posts: List<Post>, navController: NavController) {
                     onFollowToggle = { _, _ -> },
                     showFollowButton = false, // 隐藏关注按钮
                     onAvatarClick = { targetId, _ -> navController.navigate("${com.example.rideflow.navigation.AppRoutes.COMMUNITY_CLUB_DETAIL}/$targetId") },
-                    onPostClick = { pid -> navController.navigate("${com.example.rideflow.navigation.AppRoutes.POST_DETAIL}/$pid") }
+                    onPostClick = { pid -> navController.navigate("${com.example.rideflow.navigation.AppRoutes.POST_DETAIL}/$pid") },
+                    onLikeToggle = onLikeToggle,
+                    onDislikeToggle = onDislikeToggle
                 )
                 Spacer(modifier = Modifier.height(8.dp).background(Color(0xFFF0F0F0)))
             }

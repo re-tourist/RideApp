@@ -74,9 +74,14 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
             val posts = mutableListOf<Post>()
             val uid = userId.toIntOrNull()
             val likedSet = mutableSetOf<Int>()
+            val dislikedSet = mutableSetOf<Int>()
             if (uid != null) {
                 DatabaseHelper.processQuery("SELECT post_id FROM post_likes WHERE user_id = ?", listOf(uid)) { rs ->
                     while (rs.next()) likedSet.add(rs.getInt(1))
+                    Unit
+                }
+                DatabaseHelper.processQuery("SELECT post_id FROM post_dislikes WHERE user_id = ?", listOf(uid)) { rs ->
+                    while (rs.next()) dislikedSet.add(rs.getInt(1))
                     Unit
                 }
             }
@@ -134,12 +139,28 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
                 while (rs.next()) likesMap[rs.getInt(1)] = rs.getInt(2)
                 Unit
             }
+            val dislikesMap = mutableMapOf<Int, Int>()
+            DatabaseHelper.processQuery("SELECT post_id, COUNT(*) FROM post_dislikes GROUP BY post_id") { rs ->
+                while (rs.next()) dislikesMap[rs.getInt(1)] = rs.getInt(2)
+                Unit
+            }
             val commentsMap = mutableMapOf<Int, Int>()
             DatabaseHelper.processQuery("SELECT post_id, COUNT(*) FROM post_comments GROUP BY post_id") { rs ->
                 while (rs.next()) commentsMap[rs.getInt(1)] = rs.getInt(2)
                 Unit
             }
-            posts.map { p -> p.copy(likes = likesMap[p.id] ?: p.likes, comments = commentsMap[p.id] ?: p.comments, initialIsLiked = likedSet.contains(p.id)) }
+            posts.map { p ->
+                val likeCount = likesMap[p.id] ?: p.likes
+                val dislikeCount = dislikesMap[p.id] ?: p.dislikes
+                val commentCount = commentsMap[p.id] ?: p.comments
+                p.copy(
+                    likes = likeCount,
+                    dislikes = dislikeCount,
+                    comments = commentCount,
+                    initialIsLiked = likedSet.contains(p.id),
+                    initialIsDisliked = dislikedSet.contains(p.id)
+                )
+            }
         }
         allPosts.clear(); allPosts.addAll(merged)
         isLoading = false
@@ -209,17 +230,64 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
                 withContext(Dispatchers.IO) {
                     if (newIsLiked) {
                         DatabaseHelper.executeUpdate("INSERT IGNORE INTO post_likes (post_id, user_id) VALUES (?, ?)", listOf(postId, uidVal))
+                        DatabaseHelper.executeUpdate("DELETE FROM post_dislikes WHERE post_id = ? AND user_id = ?", listOf(postId, uidVal))
                     } else {
                         DatabaseHelper.executeUpdate("DELETE FROM post_likes WHERE post_id = ? AND user_id = ?", listOf(postId, uidVal))
                     }
-                    var newCount = 0
+                    var newLikeCount = 0
+                    var newDislikeCount = 0
                     DatabaseHelper.processQuery("SELECT COUNT(*) FROM post_likes WHERE post_id = ?", listOf(postId)) { rs ->
-                        if (rs.next()) newCount = rs.getInt(1)
+                        if (rs.next()) newLikeCount = rs.getInt(1)
+                        Unit
+                    }
+                    DatabaseHelper.processQuery("SELECT COUNT(*) FROM post_dislikes WHERE post_id = ?", listOf(postId)) { rs ->
+                        if (rs.next()) newDislikeCount = rs.getInt(1)
                         Unit
                     }
                     val idx = allPosts.indexOfFirst { it.id == postId }
                     if (idx >= 0) {
-                        val updated = allPosts[idx].copy(likes = newCount)
+                        val updated = allPosts[idx].copy(
+                            likes = newLikeCount,
+                            dislikes = newDislikeCount,
+                            initialIsLiked = newIsLiked,
+                            initialIsDisliked = if (newIsLiked) false else allPosts[idx].initialIsDisliked
+                        )
+                        allPosts[idx] = updated
+                    }
+                }
+            }
+        }
+    }
+
+    val onDislikeToggle: (Int, Boolean) -> Unit = { postId, newIsDisliked ->
+        val uid = userId.toIntOrNull()
+        uid?.let { uidVal ->
+            scope.launch {
+                withContext(Dispatchers.IO) {
+                    if (newIsDisliked) {
+                        DatabaseHelper.executeUpdate("INSERT IGNORE INTO post_dislikes (post_id, user_id) VALUES (?, ?)", listOf(postId, uidVal))
+                        DatabaseHelper.executeUpdate("DELETE FROM post_likes WHERE post_id = ? AND user_id = ?", listOf(postId, uidVal))
+                    } else {
+                        DatabaseHelper.executeUpdate("DELETE FROM post_dislikes WHERE post_id = ? AND user_id = ?", listOf(postId, uidVal))
+                    }
+                    var newLikeCount = 0
+                    var newDislikeCount = 0
+                    DatabaseHelper.processQuery("SELECT COUNT(*) FROM post_likes WHERE post_id = ?", listOf(postId)) { rs ->
+                        if (rs.next()) newLikeCount = rs.getInt(1)
+                        Unit
+                    }
+                    DatabaseHelper.processQuery("SELECT COUNT(*) FROM post_dislikes WHERE post_id = ?", listOf(postId)) { rs ->
+                        if (rs.next()) newDislikeCount = rs.getInt(1)
+                        Unit
+                    }
+                    val idx = allPosts.indexOfFirst { it.id == postId }
+                    if (idx >= 0) {
+                        val updated = allPosts[idx].copy(
+                            likes = newLikeCount,
+                            dislikes = newDislikeCount,
+                            initialIsLiked = if (newIsDisliked) false else allPosts[idx].initialIsLiked,
+                            initialIsDisliked = newIsDisliked
+                        )
                         allPosts[idx] = updated
                     }
                 }
@@ -248,7 +316,7 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
             } else {
                 Log.d("Perf", "CommunityScreen UIRender: ${System.currentTimeMillis() - pageStart} ms")
                 when (selectedCategory) {
-                "关注动态" -> CommunityFollowingScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick, onPostClick, onLikeToggle, hasMore, isLoadingMore, onLoadMore = {
+                "关注动态" -> CommunityFollowingScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick, onPostClick, onLikeToggle, onDislikeToggle, hasMore, isLoadingMore, onLoadMore = {
                     if (hasMore && !isLoadingMore) {
                         scope.launch {
                             isLoadingMore = true
@@ -260,7 +328,7 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
                         }
                     }
                 })
-                "热门动态" -> CommunityHotScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick, onPostClick, onLikeToggle, hasMore, isLoadingMore, onLoadMore = {
+                "热门动态" -> CommunityHotScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick, onPostClick, onLikeToggle, onDislikeToggle, hasMore, isLoadingMore, onLoadMore = {
                     if (hasMore && !isLoadingMore) {
                         scope.launch {
                             isLoadingMore = true
@@ -273,8 +341,8 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
                     }
                 })
                 "社区交易" -> CommunityTradeScreen(navController = navController)
-                "俱乐部" -> CommunityClubPortalScreen(navController = navController, allPosts = allPosts)
-                else -> CommunityHotScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick, onPostClick, onLikeToggle, hasMore, isLoadingMore, onLoadMore = {
+                "俱乐部" -> CommunityClubPortalScreen(navController = navController, allPosts = allPosts, onLikeToggle = onLikeToggle, onDislikeToggle = onDislikeToggle)
+                else -> CommunityHotScreen(allPosts, followingUserIds.value, onFollowToggle, onAvatarClick, onPostClick, onLikeToggle, onDislikeToggle, hasMore, isLoadingMore, onLoadMore = {
                     if (hasMore && !isLoadingMore) {
                         scope.launch {
                             isLoadingMore = true
@@ -341,16 +409,26 @@ private suspend fun loadPage(page: Int, pageSize: Int, currentUserId: Int? = nul
         Unit
     }
     val likedSet = mutableSetOf<Int>()
+    val dislikedSet = mutableSetOf<Int>()
     if (currentUserId != null) {
         DatabaseHelper.processQuery("SELECT post_id FROM post_likes WHERE user_id = ?", listOf(currentUserId)) { rs ->
             while (rs.next()) likedSet.add(rs.getInt(1))
+            Unit
+        }
+        DatabaseHelper.processQuery("SELECT post_id FROM post_dislikes WHERE user_id = ?", listOf(currentUserId)) { rs ->
+            while (rs.next()) dislikedSet.add(rs.getInt(1))
             Unit
         }
     }
     return posts.map { p ->
         val nm = if (p.userName.isEmpty()) nameMap[p.id] ?: "未知用户" else p.userName
         val av = avatarMap[p.id]
-        p.copy(userName = nm, avatarUrl = av, initialIsLiked = likedSet.contains(p.id))
+        p.copy(
+            userName = nm,
+            avatarUrl = av,
+            initialIsLiked = likedSet.contains(p.id),
+            initialIsDisliked = dislikedSet.contains(p.id)
+        )
     }
 }
 

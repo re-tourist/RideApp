@@ -198,14 +198,17 @@ fun PostCard(
     showFollowButton: Boolean = true,
     onAvatarClick: (Int, String) -> Unit = { _, _ -> },
     onPostClick: (Int) -> Unit = {},
-    onLikeToggle: (Int, Boolean) -> Unit = { _, _ -> }
+    onLikeToggle: (Int, Boolean) -> Unit = { _, _ -> },
+    onDislikeToggle: (Int, Boolean) -> Unit = { _, _ -> }
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val authViewModel = koinViewModel<AuthViewModel>()
 
     var isLiked by remember { mutableStateOf(post.initialIsLiked) }
+    var isDisliked by remember { mutableStateOf(post.initialIsDisliked) }
     var likeCount by remember { mutableStateOf(post.likes) }
+    var dislikeCount by remember { mutableStateOf(post.dislikes) }
     var commentCount by remember { mutableStateOf(post.comments) }
     var latestComments by remember { mutableStateOf<List<Comment>>(emptyList()) }
     var showCommentSheet by remember { mutableStateOf(false) }
@@ -215,7 +218,10 @@ fun PostCard(
     var likePulseKey by remember { mutableStateOf(0) }
 
     LaunchedEffect(post.likes) { likeCount = post.likes }
+    LaunchedEffect(post.dislikes) { dislikeCount = post.dislikes }
     LaunchedEffect(post.comments) { commentCount = post.comments }
+    LaunchedEffect(post.initialIsLiked) { isLiked = post.initialIsLiked }
+    LaunchedEffect(post.initialIsDisliked) { isDisliked = post.initialIsDisliked }
 
     LaunchedEffect(likePulseKey) {
         if (likePulseKey > 0) {
@@ -282,24 +288,45 @@ fun PostCard(
 
             FeedActions(
                 isLiked = isLiked,
+                isDisliked = isDisliked,
                 likeCount = likeCount,
+                dislikeCount = dislikeCount,
                 commentCount = commentCount,
                 likeScale = likeScale.value,
                 onLikeClick = {
-                    val newState = !isLiked
-                    isLiked = newState
-                    if (newState) {
+                    val newIsLiked = !isLiked
+                    if (newIsLiked) {
+                        if (isDisliked) {
+                            isDisliked = false
+                            dislikeCount = (dislikeCount - 1).coerceAtLeast(0)
+                            onDislikeToggle(post.id, false)
+                        }
+                        isLiked = true
                         likeCount = likeCount + 1
                         likePulseKey += 1
                     } else {
+                        isLiked = false
                         likeCount = (likeCount - 1).coerceAtLeast(0)
                     }
-                    onLikeToggle(post.id, newState)
+                    onLikeToggle(post.id, newIsLiked)
                 },
-                onCommentClick = { showCommentSheet = true },
-                onShareClick = {
-                    Toast.makeText(context, "已转发到你的动态", Toast.LENGTH_SHORT).show()
-                }
+                onDislikeClick = {
+                    val newIsDisliked = !isDisliked
+                    if (newIsDisliked) {
+                        if (isLiked) {
+                            isLiked = false
+                            likeCount = (likeCount - 1).coerceAtLeast(0)
+                            onLikeToggle(post.id, false)
+                        }
+                        isDisliked = true
+                        dislikeCount = dislikeCount + 1
+                    } else {
+                        isDisliked = false
+                        dislikeCount = (dislikeCount - 1).coerceAtLeast(0)
+                    }
+                    onDislikeToggle(post.id, newIsDisliked)
+                },
+                onCommentClick = { showCommentSheet = true }
             )
 
             Spacer(Modifier.height(10.dp))
@@ -550,12 +577,14 @@ private fun FeedCommentsPreview(
 @Composable
 private fun FeedActions(
     isLiked: Boolean,
+    isDisliked: Boolean,
     likeCount: Int,
+    dislikeCount: Int,
     commentCount: Int,
     likeScale: Float,
     onLikeClick: () -> Unit,
-    onCommentClick: () -> Unit,
-    onShareClick: () -> Unit
+    onDislikeClick: () -> Unit,
+    onCommentClick: () -> Unit
 ) {
     val iconColor = MaterialTheme.colorScheme.onSurfaceVariant
     val activeColor = MaterialTheme.colorScheme.primary
@@ -566,42 +595,54 @@ private fun FeedActions(
         verticalAlignment = Alignment.CenterVertically
     ) {
         FeedActionButton(
-            icon = Icons.Default.Share,
-            label = "转发",
-            count = null,
-            tint = iconColor,
-            onClick = onShareClick
-        )
-
-        FeedActionButton(
             icon = Icons.Default.ChatBubbleOutline,
             label = "评论",
-            count = if (commentCount > 0) commentCount else null,
+            count = commentCount,
             tint = iconColor,
             onClick = onCommentClick
         )
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .clickable(onClick = onLikeClick)
-                .padding(horizontal = 8.dp, vertical = 6.dp)
-        ) {
-            Crossfade(targetState = isLiked, label = "like") { liked ->
-                Icon(
-                    imageVector = if (liked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = "点赞",
-                    tint = if (liked) activeColor else iconColor,
-                    modifier = Modifier
-                        .size(20.dp)
-                        .graphicsLayer(scaleX = likeScale, scaleY = likeScale)
-                )
-            }
-            AnimatedVisibility(visible = likeCount > 0) {
+        Row {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clickable(onClick = onLikeClick)
+                    .padding(horizontal = 8.dp, vertical = 6.dp)
+            ) {
+                Crossfade(targetState = isLiked, label = "like") { liked ->
+                    Icon(
+                        imageVector = if (liked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = "点赞",
+                        tint = if (liked) activeColor else iconColor,
+                        modifier = Modifier
+                            .size(20.dp)
+                            .graphicsLayer(scaleX = likeScale, scaleY = likeScale)
+                    )
+                }
                 Text(
                     text = likeCount.toString(),
                     fontSize = 12.sp,
                     color = if (isLiked) activeColor else iconColor,
+                    modifier = Modifier.padding(start = 6.dp)
+                )
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clickable(onClick = onDislikeClick)
+                    .padding(horizontal = 8.dp, vertical = 6.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ThumbDown,
+                    contentDescription = "踩",
+                    tint = if (isDisliked) activeColor else iconColor,
+                    modifier = Modifier.size(20.dp)
+                )
+                Text(
+                    text = dislikeCount.toString(),
+                    fontSize = 12.sp,
+                    color = if (isDisliked) activeColor else iconColor,
                     modifier = Modifier.padding(start = 6.dp)
                 )
             }

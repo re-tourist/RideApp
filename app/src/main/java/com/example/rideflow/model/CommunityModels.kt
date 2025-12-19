@@ -17,7 +17,9 @@ data class Post(
     val comments: Int,
     val initialIsLiked: Boolean = false,
     val authorType: String = "user",
-    val avatarUrl: String? = null
+    val avatarUrl: String? = null,
+    val dislikes: Int = 0,
+    val initialIsDisliked: Boolean = false
 )
 
 // 交易物品模型
@@ -45,7 +47,8 @@ data class Comment(
     val id: Int,
     val userName: String,
     val content: String,
-    val time: String
+    val time: String,
+    val avatarUrl: String? = null
 )
 
 // 好友模型
