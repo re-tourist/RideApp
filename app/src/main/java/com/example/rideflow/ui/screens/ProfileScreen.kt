@@ -447,7 +447,7 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp)
-                        .clickable { navController.navigate(AppRoutes.MY_ACTIVITIES) },
+                        .clickable { navController.navigate("${AppRoutes.ACTIVITIES}?category=1") },
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
