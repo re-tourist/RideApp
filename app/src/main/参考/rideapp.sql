@@ -11,7 +11,7 @@
  Target Server Version : 80044 (8.0.44-0ubuntu0.22.04.1)
  File Encoding         : 65001
 
- Date: 18/12/2025 19:53:34
+ Date: 19/12/2025 14:54:51
 */
 
 SET NAMES utf8mb4;
@@ -291,7 +291,7 @@ CREATE TABLE `post_comments`  (
   INDEX `fk_comments_user`(`user_id` ASC) USING BTREE,
   CONSTRAINT `fk_comments_post` FOREIGN KEY (`post_id`) REFERENCES `community_posts` (`post_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_comments_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 41 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 42 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of post_comments
@@ -322,20 +322,21 @@ INSERT INTO `post_comments` VALUES (23, 4, 2, '路线和配速发一下', '2025-
 INSERT INTO `post_comments` VALUES (24, 5, 1, '夜骑灯光确实很美', '2025-12-04 21:11:00');
 INSERT INTO `post_comments` VALUES (25, 5, 3, '速度控制好更安全', '2025-12-04 21:13:00');
 INSERT INTO `post_comments` VALUES (26, 6, 3, '晨练集合几点？', '2025-12-03 06:53:00');
-INSERT INTO `post_comments` VALUES (27, 2, 1, '111', '2025-12-12 20:34:09');
-INSERT INTO `post_comments` VALUES (28, 2, 1, 'test', '2025-12-12 20:40:48');
-INSERT INTO `post_comments` VALUES (29, 6, 1, 'good', '2025-12-12 21:17:01');
-INSERT INTO `post_comments` VALUES (30, 5, 1, 'gooooood', '2025-12-12 21:17:22');
-INSERT INTO `post_comments` VALUES (31, 2, 8, 'good', '2025-12-16 15:06:08');
-INSERT INTO `post_comments` VALUES (32, 2, 1, '999', '2025-12-16 19:43:57');
-INSERT INTO `post_comments` VALUES (33, 2, 1, '999', '2025-12-16 19:44:08');
-INSERT INTO `post_comments` VALUES (34, 5, 1, '6666', '2025-12-16 19:47:04');
-INSERT INTO `post_comments` VALUES (35, 2, 11, '999', '2025-12-17 09:03:15');
-INSERT INTO `post_comments` VALUES (36, 2, 11, '123456', '2025-12-17 09:03:27');
-INSERT INTO `post_comments` VALUES (37, 2, 11, '12545568', '2025-12-17 09:14:28');
-INSERT INTO `post_comments` VALUES (38, 2, 11, '1', '2025-12-17 09:14:34');
-INSERT INTO `post_comments` VALUES (39, 2, 8, '123456', '2025-12-17 09:17:07');
-INSERT INTO `post_comments` VALUES (40, 1, 8, 'fddf', '2025-12-17 09:28:03');
+INSERT INTO `post_comments` VALUES (27, 2, 1, '今天状态一般，不过爬完感觉挺爽', '2025-12-12 20:34:09');
+INSERT INTO `post_comments` VALUES (28, 2, 1, '最近爬坡手感不错，下次一起？', '2025-12-12 20:40:48');
+INSERT INTO `post_comments` VALUES (29, 6, 1, '路线很舒服，就是有几段风有点大', '2025-12-12 21:17:01');
+INSERT INTO `post_comments` VALUES (30, 5, 1, '这条路书收藏了，周末约一波', '2025-12-12 21:17:22');
+INSERT INTO `post_comments` VALUES (31, 2, 8, '已经加到训练计划里了', '2025-12-16 15:06:08');
+INSERT INTO `post_comments` VALUES (32, 2, 1, '已经加到训练计划里了', '2025-12-16 19:43:57');
+INSERT INTO `post_comments` VALUES (33, 2, 1, '已经加到训练计划里了', '2025-12-16 19:44:08');
+INSERT INTO `post_comments` VALUES (34, 5, 1, '打卡！今天也骑完了', '2025-12-16 19:47:04');
+INSERT INTO `post_comments` VALUES (35, 2, 11, '已经加到训练计划里了', '2025-12-17 09:03:15');
+INSERT INTO `post_comments` VALUES (36, 2, 11, '打卡！今天也骑完了', '2025-12-17 09:03:27');
+INSERT INTO `post_comments` VALUES (37, 2, 11, '打卡！今天也骑完了', '2025-12-17 09:14:28');
+INSERT INTO `post_comments` VALUES (38, 2, 11, '打卡！今天也骑完了', '2025-12-17 09:14:34');
+INSERT INTO `post_comments` VALUES (39, 2, 8, '打卡！今天也骑完了', '2025-12-17 09:17:07');
+INSERT INTO `post_comments` VALUES (40, 1, 8, '打卡！今天也骑完了', '2025-12-17 09:28:03');
+INSERT INTO `post_comments` VALUES (41, 2, 1, '111', '2025-12-19 13:53:44');
 
 -- ----------------------------
 -- Table structure for post_dislikes
@@ -354,7 +355,9 @@ CREATE TABLE `post_dislikes`  (
 -- ----------------------------
 -- Records of post_dislikes
 -- ----------------------------
-INSERT INTO `post_dislikes` VALUES (2, 1, '2025-12-17 12:00:52');
+INSERT INTO `post_dislikes` VALUES (3, 1, '2025-12-18 20:20:49');
+INSERT INTO `post_dislikes` VALUES (5, 1, '2025-12-18 20:20:44');
+INSERT INTO `post_dislikes` VALUES (6, 1, '2025-12-18 20:21:05');
 
 -- ----------------------------
 -- Table structure for post_likes
@@ -373,12 +376,11 @@ CREATE TABLE `post_likes`  (
 -- ----------------------------
 -- Records of post_likes
 -- ----------------------------
-INSERT INTO `post_likes` VALUES (1, 1, '2025-12-17 12:00:55');
 INSERT INTO `post_likes` VALUES (1, 2, '2025-12-05 09:00:00');
 INSERT INTO `post_likes` VALUES (1, 3, '2025-12-05 08:19:00');
 INSERT INTO `post_likes` VALUES (1, 7, '2025-12-05 08:21:00');
 INSERT INTO `post_likes` VALUES (1, 8, '2025-12-17 09:27:58');
-INSERT INTO `post_likes` VALUES (2, 1, '2025-12-18 15:58:45');
+INSERT INTO `post_likes` VALUES (2, 1, '2025-12-19 14:53:33');
 INSERT INTO `post_likes` VALUES (2, 2, '2025-12-05 08:27:00');
 INSERT INTO `post_likes` VALUES (2, 3, '2025-12-05 08:40:00');
 INSERT INTO `post_likes` VALUES (2, 8, '2025-12-16 15:05:54');
@@ -821,8 +823,8 @@ CREATE TABLE `user_follows`  (
 -- ----------------------------
 -- Records of user_follows
 -- ----------------------------
-INSERT INTO `user_follows` VALUES (1, 1, '2025-12-16 19:43:41');
-INSERT INTO `user_follows` VALUES (1, 2, '2025-12-16 19:43:36');
+INSERT INTO `user_follows` VALUES (1, 1, '2025-12-19 13:54:02');
+INSERT INTO `user_follows` VALUES (1, 2, '2025-12-19 13:44:53');
 INSERT INTO `user_follows` VALUES (1, 3, '2025-12-16 20:27:47');
 INSERT INTO `user_follows` VALUES (8, 1, '2025-12-16 17:05:05');
 INSERT INTO `user_follows` VALUES (8, 2, '2025-12-17 09:41:43');
@@ -949,7 +951,7 @@ CREATE TABLE `user_ride_records`  (
   INDEX `idx_ride_records_start_time`(`start_time` ASC) USING BTREE,
   CONSTRAINT `user_ride_records_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `user_ride_records_ibfk_2` FOREIGN KEY (`route_id`) REFERENCES `routes` (`route_id`) ON DELETE SET NULL ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 818851204 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户骑行记录' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 892628470 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户骑行记录' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of user_ride_records
@@ -1036,6 +1038,8 @@ INSERT INTO `user_ride_records` VALUES (811087845, 1, NULL, '2025-12-18 07:24:06
 INSERT INTO `user_ride_records` VALUES (811298996, 1, NULL, '2025-12-18 07:27:37', 0, 5, 0.00, 0.00, 0, NULL, NULL, '2025-12-18 15:27:37', 0, 0.00);
 INSERT INTO `user_ride_records` VALUES (813220565, 1, NULL, '2025-12-18 07:59:39', 0, 6, 0.00, 0.00, 0, NULL, NULL, '2025-12-18 15:59:39', 0, 0.00);
 INSERT INTO `user_ride_records` VALUES (818851203, 1, NULL, '2025-12-18 09:33:10', 0, 15, 0.00, 0.00, 0, NULL, NULL, '2025-12-18 17:33:57', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (892145338, 1, NULL, '2025-12-19 05:54:52', 0, 4, 0.00, 0.00, 0, NULL, NULL, '2025-12-19 13:55:05', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (892628469, 1, NULL, '2025-12-19 06:03:05', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-19 14:03:09', 0, 0.00);
 
 -- ----------------------------
 -- Table structure for users

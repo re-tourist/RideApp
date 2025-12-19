@@ -294,25 +294,37 @@ fun PostCard(
                 commentCount = commentCount,
                 likeScale = likeScale.value,
                 onLikeClick = {
-                    val newState = !isLiked
-                    isLiked = newState
-                    if (newState) {
+                    val newIsLiked = !isLiked
+                    if (newIsLiked) {
+                        if (isDisliked) {
+                            isDisliked = false
+                            dislikeCount = (dislikeCount - 1).coerceAtLeast(0)
+                            onDislikeToggle(post.id, false)
+                        }
+                        isLiked = true
                         likeCount = likeCount + 1
                         likePulseKey += 1
                     } else {
+                        isLiked = false
                         likeCount = (likeCount - 1).coerceAtLeast(0)
                     }
-                    onLikeToggle(post.id, newState)
+                    onLikeToggle(post.id, newIsLiked)
                 },
                 onDislikeClick = {
-                    val newState = !isDisliked
-                    isDisliked = newState
-                    dislikeCount = if (newState) {
-                        dislikeCount + 1
+                    val newIsDisliked = !isDisliked
+                    if (newIsDisliked) {
+                        if (isLiked) {
+                            isLiked = false
+                            likeCount = (likeCount - 1).coerceAtLeast(0)
+                            onLikeToggle(post.id, false)
+                        }
+                        isDisliked = true
+                        dislikeCount = dislikeCount + 1
                     } else {
-                        (dislikeCount - 1).coerceAtLeast(0)
+                        isDisliked = false
+                        dislikeCount = (dislikeCount - 1).coerceAtLeast(0)
                     }
-                    onDislikeToggle(post.id, newState)
+                    onDislikeToggle(post.id, newIsDisliked)
                 },
                 onCommentClick = { showCommentSheet = true }
             )

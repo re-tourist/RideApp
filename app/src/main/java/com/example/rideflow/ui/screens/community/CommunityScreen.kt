@@ -230,17 +230,28 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
                 withContext(Dispatchers.IO) {
                     if (newIsLiked) {
                         DatabaseHelper.executeUpdate("INSERT IGNORE INTO post_likes (post_id, user_id) VALUES (?, ?)", listOf(postId, uidVal))
+                        DatabaseHelper.executeUpdate("DELETE FROM post_dislikes WHERE post_id = ? AND user_id = ?", listOf(postId, uidVal))
                     } else {
                         DatabaseHelper.executeUpdate("DELETE FROM post_likes WHERE post_id = ? AND user_id = ?", listOf(postId, uidVal))
                     }
-                    var newCount = 0
+                    var newLikeCount = 0
+                    var newDislikeCount = 0
                     DatabaseHelper.processQuery("SELECT COUNT(*) FROM post_likes WHERE post_id = ?", listOf(postId)) { rs ->
-                        if (rs.next()) newCount = rs.getInt(1)
+                        if (rs.next()) newLikeCount = rs.getInt(1)
+                        Unit
+                    }
+                    DatabaseHelper.processQuery("SELECT COUNT(*) FROM post_dislikes WHERE post_id = ?", listOf(postId)) { rs ->
+                        if (rs.next()) newDislikeCount = rs.getInt(1)
                         Unit
                     }
                     val idx = allPosts.indexOfFirst { it.id == postId }
                     if (idx >= 0) {
-                        val updated = allPosts[idx].copy(likes = newCount, initialIsLiked = newIsLiked)
+                        val updated = allPosts[idx].copy(
+                            likes = newLikeCount,
+                            dislikes = newDislikeCount,
+                            initialIsLiked = newIsLiked,
+                            initialIsDisliked = if (newIsLiked) false else allPosts[idx].initialIsDisliked
+                        )
                         allPosts[idx] = updated
                     }
                 }
@@ -255,17 +266,28 @@ fun CommunityScreen(navController: NavController, userId: String = "") {
                 withContext(Dispatchers.IO) {
                     if (newIsDisliked) {
                         DatabaseHelper.executeUpdate("INSERT IGNORE INTO post_dislikes (post_id, user_id) VALUES (?, ?)", listOf(postId, uidVal))
+                        DatabaseHelper.executeUpdate("DELETE FROM post_likes WHERE post_id = ? AND user_id = ?", listOf(postId, uidVal))
                     } else {
                         DatabaseHelper.executeUpdate("DELETE FROM post_dislikes WHERE post_id = ? AND user_id = ?", listOf(postId, uidVal))
                     }
-                    var newCount = 0
+                    var newLikeCount = 0
+                    var newDislikeCount = 0
+                    DatabaseHelper.processQuery("SELECT COUNT(*) FROM post_likes WHERE post_id = ?", listOf(postId)) { rs ->
+                        if (rs.next()) newLikeCount = rs.getInt(1)
+                        Unit
+                    }
                     DatabaseHelper.processQuery("SELECT COUNT(*) FROM post_dislikes WHERE post_id = ?", listOf(postId)) { rs ->
-                        if (rs.next()) newCount = rs.getInt(1)
+                        if (rs.next()) newDislikeCount = rs.getInt(1)
                         Unit
                     }
                     val idx = allPosts.indexOfFirst { it.id == postId }
                     if (idx >= 0) {
-                        val updated = allPosts[idx].copy(dislikes = newCount, initialIsDisliked = newIsDisliked)
+                        val updated = allPosts[idx].copy(
+                            likes = newLikeCount,
+                            dislikes = newDislikeCount,
+                            initialIsLiked = if (newIsDisliked) false else allPosts[idx].initialIsLiked,
+                            initialIsDisliked = newIsDisliked
+                        )
                         allPosts[idx] = updated
                     }
                 }
