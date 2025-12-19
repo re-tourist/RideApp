@@ -182,11 +182,16 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
         }
 
         // 活动页面
-        composable(AppRoutes.ACTIVITIES) {
+        composable(
+            route = "${AppRoutes.ACTIVITIES}?category={category}",
+            arguments = listOf(navArgument("category") { type = NavType.IntType; defaultValue = 0 })
+        ) { backStackEntry ->
+            val initialCategory = backStackEntry.arguments?.getInt("category") ?: 0
             ActivitiesScreen(
                 navController = navController,
                 onBack = { navController.popBackStack() },
-                onCreateActivity = { navController.navigate(AppRoutes.CREATE_ACTIVITY) }
+                onCreateActivity = { navController.navigate(AppRoutes.CREATE_ACTIVITY) },
+                initialCategoryIndex = initialCategory
             )
         }
         

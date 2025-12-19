@@ -99,8 +99,13 @@ private val mockActivitiesList = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ActivitiesScreen(navController: NavController, onBack: () -> Unit, onCreateActivity: () -> Unit) {
-    var selectedCategory by remember { mutableStateOf(0) }
+fun ActivitiesScreen(
+    navController: NavController,
+    onBack: () -> Unit,
+    onCreateActivity: () -> Unit,
+    initialCategoryIndex: Int = 0
+) {
+    var selectedCategory by remember { mutableStateOf(initialCategoryIndex) }
     val handler = Handler(Looper.getMainLooper())
     var dbActivities by remember { mutableStateOf<List<Activity>>(emptyList()) }
     LaunchedEffect(Unit) {
