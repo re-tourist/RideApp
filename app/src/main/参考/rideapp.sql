@@ -11,7 +11,7 @@
  Target Server Version : 80044 (8.0.44-0ubuntu0.22.04.1)
  File Encoding         : 65001
 
- Date: 19/12/2025 14:54:51
+ Date: 19/12/2025 15:40:50
 */
 
 SET NAMES utf8mb4;
@@ -42,12 +42,12 @@ CREATE TABLE `achievement_badges`  (
 -- ----------------------------
 -- Records of achievement_badges
 -- ----------------------------
-INSERT INTO `achievement_badges` VALUES (1, 'first_ride', '完成第一次骑行', '完成任意一次骑行记录', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', 'first_ride', 1, 0.00, 0, 0, 1, '2025-12-07 14:09:55');
-INSERT INTO `achievement_badges` VALUES (2, 'streak_7', '连续骑行7天', '连续7天有骑行记录', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', 'streak_days', 0, 0.00, 7, 0, 1, '2025-12-07 14:09:55');
-INSERT INTO `achievement_badges` VALUES (3, 'total_100', '累计骑行100次', '累计完成100次骑行', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', 'total_rides', 100, 0.00, 0, 0, 1, '2025-12-07 14:09:55');
-INSERT INTO `achievement_badges` VALUES (4, 'single_42', '单次骑行超42公里', '任意单次骑行≥42km', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', 'single_distance', 0, 42.00, 0, 0, 1, '2025-12-07 14:09:55');
-INSERT INTO `achievement_badges` VALUES (5, 'night_3', '夜骑3次', '22:00后完成3次骑行', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', 'night_rides', 3, 0.00, 0, 0, 1, '2025-12-07 14:09:55');
-INSERT INTO `achievement_badges` VALUES (6, 'monthly_20', '月度20次', '一个月内完成20次骑行', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg', 'monthly_rides', 20, 0.00, 0, 30, 1, '2025-12-07 14:09:55');
+INSERT INTO `achievement_badges` VALUES (1, 'first_ride', '完成第一次骑行', '完成任意一次骑行记录', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/achievement_icons/00f9a7b6b9805c1da787db330de706f.png', 'first_ride', 1, 0.00, 0, 0, 1, '2025-12-07 14:09:55');
+INSERT INTO `achievement_badges` VALUES (2, 'streak_7', '连续骑行7天', '连续7天有骑行记录', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/achievement_icons/17570b444641911da92f455432e9554.jpg', 'streak_days', 0, 0.00, 7, 0, 1, '2025-12-07 14:09:55');
+INSERT INTO `achievement_badges` VALUES (3, 'total_100', '累计骑行100次', '累计完成100次骑行', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/achievement_icons/23629d1b808bc993cb1c5f110168b23.jpg', 'total_rides', 100, 0.00, 0, 0, 1, '2025-12-07 14:09:55');
+INSERT INTO `achievement_badges` VALUES (4, 'single_42', '单次骑行超42公里', '任意单次骑行≥42km', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/achievement_icons/5cf62dff005bb0ea14366793c8fce23.jpg', 'single_distance', 0, 42.00, 0, 0, 1, '2025-12-07 14:09:55');
+INSERT INTO `achievement_badges` VALUES (5, 'night_3', '夜骑3次', '22:00后完成3次骑行', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/achievement_icons/68183d65c58ca1a3ad0020f98f84229.jpg', 'night_rides', 3, 0.00, 0, 0, 1, '2025-12-07 14:09:55');
+INSERT INTO `achievement_badges` VALUES (6, 'monthly_20', '月度20次', '一个月内完成20次骑行', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/achievement_icons/b4b9aaa453c185261ccf6ed6d411d32.jpg', 'monthly_rides', 20, 0.00, 0, 30, 1, '2025-12-07 14:09:55');
 
 -- ----------------------------
 -- Table structure for activities
@@ -669,12 +669,18 @@ CREATE TABLE `user_achievement_progress`  (
 -- ----------------------------
 -- Records of user_achievement_progress
 -- ----------------------------
-INSERT INTO `user_achievement_progress` VALUES (1, 1, 1, 0.00, 0, 100.00, 1, '2025-12-01 08:00:00', '2025-12-07 14:09:55');
-INSERT INTO `user_achievement_progress` VALUES (1, 2, 0, 0.00, 3, 42.86, 0, NULL, '2025-12-07 14:09:55');
-INSERT INTO `user_achievement_progress` VALUES (1, 3, 12, 0.00, 0, 12.00, 0, NULL, '2025-12-07 14:09:55');
-INSERT INTO `user_achievement_progress` VALUES (1, 4, 1, 45.00, 0, 100.00, 1, '2025-12-10 10:00:00', '2025-12-07 14:09:55');
-INSERT INTO `user_achievement_progress` VALUES (1, 5, 1, 0.00, 0, 33.33, 0, NULL, '2025-12-07 14:09:55');
-INSERT INTO `user_achievement_progress` VALUES (1, 6, 5, 0.00, 0, 25.00, 0, NULL, '2025-12-07 14:09:57');
+INSERT INTO `user_achievement_progress` VALUES (1, 1, 26, 0.00, 0, 100.00, 1, '2025-12-01 08:00:00', '2025-12-19 15:20:11');
+INSERT INTO `user_achievement_progress` VALUES (1, 2, 0, 0.00, 5, 71.43, 0, NULL, '2025-12-19 15:20:11');
+INSERT INTO `user_achievement_progress` VALUES (1, 3, 26, 0.00, 0, 26.00, 0, NULL, '2025-12-19 15:20:12');
+INSERT INTO `user_achievement_progress` VALUES (1, 4, 0, 32.50, 0, 77.38, 0, '2025-12-10 10:00:00', '2025-12-19 15:20:12');
+INSERT INTO `user_achievement_progress` VALUES (1, 5, 3, 0.00, 0, 100.00, 1, NULL, '2025-12-19 15:20:12');
+INSERT INTO `user_achievement_progress` VALUES (1, 6, 25, 0.00, 0, 100.00, 1, NULL, '2025-12-19 15:20:12');
+INSERT INTO `user_achievement_progress` VALUES (14, 1, 1, 0.00, 0, 100.00, 1, NULL, '2025-12-19 15:21:32');
+INSERT INTO `user_achievement_progress` VALUES (14, 2, 0, 0.00, 1, 14.29, 0, NULL, '2025-12-19 15:21:32');
+INSERT INTO `user_achievement_progress` VALUES (14, 3, 1, 0.00, 0, 1.00, 0, NULL, '2025-12-19 15:21:32');
+INSERT INTO `user_achievement_progress` VALUES (14, 4, 0, 0.00, 0, 0.00, 0, NULL, '2025-12-19 15:21:32');
+INSERT INTO `user_achievement_progress` VALUES (14, 5, 0, 0.00, 0, 0.00, 0, NULL, '2025-12-19 15:21:32');
+INSERT INTO `user_achievement_progress` VALUES (14, 6, 1, 0.00, 0, 5.00, 0, NULL, '2025-12-19 15:21:32');
 
 -- ----------------------------
 -- Table structure for user_achievement_record_links
@@ -951,7 +957,7 @@ CREATE TABLE `user_ride_records`  (
   INDEX `idx_ride_records_start_time`(`start_time` ASC) USING BTREE,
   CONSTRAINT `user_ride_records_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `user_ride_records_ibfk_2` FOREIGN KEY (`route_id`) REFERENCES `routes` (`route_id`) ON DELETE SET NULL ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 892628470 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户骑行记录' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 897967848 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户骑行记录' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of user_ride_records
@@ -1040,6 +1046,13 @@ INSERT INTO `user_ride_records` VALUES (813220565, 1, NULL, '2025-12-18 07:59:39
 INSERT INTO `user_ride_records` VALUES (818851203, 1, NULL, '2025-12-18 09:33:10', 0, 15, 0.00, 0.00, 0, NULL, NULL, '2025-12-18 17:33:57', 0, 0.00);
 INSERT INTO `user_ride_records` VALUES (892145338, 1, NULL, '2025-12-19 05:54:52', 0, 4, 0.00, 0.00, 0, NULL, NULL, '2025-12-19 13:55:05', 0, 0.00);
 INSERT INTO `user_ride_records` VALUES (892628469, 1, NULL, '2025-12-19 06:03:05', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-19 14:03:09', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (897250873, 1, NULL, '2025-12-19 07:20:07', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-19 15:20:10', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (897272744, 8, NULL, '2025-12-19 15:20:31', 0, 3, 0.00, 0.00, 0, NULL, NULL, '2025-12-19 15:20:31', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (897330992, 14, NULL, '2025-12-19 07:21:28', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-19 15:21:31', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (897360181, 8, NULL, '2025-12-19 15:21:58', 0, 5, 0.01, 5.50, 0, NULL, NULL, '2025-12-19 15:21:59', 0, 3.10);
+INSERT INTO `user_ride_records` VALUES (897936590, 8, NULL, '2025-12-19 15:31:35', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-19 15:31:35', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (897939172, 8, NULL, '2025-12-19 15:31:37', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-19 15:31:38', 0, 0.00);
+INSERT INTO `user_ride_records` VALUES (897967847, 8, NULL, '2025-12-19 15:32:06', 0, 13, 0.00, 0.50, 0, NULL, NULL, '2025-12-19 15:32:06', 0, 0.39);
 
 -- ----------------------------
 -- Table structure for users
@@ -1066,7 +1079,7 @@ CREATE TABLE `users`  (
   INDEX `idx_users_email`(`email` ASC) USING BTREE,
   INDEX `idx_users_nickname`(`nickname` ASC) USING BTREE,
   INDEX `idx_users_status`(`status` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 14 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 15 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of users
@@ -1081,5 +1094,6 @@ INSERT INTO `users` VALUES (10, '111', '111@gmail.com', '111111', 'https://ridea
 INSERT INTO `users` VALUES (11, '1', '1@gmail.com', '123123', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/User%20Icon/1764739143896.png', NULL, 'other', NULL, NULL, 0, 0, '2025-12-17 09:26:48', '2025-12-09 19:31:59', '2025-12-17 09:26:48');
 INSERT INTO `users` VALUES (12, 'as', 'test@qq.com', '123456', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-12-16 15:06:12', '2025-12-16 15:06:11', '2025-12-16 15:06:12');
 INSERT INTO `users` VALUES (13, '123456/', 'test6@example.com', '123456', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-12-17 08:55:24', '2025-12-17 08:53:10', '2025-12-17 08:55:24');
+INSERT INTO `users` VALUES (14, 'aaa', 'aaaa@qq.com', 'aaaaaa', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-12-19 15:21:21', '2025-12-19 15:21:20', '2025-12-19 15:21:21');
 
 SET FOREIGN_KEY_CHECKS = 1;
