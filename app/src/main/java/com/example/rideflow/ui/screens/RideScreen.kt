@@ -7,6 +7,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,6 +30,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Map
@@ -145,6 +147,12 @@ sealed class RideStatus {
 private enum class RideStartMode {
     FreeRide,
     TargetRide
+}
+
+private enum class TargetGoalType {
+    Distance,
+    Duration,
+    Calories
 }
 
 data class RideHistory(
@@ -360,7 +368,7 @@ fun RideScreen(navController: androidx.navigation.NavController) {
         } else {
             RideMainContent(
                 onShowHistory = { showHistoryScreen = true },
-                routeButtonText = "路线",
+                routeButtonText = "路书",
                 onRouteClick = { showRouteSelect = true },
                 enableSearch = false
             )
@@ -371,8 +379,7 @@ fun RideScreen(navController: androidx.navigation.NavController) {
                 selectedRouteId = selectedRouteId,
                 onDismiss = { showRouteSelect = false },
                 onSelectRouteId = { id ->
-                    selectedRouteId = id
-                    showRouteSelect = false
+                    selectedRouteId = if (selectedRouteId == id) null else id
                 }
             )
         }
@@ -1254,19 +1261,50 @@ fun NotStartedContent(
     }
 
     var mode by rememberSaveable { mutableStateOf(RideStartMode.FreeRide) }
+    var targetGoalType by rememberSaveable { mutableStateOf(TargetGoalType.Distance) }
     var targetDistanceKm by rememberSaveable { mutableStateOf(10.0) }
+    var targetDurationMinutes by rememberSaveable { mutableStateOf(30) }
+    var targetCaloriesKcal by rememberSaveable { mutableStateOf(200) }
     var showTargetSheet by rememberSaveable { mutableStateOf(false) }
 
     if (showTargetSheet) {
-        TargetDistanceBottomSheet(
-            initialDistanceKm = targetDistanceKm,
-            onDismiss = { showTargetSheet = false },
-            onConfirm = { km ->
-                targetDistanceKm = km
-                showTargetSheet = false
-            },
-            primaryGreen = primaryGreen
-        )
+        when (targetGoalType) {
+            TargetGoalType.Distance -> {
+                TargetDistanceBottomSheet(
+                    initialDistanceKm = targetDistanceKm,
+                    onDismiss = { showTargetSheet = false },
+                    onConfirm = { km ->
+                        targetDistanceKm = km
+                        showTargetSheet = false
+                    },
+                    primaryGreen = primaryGreen
+                )
+            }
+
+            TargetGoalType.Duration -> {
+                TargetDurationBottomSheet(
+                    initialMinutes = targetDurationMinutes,
+                    onDismiss = { showTargetSheet = false },
+                    onConfirm = { minutes ->
+                        targetDurationMinutes = minutes
+                        showTargetSheet = false
+                    },
+                    primaryGreen = primaryGreen
+                )
+            }
+
+            TargetGoalType.Calories -> {
+                TargetCaloriesBottomSheet(
+                    initialKcal = targetCaloriesKcal,
+                    onDismiss = { showTargetSheet = false },
+                    onConfirm = { kcal ->
+                        targetCaloriesKcal = kcal
+                        showTargetSheet = false
+                    },
+                    primaryGreen = primaryGreen
+                )
+            }
+        }
     }
 
     BoxWithConstraints(
@@ -1329,10 +1367,22 @@ fun NotStartedContent(
                     }
 
                     RideStartMode.TargetRide -> {
-                        TargetDistanceHeroCard(
+                        val toggleGoalType = {
+                            targetGoalType = when (targetGoalType) {
+                                TargetGoalType.Distance -> TargetGoalType.Duration
+                                TargetGoalType.Duration -> TargetGoalType.Calories
+                                TargetGoalType.Calories -> TargetGoalType.Distance
+                            }
+                        }
+                        TargetGoalHeroCard(
                             height = mapHeight,
+                            goalType = targetGoalType,
                             distanceKm = targetDistanceKm,
+                            durationMinutes = targetDurationMinutes,
+                            caloriesKcal = targetCaloriesKcal,
                             onClick = { showTargetSheet = true },
+                            onPrevGoal = toggleGoalType,
+                            onNextGoal = toggleGoalType,
                             primaryGreen = primaryGreen
                         )
                     }
@@ -1506,12 +1556,42 @@ private fun RideModeTabItem(
 }
 
 @Composable
-private fun TargetDistanceHeroCard(
+private fun TargetGoalHeroCard(
     height: Dp,
+    goalType: TargetGoalType,
     distanceKm: Double,
+    durationMinutes: Int,
+    caloriesKcal: Int,
     onClick: () -> Unit,
+    onPrevGoal: () -> Unit,
+    onNextGoal: () -> Unit,
     primaryGreen: Color
 ) {
+    val title = when (goalType) {
+        TargetGoalType.Distance -> "目标公里"
+        TargetGoalType.Duration -> "目标时长"
+        TargetGoalType.Calories -> "目标消耗"
+    }
+    val hint = when (goalType) {
+        TargetGoalType.Distance -> "点击设置（公里）"
+        TargetGoalType.Duration -> "点击设置（时:分）"
+        TargetGoalType.Calories -> "点击设置（千卡）"
+    }
+    val mainValueText = when (goalType) {
+        TargetGoalType.Distance -> String.format("%.2f", distanceKm)
+        TargetGoalType.Duration -> {
+            val h = durationMinutes / 60
+            val m = durationMinutes % 60
+            String.format("%02d:%02d", h, m)
+        }
+        TargetGoalType.Calories -> caloriesKcal.toString()
+    }
+    val unitText = when (goalType) {
+        TargetGoalType.Distance -> "km"
+        TargetGoalType.Duration -> ""
+        TargetGoalType.Calories -> ""
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -1527,34 +1607,60 @@ private fun TargetDistanceHeroCard(
                 .padding(horizontal = 18.dp, vertical = 16.dp)
         ) {
             Column(modifier = Modifier.align(Alignment.Center)) {
-                Text(
-                    text = "目标距离",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White.copy(alpha = 0.88f)
-                )
+                Row(
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    IconButton(onClick = onPrevGoal) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "切换目标类型",
+                            tint = Color.White.copy(alpha = 0.88f)
+                        )
+                    }
+                    Text(
+                        text = title,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White.copy(alpha = 0.88f)
+                    )
+                    IconButton(onClick = onNextGoal) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = "切换目标类型",
+                            tint = Color.White.copy(alpha = 0.88f)
+                        )
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(10.dp))
+
                 Row(
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                     verticalAlignment = Alignment.Bottom
                 ) {
                     Text(
-                        text = String.format("%.2f", distanceKm),
+                        text = mainValueText,
                         fontSize = 56.sp,
                         fontWeight = FontWeight.Black,
                         color = Color.White
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "km",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White.copy(alpha = 0.90f)
-                    )
+                    if (unitText.isNotEmpty()) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = unitText,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White.copy(alpha = 0.90f)
+                        )
+                    }
                 }
+
                 Spacer(modifier = Modifier.height(12.dp))
+
                 Text(
-                    text = "点击设置（公里）",
+                    text = hint,
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
@@ -1728,6 +1834,223 @@ private fun TargetDistanceBottomSheet(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+private fun TargetDurationBottomSheet(
+    initialMinutes: Int,
+    onDismiss: () -> Unit,
+    onConfirm: (Int) -> Unit,
+    primaryGreen: Color
+) {
+    var minutes by rememberSaveable { mutableStateOf(initialMinutes) }
+    val quick = remember { listOf(15, 30, 45, 60, 90) }
+
+    fun clamp(v: Int): Int = v.coerceIn(5, 600)
+    fun format(v: Int): String {
+        val h = v / 60
+        val m = v % 60
+        return String.format("%02d:%02d", h, m)
+    }
+
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 20.dp)
+        ) {
+            Text(
+                text = "设置目标时长",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.Black.copy(alpha = 0.86f)
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Card(
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    IconButton(onClick = { minutes = clamp(minutes - 5) }) {
+                        Icon(imageVector = Icons.Filled.Remove, contentDescription = "减少")
+                    }
+
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = format(minutes),
+                            fontSize = 36.sp,
+                            fontWeight = FontWeight.Black,
+                            color = Color.Black.copy(alpha = 0.86f)
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "支持 5 分钟步进",
+                            fontSize = 12.sp,
+                            color = Color.Black.copy(alpha = 0.48f)
+                        )
+                    }
+
+                    IconButton(onClick = { minutes = clamp(minutes + 5) }) {
+                        Icon(imageVector = Icons.Filled.Add, contentDescription = "增加")
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                quick.forEach { m ->
+                    AssistChip(
+                        onClick = { minutes = m },
+                        label = { Text(text = format(m)) },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = if (minutes == m) primaryGreen.copy(alpha = 0.14f) else Color.White,
+                            labelColor = if (minutes == m) primaryGreen else Color.Black.copy(alpha = 0.70f)
+                        ),
+                        border = AssistChipDefaults.assistChipBorder(
+                            enabled = true,
+                            borderColor = Color.Black.copy(alpha = 0.08f)
+                        )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Button(
+                onClick = { onConfirm(minutes) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = primaryGreen)
+            ) {
+                Text(text = "确认", fontWeight = FontWeight.SemiBold, color = Color.White)
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TargetCaloriesBottomSheet(
+    initialKcal: Int,
+    onDismiss: () -> Unit,
+    onConfirm: (Int) -> Unit,
+    primaryGreen: Color
+) {
+    var kcal by rememberSaveable { mutableStateOf(initialKcal) }
+    val quick = remember { listOf(100, 200, 300, 500, 800) }
+
+    fun clamp(v: Int): Int = v.coerceIn(20, 5000)
+
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 20.dp)
+        ) {
+            Text(
+                text = "设置目标消耗",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.Black.copy(alpha = 0.86f)
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Card(
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    IconButton(onClick = { kcal = clamp(kcal - 20) }) {
+                        Icon(imageVector = Icons.Filled.Remove, contentDescription = "减少")
+                    }
+
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = kcal.toString(),
+                            fontSize = 36.sp,
+                            fontWeight = FontWeight.Black,
+                            color = Color.Black.copy(alpha = 0.86f)
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "单位：千卡",
+                            fontSize = 12.sp,
+                            color = Color.Black.copy(alpha = 0.48f)
+                        )
+                    }
+
+                    IconButton(onClick = { kcal = clamp(kcal + 20) }) {
+                        Icon(imageVector = Icons.Filled.Add, contentDescription = "增加")
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                quick.forEach { v ->
+                    AssistChip(
+                        onClick = { kcal = v },
+                        label = { Text(text = v.toString()) },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = if (kcal == v) primaryGreen.copy(alpha = 0.14f) else Color.White,
+                            labelColor = if (kcal == v) primaryGreen else Color.Black.copy(alpha = 0.70f)
+                        ),
+                        border = AssistChipDefaults.assistChipBorder(
+                            enabled = true,
+                            borderColor = Color.Black.copy(alpha = 0.08f)
+                        )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Button(
+                onClick = { onConfirm(kcal) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = primaryGreen)
+            ) {
+                Text(text = "确认", fontWeight = FontWeight.SemiBold, color = Color.White)
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
+@Composable
 private fun RouteSelectBottomSheet(
     selectedRouteId: Int?,
     onDismiss: () -> Unit,
@@ -1762,13 +2085,19 @@ private fun RouteSelectBottomSheet(
         routes = loaded
     }
 
-    val displayRoutes = remember(routes, sortIndex) {
+    val sortedRoutes = remember(routes, sortIndex) {
         when (sortIndex) {
             1 -> routes.sortedByDescending { it.distanceKm }
             2 -> routes.sortedByDescending { it.elevationM }
             3 -> routes.sortedBy { it.location }
             else -> routes
         }
+    }
+
+    val displayRoutes = remember(sortedRoutes, selectedRouteId) {
+        val id = selectedRouteId ?: return@remember sortedRoutes
+        val pinned = sortedRoutes.firstOrNull { it.id == id } ?: return@remember sortedRoutes
+        listOf(pinned) + sortedRoutes.filter { it.id != id }
     }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -1792,7 +2121,12 @@ private fun RouteSelectBottomSheet(
                 .padding(horizontal = 12.dp)
                 .padding(bottom = 96.dp)
                 .fillMaxWidth()
-                .heightIn(max = sheetMaxHeight),
+                .heightIn(max = sheetMaxHeight)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {}
+                ),
             shape = RoundedCornerShape(22.dp),
             tonalElevation = 2.dp,
             shadowElevation = 10.dp,
@@ -1810,7 +2144,7 @@ private fun RouteSelectBottomSheet(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "选择路线",
+                        text = "选择路书",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Black,
                         color = Color.Black.copy(alpha = 0.86f)
@@ -1853,11 +2187,15 @@ private fun RouteSelectBottomSheet(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(displayRoutes) { route ->
+                    items(
+                        items = displayRoutes,
+                        key = { it.id }
+                    ) { route ->
                         RouteSelectRow(
                             route = route,
                             selected = selectedRouteId == route.id,
-                            onClick = { onSelectRouteId(route.id) }
+                            onClick = { onSelectRouteId(route.id) },
+                            modifier = Modifier.animateItem(placementSpec = tween(180))
                         )
                     }
                     item { Spacer(modifier = Modifier.height(12.dp)) }
@@ -1871,10 +2209,11 @@ private fun RouteSelectBottomSheet(
 private fun RouteSelectRow(
     route: RouteBook,
     selected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
