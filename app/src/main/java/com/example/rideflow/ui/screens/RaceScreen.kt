@@ -49,7 +49,7 @@ private fun loadRaces(handler: Handler, onLoaded: (List<Race>) -> Unit) {
         DatabaseHelper.processQuery("SELECT race_id, title, event_date, location, event_type, is_open, cover_image_url FROM races ORDER BY event_date DESC LIMIT 100") { rs ->
             while (rs.next()) {
                 val id = rs.getInt(1)
-                val title = rs.getString(2)
+                val title = rs.getString(2) ?: ""
                 val date = rs.getTimestamp(3)?.toString() ?: ""
                 val loc = rs.getString(4) ?: ""
                 val type = rs.getString(5) ?: "骑行"

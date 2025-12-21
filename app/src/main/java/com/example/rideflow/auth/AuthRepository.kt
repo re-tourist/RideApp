@@ -8,108 +8,73 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 
-/**
- * 认证仓库
- * 处理用户登录、注册、登出等核心认证逻辑
- */
 class AuthRepository(private val sessionManager: SessionManager) {
-    // 认证状态的可变状态流
     private val _authState = MutableStateFlow<AuthState>(AuthState.Unauthenticated)
 
-    // 暴露给外部的只读状态流
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
-    /**
-     * 用户登录方法
-     * @param usernameOrEmail 用户名或邮箱
-     * @param password 密码
-     */
     suspend fun login(usernameOrEmail: String, password: String) {
         _authState.value = AuthState.Authenticating
 
         try {
-            // 简单判断输入是否有效
             if (usernameOrEmail.isBlank() || password.isBlank()) {
                 throw Exception("用户名和密码不能为空")
             }
 
-            // 在IO线程执行数据库操作
             val userData = withContext(Dispatchers.IO) {
-                AuthDatabaseHelper.login(usernameOrEmail, password)
+                loginRemote(usernameOrEmail, password)
             }
 
-            if (userData != null) {
-                sessionManager.loginSuccess(userData.userId)
-                _authState.value = AuthState.Authenticated(userData)
-            } else {
-                throw Exception("用户名或密码错误，请重试")
-            }
+            sessionManager.loginSuccess(userData.userId)
+            _authState.value = AuthState.Authenticated(userData)
         } catch (e: Exception) {
             _authState.value = AuthState.Error(e.message ?: "登录失败，请重试")
         }
     }
 
-    /**
-     * 用户注册方法
-     * @param email 邮箱
-     * @param nickname 昵称
-     * @param password 密码
-     */
     suspend fun register(email: String, nickname: String, password: String) {
         _authState.value = AuthState.Authenticating
 
         try {
-            // 简单验证输入
-            if (email.isBlank() || nickname.isBlank() || password.isBlank()) {
-                throw Exception("请填写所有必填信息")
+            if (email.isBlank() || password.isBlank()) {
+                throw Exception("请填写邮箱和密码")
             }
 
             if (password.length < 6) {
                 throw Exception("密码至少需要6位字符")
             }
 
-            // 在IO线程执行数据库操作
+            val username = if (email.isNotBlank()) email else nickname
+
             val userData = withContext(Dispatchers.IO) {
-                AuthDatabaseHelper.register(email, nickname, password)
+                registerRemote(username, password)
             }
 
-            if (userData != null) {
-                _authState.value = AuthState.Authenticated(userData)
-            } else {
-                throw Exception("注册失败，邮箱或昵称可能已被使用")
-            }
+            sessionManager.loginSuccess(userData.userId)
+            _authState.value = AuthState.Authenticated(userData)
         } catch (e: Exception) {
             _authState.value = AuthState.Error(e.message ?: "注册失败，请重试")
         }
     }
 
-    /**
-     * 用户登出方法
-     */
     fun logout() {
         _authState.value = AuthState.Unauthenticated
     }
 
-    /**
-     * 清除认证错误
-     */
     fun clearError() {
         if (_authState.value is AuthState.Error) {
             _authState.value = AuthState.Unauthenticated
         }
     }
 
-    /**
-     * 检查用户是否已登录
-     */
     fun isLoggedIn(): Boolean {
         return _authState.value is AuthState.Authenticated
     }
 
-    /**
-     * 获取当前登录用户数据
-     */
     fun getCurrentUser(): UserData? {
         return if (_authState.value is AuthState.Authenticated) {
             (_authState.value as AuthState.Authenticated).userData
@@ -118,9 +83,6 @@ class AuthRepository(private val sessionManager: SessionManager) {
         }
     }
 
-    /**
-     * 获取当前登录用户ID
-     */
     fun getCurrentUserId(): String? {
         return getCurrentUser()?.userId
     }
@@ -130,5 +92,106 @@ class AuthRepository(private val sessionManager: SessionManager) {
         if (user != null) {
             _authState.value = AuthState.Authenticated(user)
         }
+    }
+
+    private fun loginRemote(usernameOrEmail: String, password: String): UserData {
+        val url = URL("$BASE_URL/api/v1/auth/login")
+        val conn = (url.openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            connectTimeout = 10000
+            readTimeout = 15000
+            doInput = true
+            doOutput = true
+            setRequestProperty("Content-Type", "application/json; charset=utf-8")
+        }
+
+        return conn.useJsonCall(
+            bodyBuilder = {
+                put("username", usernameOrEmail)
+                put("password", password)
+            }
+        )
+    }
+
+    private fun registerRemote(username: String, password: String): UserData {
+        val url = URL("$BASE_URL/api/v1/auth/register")
+        val conn = (url.openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            connectTimeout = 10000
+            readTimeout = 15000
+            doInput = true
+            doOutput = true
+            setRequestProperty("Content-Type", "application/json; charset=utf-8")
+        }
+
+        return conn.useJsonCall(
+            bodyBuilder = {
+                put("username", username)
+                put("password", password)
+            }
+        )
+    }
+
+    private fun HttpURLConnection.useJsonCall(
+        bodyBuilder: JSONObject.() -> Unit
+    ): UserData {
+        try {
+            val body = JSONObject().apply(bodyBuilder)
+            outputStream.use { os ->
+                os.write(body.toString().toByteArray(Charsets.UTF_8))
+            }
+
+            val code = responseCode
+            val stream = if (code in 200..299) inputStream else errorStream
+            val responseText = stream.bufferedReader().use { it.readText() }
+
+            if (code !in 200..299) {
+                throw Exception("网络请求失败($code)")
+            }
+
+            val root = JSONObject(responseText)
+            val bizCode = root.optInt("code", -1)
+            if (bizCode != 0) {
+                val msg = root.optString("message", "请求失败")
+                throw Exception(msg)
+            }
+
+            val data = root.optJSONObject("data") ?: throw Exception("响应数据为空")
+
+            val userId = data.optLong("user_id", 0L)
+            if (userId <= 0L) {
+                throw Exception("用户数据不合法")
+            }
+
+            val nickname = data.optString("nickname", "")
+            val username = data.optString("username", "")
+            val email = data.optString("email", "")
+            val avatarUrl = data.optString("avatar_url", "")
+            val bio = data.optString("bio", "")
+            val genderStr = data.optString("gender", "")
+
+            val gender = when (genderStr.lowercase()) {
+                "male", "m", "1" -> 1
+                "female", "f", "2" -> 2
+                else -> 0
+            }
+
+            return UserData(
+                userId = userId.toString(),
+                nickname = if (nickname.isNotEmpty()) nickname else username,
+                email = email,
+                avatarUrl = avatarUrl.takeIf { it.isNotEmpty() },
+                bio = bio.takeIf { it.isNotEmpty() },
+                gender = gender,
+                birthday = null,
+                emergencyContact = null
+            )
+        } finally {
+            disconnect()
+        }
+    }
+
+    companion object {
+        private const val BASE_URL = "http://101.37.79.220:8080"
     }
 }

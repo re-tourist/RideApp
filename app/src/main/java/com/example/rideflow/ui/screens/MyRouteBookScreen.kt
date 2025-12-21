@@ -38,7 +38,7 @@ fun MyRouteBookScreen(onBack: () -> Unit, userId: String = "") {
                 ) { rs ->
                     while (rs.next()) {
                         val id = rs.getInt(1)
-                        val title = rs.getString(2)
+                        val title = rs.getString(2) ?: ""
                         val dist = rs.getDouble(3)
                         val elev = rs.getInt(4)
                         val loc = rs.getString(5) ?: ""
@@ -67,7 +67,7 @@ fun MyRouteBookScreen(onBack: () -> Unit, userId: String = "") {
                 ) { rs ->
                     while (rs.next()) {
                         val id = rs.getInt(1)
-                        val title = rs.getString(2)
+                        val title = rs.getString(2) ?: ""
                         val dist = rs.getDouble(3)
                         val elev = rs.getInt(4)
                         val loc = rs.getString(5) ?: ""

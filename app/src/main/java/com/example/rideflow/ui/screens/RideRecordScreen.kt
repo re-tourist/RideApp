@@ -89,7 +89,7 @@ fun RideRecordScreen(navController: NavController, userId: String) {
                         val durationSec = rs.getInt(3)
                         val distanceKm = rs.getDouble(4)
                         val avgSpeed = rs.getDouble(5)
-                        val dateStr = sdf.format(Date(ts.time))
+                        val dateStr = if (ts != null) sdf.format(Date(ts.time)) else ""
                         list.add(
                             RideRecord(
                                 id = id,

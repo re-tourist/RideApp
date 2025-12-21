@@ -69,8 +69,8 @@ private suspend fun loadArticlesIO(): List<Article> {
         ) { rs ->
             while (rs.next()) {
                 val id = rs.getInt(1)
-                val title = rs.getString(2)
-                val author = rs.getString(3)
+                val title = rs.getString(2) ?: ""
+                val author = rs.getString(3) ?: ""
                 val date = rs.getDate(4)?.toString() ?: ""
                 val views = rs.getInt(5)
                 val img = rs.getString(6) ?: "https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg"
@@ -455,12 +455,12 @@ private suspend fun loadRecommendedRacesIO(): List<Race> {
         DatabaseHelper.processQuery("SELECT race_id, title, event_date, location, event_type, is_open, cover_image_url FROM races ORDER BY event_date DESC LIMIT 30") { rs ->
             while (rs.next()) {
                 val id = rs.getInt(1)
-                val title = rs.getString(2)
+                val title = rs.getString(2) ?: ""
                 val date = rs.getTimestamp(3)?.toString() ?: ""
                 val loc = rs.getString(4) ?: ""
                 val type = rs.getString(5) ?: "娱乐赛"
                 val open = rs.getBoolean(6)
-                val coverUrl = rs.getString(7)
+                val coverUrl = rs.getString(7) ?: "https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg"
                 val tags = mutableListOf<String>()
                 DatabaseHelper.processQuery("SELECT tag_name FROM race_tags WHERE race_id = ?", listOf(id)) { trs ->
                     while (trs.next()) tags.add(trs.getString(1) ?: "")
@@ -480,12 +480,12 @@ private suspend fun loadRecommendedActivitiesIO(): List<Activity> {
         DatabaseHelper.processQuery("SELECT activity_id, title, event_date, location, event_type, is_open, cover_image_url FROM activities ORDER BY event_date DESC LIMIT 30") { rs ->
             while (rs.next()) {
                 val id = rs.getInt(1)
-                val title = rs.getString(2)
+                val title = rs.getString(2) ?: ""
                 val date = rs.getTimestamp(3)?.toString() ?: ""
                 val loc = rs.getString(4) ?: ""
                 val type = rs.getString(5) ?: "周末活动"
                 val open = rs.getBoolean(6)
-                val coverUrl = rs.getString(7)
+                val coverUrl = rs.getString(7) ?: "https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/%E5%87%89%E5%AE%AB%E6%98%A5%E6%97%A5.jpg"
                 val tags = mutableListOf<String>()
                 DatabaseHelper.processQuery("SELECT tag_name FROM activity_tags WHERE activity_id = ?", listOf(id)) { trs ->
                     while (trs.next()) tags.add(trs.getString(1) ?: "")
@@ -505,7 +505,7 @@ private suspend fun loadRecommendedClubsIO(): List<Club> {
         DatabaseHelper.processQuery("SELECT club_id, name, city, logo_url, members_count, heat FROM clubs ORDER BY heat DESC LIMIT 20") { rs ->
             while (rs.next()) {
                 val id = rs.getInt(1)
-                val name = rs.getString(2)
+                val name = rs.getString(2) ?: ""
                 val city = rs.getString(3) ?: ""
                 val logo = rs.getString(4)
                 val members = rs.getInt(5)

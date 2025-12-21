@@ -116,7 +116,7 @@ fun ActivitiesScreen(
             ) { rs ->
                 while (rs.next()) {
                     val id = rs.getInt(1)
-                    val title = rs.getString(2)
+                    val title = rs.getString(2) ?: ""
                     val date = rs.getTimestamp(3)?.toString() ?: ""
                     val loc = rs.getString(4) ?: ""
                     val type = rs.getString(5) ?: "骑行"

@@ -44,7 +44,7 @@ fun RouteBookDetailScreen(navController: NavController, routeId: Int) {
                 listOf(routeId)
             ) { rs ->
                 if (rs.next()) {
-                    val t = rs.getString(1)
+                    val t = rs.getString(1) ?: ""
                     val d = rs.getDouble(2)
                     val e = rs.getInt(3)
                     val l = rs.getString(4) ?: ""

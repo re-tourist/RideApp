@@ -42,7 +42,7 @@ private fun loadClubs(handler: Handler, onLoaded: (List<Club>) -> Unit) {
         DatabaseHelper.processQuery("SELECT club_id, name, city, logo_url, members_count, heat FROM clubs ORDER BY heat DESC LIMIT 100") { rs ->
             while (rs.next()) {
                 val id = rs.getInt(1)
-                val name = rs.getString(2)
+                val name = rs.getString(2) ?: ""
                 val city = rs.getString(3) ?: ""
                 val logo = rs.getString(4)
                 val members = rs.getInt(5)

@@ -51,7 +51,7 @@ private fun loadRiders(userId: String): Pair<List<Rider>, List<Rider>> {
                 val local = mutableListOf<Rider>()
                 while (rs.next()) {
                     val id = rs.getInt(1)
-                    val name = rs.getString(2)
+                    val name = rs.getString(2) ?: ""
                     val city = rs.getString(3) ?: ""
                     val level = rs.getString(4) ?: "普通"
                     val avatar = rs.getString(5)

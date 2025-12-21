@@ -63,9 +63,9 @@ fun RidePreferenceScreen(navController: NavController, userId: String) {
             "SELECT c.category_name, o.option_id, o.option_name FROM ride_preference_options o JOIN ride_preference_categories c ON o.category_id = c.category_id ORDER BY c.display_order, o.display_order"
         ) { rs ->
             while (rs.next()) {
-                val cn = rs.getString(1)
+                val cn = rs.getString(1) ?: ""
                 val oid = rs.getInt(2)
-                val on = rs.getString(3)
+                val on = rs.getString(3) ?: ""
                 val list = map.getOrPut(cn) { mutableListOf() }
                 list.add(OptionItem(oid, on))
             }

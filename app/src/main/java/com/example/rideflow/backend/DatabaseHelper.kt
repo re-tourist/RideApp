@@ -1,397 +1,183 @@
 package com.example.rideflow.backend
 
 import android.util.Log
-import java.sql.*
+import org.json.JSONArray
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+
+interface DbResultSet {
+    fun next(): Boolean
+    fun wasNull(): Boolean
+
+    fun getString(columnIndex: Int): String?
+    fun getInt(columnIndex: Int): Int
+    fun getDouble(columnIndex: Int): Double
+    fun getLong(columnIndex: Int): Long
+    fun getBoolean(columnIndex: Int): Boolean
+    fun getDate(columnIndex: Int): java.sql.Date?
+    fun getTimestamp(columnIndex: Int): java.sql.Timestamp?
+
+    fun getBigDecimal(columnIndex: Int): java.math.BigDecimal?
+
+    fun getString(columnLabel: String): String?
+    fun getInt(columnLabel: String): Int
+    fun getDouble(columnLabel: String): Double
+    fun getLong(columnLabel: String): Long
+    fun getBoolean(columnLabel: String): Boolean
+    fun getTimestamp(columnLabel: String): java.sql.Timestamp?
+    fun getBigDecimal(columnLabel: String): java.math.BigDecimal?
+    fun getObject(columnLabel: String): Any?
+    fun getObject(columnIndex: Int): Any?
+}
 
 object DatabaseHelper {
     private const val TAG = "DatabaseHelper"
+    private const val BASE_URL = "http://101.37.79.220:8080"
 
-    // 数据库配置 - 针对云服务器MySQL配置优化
-    private const val DB_URL = "jdbc:mysql://101.37.79.220:3306/rideapp?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&characterEncoding=utf8&connectTimeout=15000&socketTimeout=45000&useUnicode=true&autoReconnect=true"
-    private const val DB_USER = "root"
-    private const val DB_PASSWORD = "Aa@123456"
-
-    /**
-     * 获取数据库连接
-     */
-    private fun getConnection(): Connection? {
-        return try {
-            // 使用兼容性更好的旧版本MySQL驱动类
-            Class.forName("com.mysql.jdbc.Driver")
-            val connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)
-            Log.d(TAG, "✅ 数据库连接创建成功")
-            connection
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ 获取数据库连接失败: ${e.message}")
-            Log.e(TAG, "连接URL: $DB_URL")
-            Log.e(TAG, "用户名: $DB_USER")
-            Log.e(TAG, "异常类型: ${e.javaClass.simpleName}")
-            e.printStackTrace()
-            null
-        }
+    fun executeQuery(sql: String, params: List<Any> = emptyList()): DbResultSet? {
+        Log.e(TAG, "executeQuery is not supported in HTTP mode")
+        return null
     }
 
-    /**
-     * 关闭数据库资源
-     */
-    private fun closeResources(connection: Connection?, statement: Statement?, resultSet: ResultSet?) {
-        try {
-            resultSet?.close()
-            statement?.close()
-            connection?.close()
-        } catch (e: SQLException) {
-            Log.e(TAG, "关闭数据库资源失败: ${e.message}")
-        }
-    }
-
-    /**
-     * 执行查询SQL，返回结果集
-     * @param sql 查询SQL语句
-     * @param params 参数列表
-     * @return ResultSet? 结果集，需要手动关闭或使用processQuery方法
-     */
-    fun executeQuery(sql: String, params: List<Any> = emptyList()): ResultSet? {
-        var connection: Connection? = null
-        var statement: PreparedStatement? = null
-
-        return try {
-            connection = getConnection()
-            statement = connection?.prepareStatement(sql)
-
-            // 设置参数
-            params.forEachIndexed { index, param ->
-                when {
-                    param == null -> statement?.setNull(index + 1, java.sql.Types.NULL)
-                    param is Int -> statement?.setInt(index + 1, param)
-                    param is String -> statement?.setString(index + 1, param)
-                    param is Double -> statement?.setDouble(index + 1, param)
-                    param is Float -> statement?.setFloat(index + 1, param)
-                    param is Long -> statement?.setLong(index + 1, param)
-                    param is Boolean -> statement?.setBoolean(index + 1, param)
-                    else -> statement?.setObject(index + 1, param)
-                }
-            }
-
-            statement?.executeQuery()
-        } catch (e: Exception) {
-            Log.e(TAG, "执行查询失败: ${e.message}, SQL: $sql")
-            closeResources(connection, statement, null)
-            null
-        }
-        // 注意：调用者需要手动关闭ResultSet和连接，或者使用processQuery方法
-    }
-
-    /**
-     * 处理查询结果，自动关闭资源
-     * @param sql 查询SQL语句
-     * @param params 参数列表
-     * @param processor 结果处理函数
-     */
     fun <T> processQuery(
         sql: String,
         params: List<Any> = emptyList(),
-        processor: (ResultSet) -> T
+        processor: (DbResultSet) -> T
     ): T? {
-        var connection: Connection? = null
-        var statement: PreparedStatement? = null
-        var resultSet: ResultSet? = null
-
-        return try {
-            Log.d(TAG, "🔍 开始执行查询操作: $sql")
-            Log.d(TAG, "参数: $params")
-            
-            connection = getConnection()
-            if (connection == null) {
-                Log.e(TAG, "❌ 无法获取数据库连接，查询操作失败")
-                return null
-            }
-            
-            statement = connection.prepareStatement(sql)
-
-            // 设置参数
-            params.forEachIndexed { index, param ->
-                when {
-                    param == null -> statement.setNull(index + 1, java.sql.Types.NULL)
-                    param is Int -> statement.setInt(index + 1, param)
-                    param is String -> statement.setString(index + 1, param)
-                    param is Double -> statement.setDouble(index + 1, param)
-                    param is Float -> statement.setFloat(index + 1, param)
-                    param is Long -> statement.setLong(index + 1, param)
-                    param is Boolean -> statement.setBoolean(index + 1, param)
-                    else -> statement.setObject(index + 1, param)
-                }
-            }
-
-            resultSet = statement.executeQuery()
-            val result = resultSet?.let { processor(it) }
-            Log.d(TAG, "✅ 查询操作成功，返回结果")
-            result
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ 处理查询失败: ${e.message}")
-            Log.e(TAG, "SQL: $sql")
-            Log.e(TAG, "参数: $params")
-            Log.e(TAG, "异常类型: ${e.javaClass.simpleName}")
-            e.printStackTrace()
-            null
-        } finally {
-            closeResources(connection, statement, resultSet)
-        }
+        Log.d(TAG, "processQuery http sql=$sql params=$params")
+        val rows = queryMultipleRows(sql, params)
+        val resultSet = InMemoryResultSet(rows)
+        return processor(resultSet)
     }
 
-    /**
-     * 执行更新操作（INSERT, UPDATE, DELETE）
-     * @param sql SQL语句
-     * @param params 参数列表
-     * @return 影响的行数，-1表示执行失败
-     */
     fun executeUpdate(sql: String, params: List<Any> = emptyList()): Int {
-        var connection: Connection? = null
-        var statement: PreparedStatement? = null
-
-        return try {
-            Log.d(TAG, "🔧 开始执行更新操作: $sql")
-            Log.d(TAG, "参数: $params")
-            
-            connection = getConnection()
-            if (connection == null) {
-                Log.e(TAG, "❌ 无法获取数据库连接，更新操作失败")
-                return -1
-            }
-            
-            statement = connection.prepareStatement(sql)
-
-            // 设置参数
-            params.forEachIndexed { index, param ->
-                when {
-                    param == null -> statement.setNull(index + 1, java.sql.Types.NULL)
-                    param is Int -> statement.setInt(index + 1, param)
-                    param is String -> statement.setString(index + 1, param)
-                    param is Double -> statement.setDouble(index + 1, param)
-                    param is Float -> statement.setFloat(index + 1, param)
-                    param is Long -> statement.setLong(index + 1, param)
-                    param is Boolean -> statement.setBoolean(index + 1, param)
-                    else -> statement.setObject(index + 1, param)
-                }
-            }
-
-            val result = statement.executeUpdate()
-            Log.d(TAG, "✅ 更新操作成功，影响行数: $result")
-            result
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ 执行更新失败: ${e.message}")
-            Log.e(TAG, "SQL: $sql")
-            Log.e(TAG, "参数: $params")
-            Log.e(TAG, "异常类型: ${e.javaClass.simpleName}")
-            e.printStackTrace()
-            -1
-        } finally {
-            closeResources(connection, statement, null)
+        Log.d(TAG, "executeUpdate http sql=$sql params=$params")
+        val body = JSONObject()
+            .put("sql", sql)
+            .put("params", JSONArray(params))
+        val root = postJson("/api/v1/db/update", body)
+        val code = root.optInt("code", -1)
+        if (code != 0) {
+            val msg = root.optString("message", "update failed")
+            Log.e(TAG, "executeUpdate error code=$code message=$msg")
+            return -1
         }
+        return root.optInt("data", -1)
     }
 
     fun insertAndReturnId(sql: String, params: List<Any> = emptyList()): Int? {
-        var connection: Connection? = null
-        var statement: PreparedStatement? = null
-        var keys: ResultSet? = null
-
-        return try {
-            connection = getConnection()
-            if (connection == null) return null
-            statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)
-            params.forEachIndexed { index, param ->
-                when {
-                    param == null -> statement.setNull(index + 1, java.sql.Types.NULL)
-                    param is Int -> statement.setInt(index + 1, param)
-                    param is String -> statement.setString(index + 1, param)
-                    param is Double -> statement.setDouble(index + 1, param)
-                    param is Float -> statement.setFloat(index + 1, param)
-                    param is Long -> statement.setLong(index + 1, param)
-                    param is Boolean -> statement.setBoolean(index + 1, param)
-                    else -> statement.setObject(index + 1, param)
-                }
-            }
-            val affected = statement.executeUpdate()
-            if (affected <= 0) return null
-            keys = statement.generatedKeys
-            if (keys != null && keys!!.next()) keys!!.getInt(1) else null
-        } catch (e: Exception) {
-            Log.e(TAG, "插入返回ID失败: ${e.message}")
-            null
-        } finally {
-            closeResources(connection, statement, keys)
+        Log.d(TAG, "insertAndReturnId http sql=$sql params=$params")
+        val body = JSONObject()
+            .put("sql", sql)
+            .put("params", JSONArray(params))
+        val root = postJson("/api/v1/db/insert", body)
+        val code = root.optInt("code", -1)
+        if (code != 0) {
+            val msg = root.optString("message", "insert failed")
+            Log.e(TAG, "insertAndReturnId error code=$code message=$msg")
+            return null
         }
+        val id = root.optLong("data", -1L)
+        return if (id > 0L) id.toInt() else null
     }
 
-    /**
-     * 执行批量更新操作
-     * @param sql SQL语句
-     * @param paramsList 参数列表的列表
-     * @return 每个操作影响的行数数组
-     */
     fun executeBatchUpdate(sql: String, paramsList: List<List<Any>>): IntArray {
-        var connection: Connection? = null
-        var statement: PreparedStatement? = null
-
-        return try {
-            connection = getConnection()
-            statement = connection?.prepareStatement(sql)
-
-            // 添加批量参数
-            paramsList.forEach { params ->
-                params.forEachIndexed { index, param ->
-                    when {
-                        param == null -> statement?.setNull(index + 1, java.sql.Types.NULL)
-                        param is Int -> statement?.setInt(index + 1, param)
-                        param is String -> statement?.setString(index + 1, param)
-                        param is Double -> statement?.setDouble(index + 1, param)
-                        param is Float -> statement?.setFloat(index + 1, param)
-                        param is Long -> statement?.setLong(index + 1, param)
-                        param is Boolean -> statement?.setBoolean(index + 1, param)
-                        else -> statement?.setObject(index + 1, param)
-                    }
-                }
-                statement?.addBatch()
-            }
-
-            statement?.executeBatch() ?: intArrayOf()
-        } catch (e: Exception) {
-            Log.e(TAG, "执行批量更新失败: ${e.message}, SQL: $sql")
-            intArrayOf()
-        } finally {
-            closeResources(connection, statement, null)
+        Log.d(TAG, "executeBatchUpdate http sql=$sql size=${paramsList.size}")
+        val jsonParamsList = JSONArray()
+        paramsList.forEach { row ->
+            jsonParamsList.put(JSONArray(row))
         }
+        val body = JSONObject()
+            .put("sql", sql)
+            .put("paramsList", jsonParamsList)
+        val root = postJson("/api/v1/db/batch-update", body)
+        val code = root.optInt("code", -1)
+        if (code != 0) {
+            val msg = root.optString("message", "batch update failed")
+            Log.e(TAG, "executeBatchUpdate error code=$code message=$msg")
+            return intArrayOf()
+        }
+        val data = root.optJSONArray("data") ?: return intArrayOf()
+        val result = IntArray(data.length())
+        for (i in 0 until data.length()) {
+            result[i] = data.optInt(i, 0)
+        }
+        return result
     }
 
-    /**
-     * 查询单行数据
-     * @param sql 查询SQL语句
-     * @param params 参数列表
-     * @return 包含列名和值的Map，查询失败返回null
-     */
     fun querySingleRow(sql: String, params: List<Any> = emptyList()): Map<String, Any>? {
-        return processQuery(sql, params) { resultSet ->
-            if (resultSet.next()) {
-                val metaData = resultSet.metaData
-                val rowData = mutableMapOf<String, Any>()
-                for (i in 1..metaData.columnCount) {
-                    val columnName = metaData.getColumnName(i)
-                    val value = if (resultSet.wasNull()) "" else resultSet.getObject(i)
-                    rowData[columnName] = value ?: ""
-                }
-                rowData
-            } else {
-                null
-            }
-        }
+        val list = queryMultipleRows(sql, params)
+        return list.firstOrNull()
     }
 
-    /**
-     * 查询多行数据
-     * @param sql 查询SQL语句
-     * @param params 参数列表
-     * @return 包含多行数据的List，每行是一个Map
-     */
     fun queryMultipleRows(sql: String, params: List<Any> = emptyList()): List<Map<String, Any>> {
-        return processQuery(sql, params) { resultSet ->
-            val resultList = mutableListOf<Map<String, Any>>()
-            val metaData = resultSet.metaData
-
-            while (resultSet.next()) {
-                val rowData = mutableMapOf<String, Any>()
-                for (i in 1..metaData.columnCount) {
-                    val columnName = metaData.getColumnName(i)
-                    val value = if (resultSet.wasNull()) "" else resultSet.getObject(i)
-                    rowData[columnName] = value ?: ""
-                }
-                resultList.add(rowData)
+        Log.d(TAG, "queryMultipleRows http sql=$sql params=$params")
+        val body = JSONObject()
+            .put("sql", sql)
+            .put("params", JSONArray(params))
+        val root = postJson("/api/v1/db/query", body)
+        val code = root.optInt("code", -1)
+        if (code != 0) {
+            val msg = root.optString("message", "query failed")
+            Log.e(TAG, "queryMultipleRows error code=$code message=$msg")
+            return emptyList()
+        }
+        val data = root.optJSONArray("data") ?: return emptyList()
+        val result = mutableListOf<Map<String, Any>>()
+        for (i in 0 until data.length()) {
+            val rowJson = data.optJSONObject(i) ?: continue
+            val row = mutableMapOf<String, Any>()
+            val names = rowJson.keys()
+            while (names.hasNext()) {
+                val key = names.next()
+                val value = rowJson.opt(key)
+                row[key] = value ?: ""
             }
-            resultList
-        } ?: emptyList()
+            result.add(row)
+        }
+        return result
     }
 
-    /**
-     * 查询单个值
-     * @param sql 查询SQL语句
-     * @param params 参数列表
-     * @return 查询到的单个值，查询失败返回null
-     */
     fun querySingleValue(sql: String, params: List<Any> = emptyList()): Any? {
-        return processQuery(sql, params) { resultSet ->
-            if (resultSet.next()) {
-                val value = resultSet.getObject(1)
-                if (resultSet.wasNull()) "" else value
-            } else {
-                null
-            }
+        val row = querySingleRow(sql, params) ?: return null
+        return row.values.firstOrNull()
+    }
+
+    fun tableExists(tableName: String): Boolean {
+        val sql = "SELECT COUNT(*) AS cnt FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?"
+        val value = querySingleValue(sql, listOf(tableName))
+        return when (value) {
+            is Number -> value.toInt() > 0
+            is String -> value.toIntOrNull()?.let { it > 0 } == true
+            else -> false
         }
     }
 
-    /**
-     * 检查表是否存在
-     * @param tableName 表名
-     * @return 是否存在
-     */
-    fun tableExists(tableName: String): Boolean {
-        return processQuery(
-            "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?",
-            listOf(tableName)
-        ) { resultSet ->
-            resultSet.next() && resultSet.getInt(1) > 0
-        } ?: false
-    }
-
-    /**
-     * 获取数据库中的所有表名
-     * @return 表名列表
-     */
     fun getTableNames(): List<String> {
-        return processQuery(
-            "SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE()"
-        ) { resultSet ->
-            val tables = mutableListOf<String>()
-            while (resultSet.next()) {
-                tables.add(resultSet.getString(1))
-            }
-            tables
-        } ?: emptyList()
+        val sql = "SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE()"
+        val rows = queryMultipleRows(sql)
+        return rows.mapNotNull { it["table_name"]?.toString() }
     }
 
-    /**
-     * 获取表结构信息
-     * @param tableName 表名
-     * @return 列信息列表
-     */
     fun getTableStructure(tableName: String): List<Map<String, Any>> {
-        return queryMultipleRows(
-            "SELECT column_name, data_type, is_nullable, column_default, column_key, extra " +
-                    "FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? ORDER BY ordinal_position",
-            listOf(tableName)
-        )
+        val sql = "SELECT column_name, data_type, is_nullable, column_default, column_key, extra FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? ORDER BY ordinal_position"
+        return queryMultipleRows(sql, listOf(tableName))
     }
 
-    /**
-     * 测试数据库连接
-     * @return 连接是否成功
-     */
     fun testConnection(): Boolean {
         return try {
-            val connection = getConnection()
-            val success = connection != null && !connection.isClosed
-            connection?.close()
-            success
+            val sql = "SELECT 1 AS v"
+            val v = querySingleValue(sql)
+            v != null
         } catch (e: Exception) {
-            Log.e(TAG, "测试数据库连接失败: ${e.message}")
+            Log.e(TAG, "testConnection failed: ${e.message}")
             false
         }
     }
 
-    /**
-     * 创建users表（如果不存在）
-     * @return 是否创建成功
-     */
     fun createUsersTable(): Boolean {
-        return try {
-            val sql = """
+        val sql = """
                 CREATE TABLE IF NOT EXISTS users (
                     user_id INT PRIMARY KEY AUTO_INCREMENT,
                     nickname VARCHAR(50) NOT NULL UNIQUE,
@@ -409,39 +195,256 @@ object DatabaseHelper {
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
                 )
             """.trimIndent()
-            
-            val result = executeUpdate(sql)
-            if (result >= 0) {
-                Log.d(TAG, "✅ users表创建成功")
-                true
-            } else {
-                Log.e(TAG, "❌ users表创建失败")
-                false
+        val result = executeUpdate(sql)
+        return result >= 0
+    }
+
+    fun dropUsersTable(): Boolean {
+        val sql = "DROP TABLE IF EXISTS users"
+        val result = executeUpdate(sql)
+        return result >= 0
+    }
+
+    private fun postJson(path: String, body: JSONObject): JSONObject {
+        val url = URL("$BASE_URL$path")
+        val conn = (url.openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            connectTimeout = 15000
+            readTimeout = 30000
+            doInput = true
+            doOutput = true
+            setRequestProperty("Content-Type", "application/json; charset=utf-8")
+        }
+        try {
+            val bytes = body.toString().toByteArray(Charsets.UTF_8)
+            Log.d(TAG, "HTTP POST $path body=$body")
+            conn.outputStream.use { os ->
+                os.write(bytes)
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "创建users表异常: ${e.message}")
-            false
+            val code = conn.responseCode
+            val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+            val text = stream.bufferedReader().use { it.readText() }
+            Log.d(TAG, "HTTP $path responseCode=$code body=$text")
+            if (code !in 200..299) {
+                throw RuntimeException("http $path failed code=$code")
+            }
+            return JSONObject(text)
+        } finally {
+            conn.disconnect()
         }
     }
 
-    /**
-     * 删除users表（用于重置）
-     * @return 是否删除成功
-     */
-    fun dropUsersTable(): Boolean {
-        return try {
-            val sql = "DROP TABLE IF EXISTS users"
-            val result = executeUpdate(sql)
-            if (result >= 0) {
-                Log.d(TAG, "✅ users表删除成功")
-                true
-            } else {
-                Log.e(TAG, "❌ users表删除失败")
-                false
+    private class InMemoryResultSet(private val rows: List<Map<String, Any>>) : DbResultSet {
+        private val columnNames: List<String> =
+            if (rows.isNotEmpty()) rows[0].keys.toList() else emptyList()
+
+        private var index = -1
+        private var lastWasNull = false
+
+        private fun current(): Map<String, Any> {
+            if (index < 0 || index >= rows.size) throw java.sql.SQLException("Invalid cursor position")
+            return rows[index]
+        }
+
+        private fun columnName(columnIndex: Int): String {
+            if (columnIndex < 1 || columnIndex > columnNames.size) {
+                throw java.sql.SQLException("Invalid column index $columnIndex")
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "删除users表异常: ${e.message}")
-            false
+            return columnNames[columnIndex - 1]
+        }
+
+        override fun next(): Boolean {
+            if (index + 1 >= rows.size) {
+                index = rows.size
+                lastWasNull = false
+                return false
+            }
+            index++
+            lastWasNull = false
+            return true
+        }
+
+        override fun wasNull(): Boolean = lastWasNull
+
+        override fun getObject(columnLabel: String): Any? {
+            val value = current()[columnLabel]
+            lastWasNull = value == null
+            return value
+        }
+
+        override fun getObject(columnIndex: Int): Any? {
+            return getObject(columnName(columnIndex))
+        }
+
+        override fun getString(columnLabel: String): String? {
+            val v = getObject(columnLabel)
+            return v?.toString()
+        }
+
+        override fun getString(columnIndex: Int): String? {
+            return getString(columnName(columnIndex))
+        }
+
+        override fun getInt(columnLabel: String): Int {
+            val v = getObject(columnLabel)
+            return when (v) {
+                null -> 0
+                is Number -> v.toInt()
+                is String -> v.toIntOrNull() ?: 0
+                else -> 0
+            }
+        }
+
+        override fun getInt(columnIndex: Int): Int {
+            return getInt(columnName(columnIndex))
+        }
+
+        override fun getDouble(columnLabel: String): Double {
+            val v = getObject(columnLabel)
+            return when (v) {
+                null -> 0.0
+                is Number -> v.toDouble()
+                is String -> v.toDoubleOrNull() ?: 0.0
+                else -> 0.0
+            }
+        }
+
+        override fun getDouble(columnIndex: Int): Double {
+            return getDouble(columnName(columnIndex))
+        }
+
+        override fun getLong(columnLabel: String): Long {
+            val v = getObject(columnLabel)
+            return when (v) {
+                null -> 0L
+                is Number -> v.toLong()
+                is String -> v.toLongOrNull() ?: 0L
+                else -> 0L
+            }
+        }
+
+        override fun getLong(columnIndex: Int): Long {
+            return getLong(columnName(columnIndex))
+        }
+
+        override fun getBoolean(columnLabel: String): Boolean {
+            val v = getObject(columnLabel)
+            return when (v) {
+                null -> false
+                is Boolean -> v
+                is Number -> v.toInt() != 0
+                is String -> v == "1" || v.equals("true", true)
+                else -> false
+            }
+        }
+
+        override fun getBoolean(columnIndex: Int): Boolean {
+            return getBoolean(columnName(columnIndex))
+        }
+
+        override fun getBigDecimal(columnIndex: Int): java.math.BigDecimal? {
+            return getBigDecimal(columnName(columnIndex))
+        }
+
+        override fun getBigDecimal(columnLabel: String): java.math.BigDecimal? {
+            val v = getObject(columnLabel)
+            return when (v) {
+                null -> {
+                    lastWasNull = true
+                    null
+                }
+                is java.math.BigDecimal -> v
+                is Number -> {
+                    try {
+                        java.math.BigDecimal(v.toString())
+                    } catch (e: Exception) {
+                        lastWasNull = true
+                        null
+                    }
+                }
+                is String -> {
+                    if (v.isEmpty()) {
+                        lastWasNull = true
+                        null
+                    } else {
+                        try {
+                            java.math.BigDecimal(v)
+                        } catch (e: Exception) {
+                            lastWasNull = true
+                            null
+                        }
+                    }
+                }
+                else -> {
+                    lastWasNull = true
+                    null
+                }
+            }
+        }
+
+        override fun getTimestamp(columnLabel: String): java.sql.Timestamp? {
+            val v = getObject(columnLabel)
+            return when (v) {
+                null -> {
+                    lastWasNull = true
+                    null
+                }
+                is java.sql.Timestamp -> v
+                is java.util.Date -> java.sql.Timestamp(v.time)
+                is Number -> java.sql.Timestamp(v.toLong())
+                is String -> {
+                    if (v.isEmpty()) {
+                        lastWasNull = true
+                        null
+                    } else {
+                        try {
+                            val s = v.replace('T', ' ')
+                            java.sql.Timestamp.valueOf(if (s.length >= 19) s.substring(0, 19) else s)
+                        } catch (e: Exception) {
+                            lastWasNull = true
+                            null
+                        }
+                    }
+                }
+                else -> {
+                    lastWasNull = true
+                    null
+                }
+            }
+        }
+
+        override fun getTimestamp(columnIndex: Int): java.sql.Timestamp? {
+            return getTimestamp(columnName(columnIndex))
+        }
+
+        override fun getDate(columnIndex: Int): java.sql.Date? {
+            val v = getObject(columnIndex)
+            return when (v) {
+                null -> {
+                    lastWasNull = true
+                    null
+                }
+                is java.sql.Date -> v
+                is java.util.Date -> java.sql.Date(v.time)
+                is Number -> java.sql.Date(v.toLong())
+                is String -> {
+                    if (v.isEmpty()) {
+                        lastWasNull = true
+                        null
+                    } else {
+                        try {
+                            java.sql.Date.valueOf(v.substring(0, 10))
+                        } catch (e: Exception) {
+                            lastWasNull = true
+                            null
+                        }
+                    }
+                }
+                else -> {
+                    lastWasNull = true
+                    null
+                }
+            }
         }
     }
 }
