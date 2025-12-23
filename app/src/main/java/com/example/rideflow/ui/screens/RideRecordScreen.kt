@@ -36,6 +36,7 @@ data class RideRecord(
     val distance: Double,
     val duration: String,
     val avgSpeed: Double,
+    val mapImageUrl: String?,
     val mapImage: Int
 )
 
@@ -46,6 +47,7 @@ private val mockRideRecords = listOf(
         distance = 0.58,
         duration = "00:07:55",
         avgSpeed = 4.4,
+        mapImageUrl = null,
         mapImage = R.drawable.ic_launcher_foreground
     ),
     RideRecord(
@@ -54,6 +56,7 @@ private val mockRideRecords = listOf(
         distance = 0.55,
         duration = "00:07:38",
         avgSpeed = 4.4,
+        mapImageUrl = null,
         mapImage = R.drawable.ic_launcher_foreground
     ),
     RideRecord(
@@ -62,6 +65,7 @@ private val mockRideRecords = listOf(
         distance = 0.40,
         duration = "00:05:44",
         avgSpeed = 4.3,
+        mapImageUrl = null,
         mapImage = R.drawable.ic_launcher_foreground
     )
 )
@@ -80,7 +84,7 @@ fun RideRecordScreen(navController: NavController, userId: String) {
                 val list = mutableListOf<RideRecord>()
                 val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
                 DatabaseHelper.processQuery(
-                    "SELECT record_id, start_time, duration_sec, distance_km, avg_speed_kmh FROM user_ride_records WHERE user_id = ? ORDER BY start_time DESC",
+                    "SELECT record_id, start_time, duration_sec, distance_km, avg_speed_kmh, track_image_url FROM user_ride_records WHERE user_id = ? ORDER BY start_time DESC",
                     listOf(uid)
                 ) { rs ->
                     while (rs.next()) {
@@ -89,6 +93,7 @@ fun RideRecordScreen(navController: NavController, userId: String) {
                         val durationSec = rs.getInt(3)
                         val distanceKm = rs.getDouble(4)
                         val avgSpeed = rs.getDouble(5)
+                        val mapUrl = rs.getString(6)
                         val dateStr = sdf.format(Date(ts.time))
                         list.add(
                             RideRecord(
@@ -97,6 +102,7 @@ fun RideRecordScreen(navController: NavController, userId: String) {
                                 distance = distanceKm,
                                 duration = formatDuration(durationSec),
                                 avgSpeed = avgSpeed,
+                                mapImageUrl = mapUrl,
                                 mapImage = R.drawable.ic_launcher_foreground
                             )
                         )
@@ -220,12 +226,22 @@ fun RideHistoryItem(record: RideRecord) {
             }
             Text(text = "用时: ${record.duration}", fontSize = 14.sp, color = Color.Gray)
         }
-        Image(
-            painter = painterResource(id = record.mapImage),
-            contentDescription = "Map preview",
-            modifier = Modifier.size(80.dp, 60.dp),
-            contentScale = ContentScale.Crop
-        )
+        val url = record.mapImageUrl
+        if (!url.isNullOrBlank()) {
+            coil.compose.AsyncImage(
+                model = url,
+                contentDescription = "骑行地图",
+                modifier = Modifier.size(80.dp, 60.dp),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Image(
+                painter = painterResource(id = record.mapImage),
+                contentDescription = "Map preview",
+                modifier = Modifier.size(80.dp, 60.dp),
+                contentScale = ContentScale.Crop
+            )
+        }
     }
 }
 
