@@ -836,28 +836,38 @@ fun RideMainContent(
             val climbVal = elevation.value.toIntOrNull() ?: 0
             val maxVal = maxSpeedValue.value
 
-            coroutineScope.launch(Dispatchers.IO) {
-                com.example.rideflow.backend.RideRecordDatabaseHelper.insertUserRideRecord(
-                    recordId = recordId,
-                    userId = userId,
-                    startTimeMillis = startMillis,
-                    durationSec = durationSec,
-                    distanceKm = distanceKm,
-                    avgSpeedKmh = avg,
-                    calories = caloriesVal,
-                    climb = climbVal,
-                    maxSpeedKmh = maxVal
-                )
-            }
-
             if (snapshotBitmap == null) {
                 rideMapUploadError.value = "地图截图失败"
+                coroutineScope.launch(Dispatchers.IO) {
+                    com.example.rideflow.backend.RideRecordDatabaseHelper.insertUserRideRecord(
+                        recordId = recordId,
+                        userId = userId,
+                        startTimeMillis = startMillis,
+                        durationSec = durationSec,
+                        distanceKm = distanceKm,
+                        avgSpeedKmh = avg,
+                        calories = caloriesVal,
+                        climb = climbVal,
+                        maxSpeedKmh = maxVal
+                    )
+                }
                 return@launch
             }
 
             rideMapUploading.value = true
             coroutineScope.launch(Dispatchers.IO) {
                 try {
+                    com.example.rideflow.backend.RideRecordDatabaseHelper.insertUserRideRecord(
+                        recordId = recordId,
+                        userId = userId,
+                        startTimeMillis = startMillis,
+                        durationSec = durationSec,
+                        distanceKm = distanceKm,
+                        avgSpeedKmh = avg,
+                        calories = caloriesVal,
+                        climb = climbVal,
+                        maxSpeedKmh = maxVal
+                    )
                     val file = com.example.rideflow.utils.ImageUploadUtils.createImageFile(context)
                     val saved = com.example.rideflow.utils.ImageUploadUtils.saveBitmapToFile(snapshotBitmap, file)
                     if (!saved) throw IllegalStateException("图片保存失败")
@@ -868,6 +878,10 @@ fun RideMainContent(
                         context = context,
                         localFile = file,
                         ossObjectKey = objectKey
+                    )
+                    com.example.rideflow.backend.RideRecordDatabaseHelper.updateRideRecordTrackImageUrl(
+                        recordId = recordId,
+                        trackImageUrl = url
                     )
                     withContext(Dispatchers.Main) {
                         rideMapUrl.value = url

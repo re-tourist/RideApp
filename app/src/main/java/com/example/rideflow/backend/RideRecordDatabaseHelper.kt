@@ -50,6 +50,16 @@ object RideRecordDatabaseHelper {
         return result > 0
     }
 
+    fun updateRideRecordTrackImageUrl(
+        recordId: Int,
+        trackImageUrl: String
+    ): Boolean {
+        val sql = "UPDATE user_ride_records SET track_image_url = ? WHERE record_id = ?"
+        val params = listOf(trackImageUrl, recordId)
+        val result = DatabaseHelper.executeUpdate(sql, params)
+        return result > 0
+    }
+
     fun getUserRideRecords(userId: Int): List<UserRideRecord> {
         val sql = "SELECT start_time, duration_sec, avg_speed_kmh, distance_km, calories FROM user_ride_records WHERE user_id = ? ORDER BY start_time DESC"
         val rows = DatabaseHelper.queryMultipleRows(sql, listOf(userId))
