@@ -56,6 +56,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.DisposableEffect
@@ -91,6 +92,7 @@ import com.amap.api.maps2d.model.PolylineOptions
 import com.amap.api.maps2d.model.MarkerOptions
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.os.Looper
 import androidx.core.content.ContextCompat
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -178,7 +180,8 @@ private fun AMap2DContainer(
     myLocation: LatLng? = null,
     accuracy: Float? = null,
     routePoints: List<LatLng> = emptyList(),
-    selectedLocation: LatLng? = null
+    selectedLocation: LatLng? = null,
+    snapshotterState: androidx.compose.runtime.MutableState<(((Bitmap) -> Unit) -> Unit)?>? = null
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -199,6 +202,7 @@ private fun AMap2DContainer(
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
             mapView.onDestroy()
+            snapshotterState?.value = null
         }
     }
     
@@ -249,6 +253,14 @@ private fun AMap2DContainer(
                 val cameraUpdate = CameraUpdateFactory.newLatLngZoom(defaultLocation, 14f) // 14f适合显示城市区域
                 map.moveCamera(cameraUpdate)
                 mapInitialized.value = true
+
+                snapshotterState?.value = { onBitmap ->
+                    map.getMapScreenShot(object : com.amap.api.maps2d.AMap.OnMapScreenShotListener {
+                        override fun onMapScreenShot(p0: Bitmap?) {
+                            if (p0 != null) onBitmap(p0)
+                        }
+                    })
+                }
                 
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -279,7 +291,7 @@ private fun AMap2DContainer(
                 android.util.Log.d("AMapUpdate", "更新地图: location=${myLocation}, routes=${routePoints.size}个点")
                 
                 // 添加当前位置 - 确保始终显示当前位置
-                if (myLocation != null && (locationChanged || isInitialSetup.value)) {
+                if (myLocation != null) {
                     map.addMarker(
                         MarkerOptions()
                             .position(myLocation)
@@ -476,6 +488,13 @@ fun RideMainContent(
     val lastAltitude = remember { mutableStateOf<Double?>(null) }
     val lastSmoothedAltitude = remember { mutableStateOf<Double?>(null) }
     val amapClientHolder = remember { mutableStateOf<AMapLocationClient?>(null) }
+    val mapSnapshotterState = remember { mutableStateOf<(((Bitmap) -> Unit) -> Unit)?>(null) }
+    val rideMapUrl = remember { mutableStateOf<String?>(null) }
+    val rideMapUploading = remember { mutableStateOf(false) }
+    val rideMapUploadError = remember { mutableStateOf<String?>(null) }
+
+    val trackPointsSnapshot by remember { derivedStateOf { trackPoints.toList() } }
+    val navRoutePointsSnapshot by remember { derivedStateOf { navRoutePoints.toList() } }
 
     // 辅助函数：计算两点之间的距离（米）
     fun calculateDistance(start: LatLng, end: LatLng): Double {
@@ -548,6 +567,45 @@ fun RideMainContent(
         val minutes = (totalSeconds % 3600) / 60
         val seconds = totalSeconds % 60
     }
+
+    fun appendTrackPoint(latLng: LatLng, speedMps: Float, accuracy: Float?) {
+        if (rideStatus.value !is RideStatus.InProgress) return
+        if (abs(latLng.latitude) < 0.1 && abs(latLng.longitude) < 0.1) return
+
+        val prevLoc = previousLocation.value
+        if (prevLoc != null) {
+            val distance = calculateDistance(prevLoc, latLng)
+            if (distance < 2.0) return
+
+            totalDistance.value += distance
+            rideDistance.value = String.format("%.2f", totalDistance.value / 1000)
+
+            val speedKmh = speedMps * 3.6
+            currentSpeed.value = String.format("%.1f", speedKmh)
+
+            if (speedKmh.toDouble() > maxSpeedValue.value) {
+                maxSpeedValue.value = speedKmh.toDouble()
+                maxSpeed.value = String.format("%.1f", speedKmh)
+            }
+
+            val durationHours = getRideDurationHours()
+            if (durationHours > 0) {
+                val avgSpeedValue = (totalDistance.value / 1000) / durationHours
+                avgSpeed.value = String.format("%.1f", avgSpeedValue)
+            }
+
+            val caloriesValue = (totalDistance.value / 1000) * 50
+            calories.value = caloriesValue.toInt().toString()
+
+            updateRideDuration()
+        }
+
+        trackPoints.add(latLng)
+        previousLocation.value = latLng
+        if (accuracy != null && accuracy > 0f) {
+            currentAccuracy.value = accuracy
+        }
+    }
     
     val permissions = arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
@@ -588,44 +646,7 @@ fun RideMainContent(
                 
                 val useGmsForTracking = amapClientHolder.value == null
                 if (useGmsForTracking && rideStatus.value is RideStatus.InProgress) {
-                    trackPoints.add(latLng)
-                    
-                    // 计算距离和速度
-                    val prevLoc = previousLocation.value
-                    if (prevLoc != null) {
-                        val distance = calculateDistance(prevLoc, latLng)
-                        totalDistance.value += distance
-                        
-                        // 更新距离显示（公里）
-                        rideDistance.value = String.format("%.2f", totalDistance.value / 1000)
-                        
-                        // 计算当前速度（km/h）
-                        val speed = loc.speed * 3.6 // m/s to km/h
-                        currentSpeed.value = String.format("%.1f", speed)
-                        
-                        // 更新最大速度
-                        if (speed > maxSpeedValue.value) {
-                            maxSpeedValue.value = speed
-                            maxSpeed.value = String.format("%.1f", speed)
-                        }
-                        
-                        // 计算平均速度
-                        val durationHours = getRideDurationHours()
-                        if (durationHours > 0) {
-                            val avgSpeedValue = (totalDistance.value / 1000) / durationHours
-                            avgSpeed.value = String.format("%.1f", avgSpeedValue)
-                        }
-                        
-                        // 计算卡路里（简化公式：距离(公里) * 体重系数 * 1.036）
-                        // 假设平均体重70kg的系数
-                        val caloriesValue = (totalDistance.value / 1000) * 50
-                        calories.value = caloriesValue.toInt().toString()
-                        
-                        // 更新骑行时长
-                        updateRideDuration()
-                    }
-                    
-                    previousLocation.value = latLng
+                    appendTrackPoint(latLng = latLng, speedMps = loc.speed, accuracy = loc.accuracy)
                 }
             }
         }
@@ -688,29 +709,7 @@ fun RideMainContent(
                     }
                     if (aLoc != null && rideStatus.value is RideStatus.InProgress) {
                         val latLng = LatLng(aLoc.latitude, aLoc.longitude)
-                        trackPoints.add(latLng)
-                        val prevLoc = previousLocation.value
-                        if (prevLoc != null) {
-                            val distance = calculateDistance(prevLoc, latLng)
-                            totalDistance.value += distance
-                            rideDistance.value = String.format("%.2f", totalDistance.value / 1000)
-
-                            val speed = aLoc.speed * 3.6
-                            currentSpeed.value = String.format("%.1f", speed)
-                            if (speed > maxSpeedValue.value) {
-                                maxSpeedValue.value = speed.toDouble()
-                                maxSpeed.value = String.format("%.1f", speed)
-                            }
-                            val durationHours = getRideDurationHours()
-                            if (durationHours > 0) {
-                                val avgSpeedValue = (totalDistance.value / 1000) / durationHours
-                                avgSpeed.value = String.format("%.1f", avgSpeedValue)
-                            }
-                            val caloriesValue = (totalDistance.value / 1000) * 50
-                            calories.value = caloriesValue.toInt().toString()
-                            updateRideDuration()
-                        }
-                        previousLocation.value = latLng
+                        appendTrackPoint(latLng = latLng, speedMps = aLoc.speed, accuracy = aLoc.accuracy)
 
                         val alt = aLoc.altitude.toDouble()
                         if (!alt.isNaN() && alt > -1000 && alt < 10000) {
@@ -791,42 +790,98 @@ fun RideMainContent(
         calories.value = "0"
         maxSpeed.value = "0.0"
         elevation.value = "0"
+        rideMapUrl.value = null
+        rideMapUploading.value = false
+        rideMapUploadError.value = null
         rideStatus.value = RideStatus.InProgress 
     }
     val onPauseClick = { rideStatus.value = RideStatus.Paused }
     val onResumeClick = { rideStatus.value = RideStatus.InProgress }
     val onStopClick: () -> Unit = {
-        val startMillis = startTime.value ?: System.currentTimeMillis()
-        reportSeconds.value = elapsedSeconds      // 先记住
-        elapsedSeconds = 0                        // 再清零
-        startTime.value = null
-        rideStatus.value = RideStatus.NotStarted
-        showReportDialog.value = true
-        val userId = authViewModel.getCurrentUser()?.userId?.toIntOrNull() ?: 0
-        val durationSec = reportSeconds.value.toInt()
-        val distanceKm = totalDistance.value / 1000.0
-        val avg = avgSpeed.value.toDoubleOrNull() ?: run {
-            val hours = getRideDurationHours()
-            if (hours > 0) (totalDistance.value / 1000.0) / hours else 0.0
+        rideMapUrl.value = null
+        rideMapUploading.value = false
+        rideMapUploadError.value = null
+
+        coroutineScope.launch {
+            val startMillis = startTime.value ?: System.currentTimeMillis()
+            val userId = authViewModel.getCurrentUser()?.userId?.toIntOrNull() ?: 0
+            val recordId = com.example.rideflow.backend.RideRecordDatabaseHelper.generateRecordId(userId)
+
+            val snapshotBitmap: Bitmap? = withTimeoutOrNull(1_200) {
+                suspendCancellableCoroutine { cont ->
+                    val snapshotter = mapSnapshotterState.value
+                    if (snapshotter == null) {
+                        cont.resume(null)
+                        return@suspendCancellableCoroutine
+                    }
+                    snapshotter { bmp ->
+                        if (cont.isActive) cont.resume(bmp)
+                    }
+                }
+            }
+
+            reportSeconds.value = elapsedSeconds
+            elapsedSeconds = 0
+            startTime.value = null
+            rideStatus.value = RideStatus.NotStarted
+            showReportDialog.value = true
+
+            val durationSec = reportSeconds.value.toInt()
+            val distanceKm = totalDistance.value / 1000.0
+            val avg = avgSpeed.value.toDoubleOrNull() ?: run {
+                val hours = getRideDurationHours()
+                if (hours > 0) (totalDistance.value / 1000.0) / hours else 0.0
+            }
+            val caloriesVal = calories.value.toIntOrNull() ?: ((totalDistance.value / 1000.0) * 50).toInt()
+            val climbVal = elevation.value.toIntOrNull() ?: 0
+            val maxVal = maxSpeedValue.value
+
+            coroutineScope.launch(Dispatchers.IO) {
+                com.example.rideflow.backend.RideRecordDatabaseHelper.insertUserRideRecord(
+                    recordId = recordId,
+                    userId = userId,
+                    startTimeMillis = startMillis,
+                    durationSec = durationSec,
+                    distanceKm = distanceKm,
+                    avgSpeedKmh = avg,
+                    calories = caloriesVal,
+                    climb = climbVal,
+                    maxSpeedKmh = maxVal
+                )
+            }
+
+            if (snapshotBitmap == null) {
+                rideMapUploadError.value = "地图截图失败"
+                return@launch
+            }
+
+            rideMapUploading.value = true
+            coroutineScope.launch(Dispatchers.IO) {
+                try {
+                    val file = com.example.rideflow.utils.ImageUploadUtils.createImageFile(context)
+                    val saved = com.example.rideflow.utils.ImageUploadUtils.saveBitmapToFile(snapshotBitmap, file)
+                    if (!saved) throw IllegalStateException("图片保存失败")
+
+                    val dir = com.example.rideflow.BuildConfig.OSS_RIDEMAP_DIR.trim().trim('/')
+                    val objectKey = "$dir/${recordId}_${startMillis}.jpg"
+                    val url = com.example.rideflow.utils.ImageUploadUtils.uploadFileToOss(
+                        context = context,
+                        localFile = file,
+                        ossObjectKey = objectKey
+                    )
+                    withContext(Dispatchers.Main) {
+                        rideMapUrl.value = url
+                        rideMapUploading.value = false
+                        rideMapUploadError.value = null
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        rideMapUploading.value = false
+                        rideMapUploadError.value = e.message ?: "上传失败"
+                    }
+                }
+            }
         }
-        val caloriesVal = calories.value.toIntOrNull() ?: ((totalDistance.value / 1000.0) * 50).toInt()
-        val climbVal = elevation.value.toIntOrNull() ?: 0
-        val maxVal = maxSpeedValue.value
-        val recordId = com.example.rideflow.backend.RideRecordDatabaseHelper.generateRecordId(userId)
-        coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            com.example.rideflow.backend.RideRecordDatabaseHelper.insertUserRideRecord(
-                recordId = recordId,
-                userId = userId,
-                startTimeMillis = startMillis,
-                durationSec = durationSec,
-                distanceKm = distanceKm,
-                avgSpeedKmh = avg,
-                calories = caloriesVal,
-                climb = climbVal,
-                maxSpeedKmh = maxVal
-            )
-        }
-        Unit
     }
     val onCloseReport = { showReportDialog.value = false }
 
@@ -845,6 +900,13 @@ fun RideMainContent(
                     Text("最高速: ${rideReport.maxSpeed}")
                     Text("卡路里: ${rideReport.calories}")
                     Text("爬升: ${rideReport.elevation}")
+                    if (rideMapUploading.value) {
+                        Text("地图: 上传中…")
+                    } else if (!rideMapUrl.value.isNullOrBlank()) {
+                        Text("地图: ${rideMapUrl.value}")
+                    } else if (!rideMapUploadError.value.isNullOrBlank()) {
+                        Text("地图: ${rideMapUploadError.value}")
+                    }
                 }
             }
         )
@@ -1199,7 +1261,7 @@ fun RideMainContent(
                     myLocation = currentLocation.value,
                     accuracy = currentAccuracy.value,
                     selectedLocation = if (enableSearch) selectedPlace.value else null,
-                    routePoints = if (enableSearch) navRoutePoints else emptyList(),
+                    routePoints = if (enableSearch) navRoutePointsSnapshot else emptyList(),
                     isLoading = currentLocation.value == null,
                     errorText = locationErrorText
                 )
@@ -1211,7 +1273,8 @@ fun RideMainContent(
                     onStopClick = onStopClick,
                     myLocation = currentLocation.value,
                     accuracy = currentAccuracy.value,
-                    routePoints = trackPoints,
+                    routePoints = trackPointsSnapshot,
+                    mapSnapshotterState = mapSnapshotterState,
                     isLoading = currentLocation.value == null,
                     errorText = locationErrorText
                 )
@@ -1223,7 +1286,8 @@ fun RideMainContent(
                     onStopClick = onStopClick,
                     myLocation = currentLocation.value,
                     accuracy = currentAccuracy.value,
-                    routePoints = trackPoints,
+                    routePoints = trackPointsSnapshot,
+                    mapSnapshotterState = mapSnapshotterState,
                     isLoading = currentLocation.value == null,
                     errorText = locationErrorText
                 )
@@ -2266,6 +2330,7 @@ fun InProgressContent(
     myLocation: LatLng?,
     accuracy: Float?,
     routePoints: List<LatLng>,
+    mapSnapshotterState: androidx.compose.runtime.MutableState<(((Bitmap) -> Unit) -> Unit)?>? = null,
     isLoading: Boolean,
     errorText: String?
 ) {
@@ -2299,6 +2364,7 @@ fun InProgressContent(
         accuracy = accuracy,
         routePoints = routePoints,
         selectedLocation = null,
+        mapSnapshotterState = mapSnapshotterState,
         isLoading = isLoading,
         errorText = errorText,
         primaryButton = {
@@ -2330,6 +2396,7 @@ fun PausedContent(
     myLocation: LatLng?,
     accuracy: Float?,
     routePoints: List<LatLng>,
+    mapSnapshotterState: androidx.compose.runtime.MutableState<(((Bitmap) -> Unit) -> Unit)?>? = null,
     isLoading: Boolean,
     errorText: String?
 ) {
@@ -2363,6 +2430,7 @@ fun PausedContent(
         accuracy = accuracy,
         routePoints = routePoints,
         selectedLocation = null,
+        mapSnapshotterState = mapSnapshotterState,
         isLoading = isLoading,
         errorText = errorText,
         primaryButton = {
@@ -2394,6 +2462,7 @@ private fun RideWorkoutLayout(
     accuracy: Float?,
     routePoints: List<LatLng>,
     selectedLocation: LatLng?,
+    mapSnapshotterState: androidx.compose.runtime.MutableState<(((Bitmap) -> Unit) -> Unit)?>?,
     isLoading: Boolean,
     errorText: String?,
     primaryButton: @Composable RowScope.() -> Unit,
@@ -2418,7 +2487,8 @@ private fun RideWorkoutLayout(
                 myLocation = myLocation,
                 accuracy = accuracy,
                 routePoints = routePoints,
-                selectedLocation = selectedLocation
+                selectedLocation = selectedLocation,
+                snapshotterState = mapSnapshotterState
             )
 
             AnimatedVisibility(visible = isLoading) {
