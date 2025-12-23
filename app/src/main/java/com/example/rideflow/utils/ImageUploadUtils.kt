@@ -22,6 +22,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.content.FileProvider
+import com.alibaba.sdk.android.oss.ClientConfiguration
+import com.alibaba.sdk.android.oss.OSSClient
+import com.alibaba.sdk.android.oss.common.auth.OSSPlainTextAKSKCredentialProvider
+import com.alibaba.sdk.android.oss.model.PutObjectRequest
+import com.example.rideflow.BuildConfig
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -176,6 +183,40 @@ object ImageUploadUtils {
         } catch (e: Exception) {
             Log.e(TAG, "Error converting uri to file: ${e.message}")
             null
+        }
+    }
+
+    suspend fun uploadFileToOss(context: Context, localFile: File, ossObjectKey: String): String {
+        val accessKeyId = BuildConfig.OSS_ACCESS_KEY_ID
+        val accessKeySecret = BuildConfig.OSS_ACCESS_KEY_SECRET
+        val bucketName = BuildConfig.OSS_BUCKET_NAME
+        val endpointHost = BuildConfig.OSS_ENDPOINT
+
+        if (accessKeyId.isBlank() || accessKeySecret.isBlank()) {
+            throw IllegalStateException("OSS AccessKey 未配置")
+        }
+
+        val endpointUrl = if (endpointHost.startsWith("http://") || endpointHost.startsWith("https://")) {
+            endpointHost
+        } else {
+            "https://$endpointHost"
+        }
+
+        return withContext(Dispatchers.IO) {
+            val credentialProvider = OSSPlainTextAKSKCredentialProvider(accessKeyId, accessKeySecret)
+            val conf = ClientConfiguration().apply {
+                connectionTimeout = 15_000
+                socketTimeout = 15_000
+                maxConcurrentRequest = 3
+                maxErrorRetry = 2
+            }
+            val oss = OSSClient(context.applicationContext, endpointUrl, credentialProvider, conf)
+
+            val normalizedKey = ossObjectKey.trimStart('/')
+            val put = PutObjectRequest(bucketName, normalizedKey, localFile.absolutePath)
+            oss.putObject(put)
+
+            "https://$bucketName.${endpointHost.removePrefix("https://").removePrefix("http://")}/$normalizedKey"
         }
     }
 }

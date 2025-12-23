@@ -4,6 +4,21 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+import java.util.Properties
+
+val localProperties = Properties().apply {
+    val propsFile = rootProject.file("local.properties")
+    if (propsFile.exists()) {
+        propsFile.inputStream().use { load(it) }
+    }
+}
+
+fun escapeForBuildConfig(value: String): String =
+    value.replace("\\", "\\\\").replace("\"", "\\\"")
+
+fun localProp(name: String): String =
+    localProperties.getProperty(name)?.trim().orEmpty()
+
 android {
     namespace = "com.example.rideflow"
     compileSdk = 36
@@ -18,6 +33,17 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         manifestPlaceholders["AMAP_API_KEY"] = "ca12ea7d2af8d7f4e8be13bc1ad5575b"
+
+        val ossAccessKeyId = localProp("OSS_ACCESS_KEY_ID")
+        val ossAccessKeySecret = localProp("OSS_ACCESS_KEY_SECRET")
+        val ossBucketName = localProp("OSS_BUCKET_NAME").ifBlank { "rideapp" }
+        val ossEndpoint = localProp("OSS_ENDPOINT").ifBlank { "oss-cn-hangzhou.aliyuncs.com" }
+
+        buildConfigField("String", "OSS_ACCESS_KEY_ID", "\"${escapeForBuildConfig(ossAccessKeyId)}\"")
+        buildConfigField("String", "OSS_ACCESS_KEY_SECRET", "\"${escapeForBuildConfig(ossAccessKeySecret)}\"")
+        buildConfigField("String", "OSS_BUCKET_NAME", "\"${escapeForBuildConfig(ossBucketName)}\"")
+        buildConfigField("String", "OSS_ENDPOINT", "\"${escapeForBuildConfig(ossEndpoint)}\"")
+        buildConfigField("String", "OSS_RIDEMAP_DIR", "\"ridemap\"")
     }
 
     buildTypes {
@@ -38,6 +64,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     sourceSets {
         getByName("main") {
@@ -100,6 +127,7 @@ dependencies {
     implementation("com.amap.api:map2d:6.0.0")
     implementation("com.amap.api:search:9.4.0")
     implementation("com.amap.api:location:6.4.7")
+    implementation("com.aliyun.dpa:oss-android-sdk:2.9.5")
     
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
