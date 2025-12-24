@@ -244,6 +244,21 @@ fun ActivityItemCard(activity: Activity, onClick: () -> Unit) {
                         contentScale = ContentScale.Crop
                     )
                 }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    if (activity.isOpen) {
+                        Button(
+                            onClick = {},
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF007AFF))
+                        ) {
+                            Text(text = "报名中")
+                        }
+                    }
+                }
             }
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(text = activity.title, fontSize = 18.sp, fontWeight = FontWeight.Bold)

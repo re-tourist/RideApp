@@ -733,6 +733,26 @@ private fun SettingsDialog(
                     onClick = onChangePassword
                 )
                 HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
+                SettingsRow(
+                    title = "通知设置",
+                    icon = Icons.Default.Notifications,
+                    kind = SettingsRowKind.Info,
+                    onClick = { onOpenInfo("notifications") }
+                )
+                HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
+                SettingsRow(
+                    title = "隐私设置",
+                    icon = Icons.Default.Lock,
+                    kind = SettingsRowKind.Info,
+                    onClick = { onOpenInfo("privacy") }
+                )
+                HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
+                SettingsRow(
+                    title = "关于我们",
+                    icon = Icons.Default.Info,
+                    kind = SettingsRowKind.Info,
+                    onClick = { onOpenInfo("about") }
+                )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
                 SettingsRow(
                     title = "退出登录",
