@@ -133,7 +133,7 @@ class EditProfileViewModel(
                     nickname = currentFormData.nickname.ifBlank { null },
                     email = currentFormData.email.ifBlank { null },
                     bio = currentFormData.bio.ifBlank { null },
-                    gender = if (currentFormData.gender != "other") currentFormData.gender else null,
+                    gender = currentFormData.gender.ifBlank { null },
                     birthday = currentFormData.birthday.ifBlank { null },
                     emergencyContact = currentFormData.emergencyContact.ifBlank { null }
                 )
