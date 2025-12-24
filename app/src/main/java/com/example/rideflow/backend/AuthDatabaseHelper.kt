@@ -206,7 +206,7 @@ object AuthDatabaseHelper {
                     email = COALESCE(NULLIF(?, ''), email),
                     avatar_url = COALESCE(NULLIF(?, ''), avatar_url),
                     bio = COALESCE(NULLIF(?, ''), bio),
-                    gender = COALESCE(?, gender),
+                    gender = COALESCE(NULLIF(?, ''), gender),
                     birthday = COALESCE(NULLIF(?, ''), birthday),
                     emergency_contact = COALESCE(NULLIF(?, ''), emergency_contact),
                     updated_at = CURRENT_TIMESTAMP

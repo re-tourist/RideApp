@@ -167,21 +167,6 @@ fun RaceCard(race: Race, onClick: () -> Unit = {}) {
                         contentScale = ContentScale.Crop
                     )
                 }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    if (race.isOpen) {
-                        Button(
-                            onClick = {},
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853))
-                        ) {
-                            Text(text = "报名中")
-                        }
-                    }
-                }
             }
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(text = race.title, fontSize = 18.sp, fontWeight = FontWeight.Bold)

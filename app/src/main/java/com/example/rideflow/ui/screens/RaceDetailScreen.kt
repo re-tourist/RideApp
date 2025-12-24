@@ -282,7 +282,6 @@ fun RaceDetailScreen(navController: NavController, raceId: Int = 0, onBack: () -
                     }
                 }
 
-                // 底部操作按钮
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -301,15 +300,6 @@ fun RaceDetailScreen(navController: NavController, raceId: Int = 0, onBack: () -
                         )
                     ) {
                         Text(text = "联系主办方")
-                    }
-                    Button(
-                        onClick = { navController.navigate("${AppRoutes.RACE_REGISTRATION}/${raceId}") },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(56.dp)
-                            .padding(start = 8.dp)
-                    ) {
-                        Text(text = "立即报名")
                     }
                 }
 

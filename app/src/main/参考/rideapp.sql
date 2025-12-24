@@ -11,7 +11,7 @@
  Target Server Version : 80044 (8.0.44-0ubuntu0.22.04.1)
  File Encoding         : 65001
 
- Date: 19/12/2025 15:40:50
+ Date: 24/12/2025 08:11:52
 */
 
 SET NAMES utf8mb4;
@@ -73,8 +73,8 @@ CREATE TABLE `activities`  (
 -- Records of activities
 -- ----------------------------
 INSERT INTO `activities` VALUES (3, '越野跑周末挑战赛', '2025-12-01 08:30:00', '上海市郊区', '越野跑', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/1e30d935247661a86ac4c5ab24dd26c.png', '周末越野跑挑战', '2025-12-04 23:00:54', '2025-12-09 23:42:14');
-INSERT INTO `activities` VALUES (4, '111', '2025-11-11 11:11:00', '111', '骑行', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/40343505983679401e1fbe48a30c3cb.png', '', '2025-12-09 11:10:54', '2025-12-09 23:42:24');
-INSERT INTO `activities` VALUES (5, '111', '2025-11-11 11:11:00', '111', '骑行', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/4c7d9c89b9a7ee6253037c5b1206cb5.png', '', '2025-12-09 11:11:21', '2025-12-09 23:44:37');
+INSERT INTO `activities` VALUES (4, '黄浦江城市夜骑体验营', '2025-12-18 19:30:00', '上海市黄浦区外滩', '骑行', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/40343505983679401e1fbe48a30c3cb.png', '适合有一定基础的骑友，沿黄浦江夜骑约 30km，控制车速、体验夜景。', '2025-12-09 11:10:54', '2025-12-19 16:19:03');
+INSERT INTO `activities` VALUES (5, '周末亲子骑游日', '2025-12-21 09:00:00', '上海市闵行区滨江绿道', '骑行', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/4c7d9c89b9a7ee6253037c5b1206cb5.png', '面向新手和亲子家庭的轻松骑游活动，全程约 15km，途中设置休息拍照点。', '2025-12-09 11:11:21', '2025-12-19 16:19:04');
 
 -- ----------------------------
 -- Table structure for activity_tags
@@ -94,8 +94,12 @@ INSERT INTO `activity_tags` VALUES (3, '周末活动');
 INSERT INTO `activity_tags` VALUES (3, '娱乐赛');
 INSERT INTO `activity_tags` VALUES (3, '挑战');
 INSERT INTO `activity_tags` VALUES (3, '越野跑');
-INSERT INTO `activity_tags` VALUES (4, '娱乐赛');
-INSERT INTO `activity_tags` VALUES (5, '娱乐赛');
+INSERT INTO `activity_tags` VALUES (4, '周末活动');
+INSERT INTO `activity_tags` VALUES (4, '夜骑');
+INSERT INTO `activity_tags` VALUES (4, '骑行');
+INSERT INTO `activity_tags` VALUES (5, '亲子活动');
+INSERT INTO `activity_tags` VALUES (5, '周末活动');
+INSERT INTO `activity_tags` VALUES (5, '骑行');
 
 -- ----------------------------
 -- Table structure for articles
@@ -207,17 +211,21 @@ CREATE TABLE `community_posts`  (
   INDEX `idx_posts_author_type`(`author_type` ASC) USING BTREE,
   CONSTRAINT `fk_posts_author` FOREIGN KEY (`author_user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_posts_club` FOREIGN KEY (`club_id`) REFERENCES `clubs` (`club_id`) ON DELETE SET NULL ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 11 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of community_posts
 -- ----------------------------
 INSERT INTO `community_posts` VALUES (1, 1, NULL, 'user', '滨江夜骑，微风很舒服', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/8032121a67073f79ed86cc6b5bf1e09.png', '2025-12-05 08:10:00');
 INSERT INTO `community_posts` VALUES (2, 2, NULL, 'user', '西郊爬坡训练，平均功率提升了', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/94acc13357724afb632e0040df2587a.png', '2025-12-05 08:20:00');
-INSERT INTO `community_posts` VALUES (3, 3, NULL, 'user', '城市早骑，通勤顺路锻炼', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/images/city-morning.jpg', '2025-12-05 07:30:00');
+INSERT INTO `community_posts` VALUES (3, 3, NULL, 'user', '城市早骑，通勤顺路锻炼', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/db5217e1ea5e5db9e3a4330ca27478b.png', '2025-12-05 07:30:00');
 INSERT INTO `community_posts` VALUES (4, 1, 1, 'club', '北京狂魔车队周末拉练，路线很燃', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/d0d454cdf63ec9fc40bba29a29de004.png', '2025-12-04 09:00:00');
 INSERT INTO `community_posts` VALUES (5, 2, 2, 'club', 'CAPU行者夜骑分享，灯光很美', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/8032121a67073f79ed86cc6b5bf1e09.png', '2025-12-04 20:30:00');
 INSERT INTO `community_posts` VALUES (6, 3, 3, 'club', '成都骑行吧晨练集合，欢迎一起', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/d4efdd6f9fcfbe8789bb53a6a7250f3.png', '2025-12-03 06:45:00');
+INSERT INTO `community_posts` VALUES (7, 1, NULL, 'user', '午休摸鱼去江边溜了一圈，比在工位上强多了', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/6f024ae766133e0fb688645a29353f7.jpg', '2025-12-10 12:20:00');
+INSERT INTO `community_posts` VALUES (8, 2, NULL, 'user', '今天第一次尝试不戴耳机骑车，听风声挺治愈的', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/bb9c3dcb46181266726840a279b4e14.jpg', '2025-12-10 19:45:00');
+INSERT INTO `community_posts` VALUES (9, 3, NULL, 'user', '楼下小圈练控车，终于敢多压一点弯了', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/7ec5577233c53aadc00bde2c26bd879.jpg', '2025-12-11 07:10:00');
+INSERT INTO `community_posts` VALUES (10, 1, 1, 'club', '本周末想试一次 100km 拉练，有想冲的在评论里报名', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/8976a63f7719018cbd9e04230a1c902.jpg', '2025-12-11 21:10:00');
 
 -- ----------------------------
 -- Table structure for event_tags
@@ -244,8 +252,12 @@ INSERT INTO `event_tags` VALUES (3, '周末活动');
 INSERT INTO `event_tags` VALUES (3, '娱乐赛');
 INSERT INTO `event_tags` VALUES (3, '挑战');
 INSERT INTO `event_tags` VALUES (3, '越野跑');
-INSERT INTO `event_tags` VALUES (4, '娱乐赛');
-INSERT INTO `event_tags` VALUES (5, '娱乐赛');
+INSERT INTO `event_tags` VALUES (4, '周末活动');
+INSERT INTO `event_tags` VALUES (4, '夜骑');
+INSERT INTO `event_tags` VALUES (4, '骑行');
+INSERT INTO `event_tags` VALUES (5, '亲子活动');
+INSERT INTO `event_tags` VALUES (5, '周末活动');
+INSERT INTO `event_tags` VALUES (5, '骑行');
 
 -- ----------------------------
 -- Table structure for events
@@ -273,8 +285,8 @@ CREATE TABLE `events`  (
 INSERT INTO `events` VALUES (1, '迎风织金季·GBA青年自行车线上赛', '2025-11-08 09:00:00', '任意地点', '骑行', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/06a5fee73fbac9e2b32da524f8fcbe4.png', '线上赛挑战', '2025-12-04 23:00:54', '2025-12-09 23:41:37');
 INSERT INTO `events` VALUES (2, '2025“环八娄”自行车爬坡联赛（娄城）', '2025-11-29 08:00:00', '浙江省娄城市', '骑行', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/13f1017e33c76449f8af3f71cea0002.png', '爬坡联赛', '2025-12-04 23:00:54', '2025-12-09 23:41:49');
 INSERT INTO `events` VALUES (3, '越野跑周末挑战赛', '2025-12-01 08:30:00', '上海市郊区', '越野跑', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/1e30d935247661a86ac4c5ab24dd26c.png', '周末越野跑挑战', '2025-12-04 23:00:54', '2025-12-09 23:42:14');
-INSERT INTO `events` VALUES (4, '111', '2025-11-11 11:11:00', '111', '骑行', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/40343505983679401e1fbe48a30c3cb.png', '', '2025-12-09 11:10:54', '2025-12-09 23:42:24');
-INSERT INTO `events` VALUES (5, '111', '2025-11-11 11:11:00', '111', '骑行', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/4c7d9c89b9a7ee6253037c5b1206cb5.png', '', '2025-12-09 11:11:21', '2025-12-09 23:44:37');
+INSERT INTO `events` VALUES (4, '黄浦江城市夜骑体验营', '2025-12-18 19:30:00', '上海市黄浦区外滩', '骑行', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/40343505983679401e1fbe48a30c3cb.png', '适合有一定基础的骑友，沿黄浦江夜骑约 30km，控制车速、体验夜景。', '2025-12-09 11:10:54', '2025-12-19 16:19:20');
+INSERT INTO `events` VALUES (5, '周末亲子骑游日', '2025-12-21 09:00:00', '上海市闵行区滨江绿道', '骑行', 1, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/posts/4c7d9c89b9a7ee6253037c5b1206cb5.png', '面向新手和亲子家庭的轻松骑游活动，全程约 15km，途中设置休息拍照点。', '2025-12-09 11:11:21', '2025-12-19 16:19:20');
 
 -- ----------------------------
 -- Table structure for post_comments
@@ -291,52 +303,51 @@ CREATE TABLE `post_comments`  (
   INDEX `fk_comments_user`(`user_id` ASC) USING BTREE,
   CONSTRAINT `fk_comments_post` FOREIGN KEY (`post_id`) REFERENCES `community_posts` (`post_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_comments_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 42 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 82 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of post_comments
 -- ----------------------------
-INSERT INTO `post_comments` VALUES (1, 1, 2, '夜骑不错，注意安全', '2025-12-05 08:16:00');
-INSERT INTO `post_comments` VALUES (2, 1, 3, '风很舒服，支持！', '2025-12-05 08:18:00');
-INSERT INTO `post_comments` VALUES (3, 2, 1, '爬坡加油，稳步提升', '2025-12-05 08:26:00');
-INSERT INTO `post_comments` VALUES (4, 4, 3, '周末拉练报名！', '2025-12-04 09:10:00');
-INSERT INTO `post_comments` VALUES (5, 1, 1, '下次一起夜骑！', '2025-12-05 08:22:00');
-INSERT INTO `post_comments` VALUES (6, 1, 3, '路线不错，注意补给', '2025-12-05 08:23:00');
-INSERT INTO `post_comments` VALUES (7, 2, 2, '功率稳步提高，很棒', '2025-12-05 08:28:00');
-INSERT INTO `post_comments` VALUES (8, 2, 3, '下次拉我一个', '2025-12-05 08:46:00');
-INSERT INTO `post_comments` VALUES (9, 3, 1, '通勤顺路太香了', '2025-12-05 07:38:00');
-INSERT INTO `post_comments` VALUES (10, 3, 2, '城市夜骑路况要看好', '2025-12-05 07:42:00');
-INSERT INTO `post_comments` VALUES (11, 4, 1, '周末拉练报名+1', '2025-12-04 09:13:00');
-INSERT INTO `post_comments` VALUES (12, 4, 2, '路线和配速发一下', '2025-12-04 09:16:00');
-INSERT INTO `post_comments` VALUES (13, 5, 1, '夜骑灯光确实很美', '2025-12-04 21:11:00');
-INSERT INTO `post_comments` VALUES (14, 5, 3, '速度控制好更安全', '2025-12-04 21:13:00');
-INSERT INTO `post_comments` VALUES (15, 6, 3, '晨练集合几点？', '2025-12-03 06:53:00');
-INSERT INTO `post_comments` VALUES (16, 1, 1, '下次一起夜骑！', '2025-12-05 08:22:00');
-INSERT INTO `post_comments` VALUES (17, 1, 3, '路线不错，注意补给', '2025-12-05 08:23:00');
-INSERT INTO `post_comments` VALUES (18, 2, 2, '功率稳步提高，很棒', '2025-12-05 08:28:00');
-INSERT INTO `post_comments` VALUES (19, 2, 3, '下次拉我一个', '2025-12-05 08:46:00');
-INSERT INTO `post_comments` VALUES (20, 3, 1, '通勤顺路太香了', '2025-12-05 07:38:00');
-INSERT INTO `post_comments` VALUES (21, 3, 2, '城市夜骑路况要看好', '2025-12-05 07:42:00');
-INSERT INTO `post_comments` VALUES (22, 4, 1, '周末拉练报名+1', '2025-12-04 09:13:00');
-INSERT INTO `post_comments` VALUES (23, 4, 2, '路线和配速发一下', '2025-12-04 09:16:00');
-INSERT INTO `post_comments` VALUES (24, 5, 1, '夜骑灯光确实很美', '2025-12-04 21:11:00');
-INSERT INTO `post_comments` VALUES (25, 5, 3, '速度控制好更安全', '2025-12-04 21:13:00');
-INSERT INTO `post_comments` VALUES (26, 6, 3, '晨练集合几点？', '2025-12-03 06:53:00');
-INSERT INTO `post_comments` VALUES (27, 2, 1, '今天状态一般，不过爬完感觉挺爽', '2025-12-12 20:34:09');
-INSERT INTO `post_comments` VALUES (28, 2, 1, '最近爬坡手感不错，下次一起？', '2025-12-12 20:40:48');
-INSERT INTO `post_comments` VALUES (29, 6, 1, '路线很舒服，就是有几段风有点大', '2025-12-12 21:17:01');
-INSERT INTO `post_comments` VALUES (30, 5, 1, '这条路书收藏了，周末约一波', '2025-12-12 21:17:22');
-INSERT INTO `post_comments` VALUES (31, 2, 8, '已经加到训练计划里了', '2025-12-16 15:06:08');
-INSERT INTO `post_comments` VALUES (32, 2, 1, '已经加到训练计划里了', '2025-12-16 19:43:57');
-INSERT INTO `post_comments` VALUES (33, 2, 1, '已经加到训练计划里了', '2025-12-16 19:44:08');
-INSERT INTO `post_comments` VALUES (34, 5, 1, '打卡！今天也骑完了', '2025-12-16 19:47:04');
-INSERT INTO `post_comments` VALUES (35, 2, 11, '已经加到训练计划里了', '2025-12-17 09:03:15');
-INSERT INTO `post_comments` VALUES (36, 2, 11, '打卡！今天也骑完了', '2025-12-17 09:03:27');
-INSERT INTO `post_comments` VALUES (37, 2, 11, '打卡！今天也骑完了', '2025-12-17 09:14:28');
-INSERT INTO `post_comments` VALUES (38, 2, 11, '打卡！今天也骑完了', '2025-12-17 09:14:34');
-INSERT INTO `post_comments` VALUES (39, 2, 8, '打卡！今天也骑完了', '2025-12-17 09:17:07');
-INSERT INTO `post_comments` VALUES (40, 1, 8, '打卡！今天也骑完了', '2025-12-17 09:28:03');
-INSERT INTO `post_comments` VALUES (41, 2, 1, '111', '2025-12-19 13:53:44');
+INSERT INTO `post_comments` VALUES (42, 1, 2, '夜骑不错，注意安全，车灯一定要亮一点', '2025-12-05 08:16:00');
+INSERT INTO `post_comments` VALUES (43, 1, 3, '看着就很舒服，下次组织个夜骑团？', '2025-12-05 08:18:00');
+INSERT INTO `post_comments` VALUES (44, 1, 1, '今晚如果不加班我也去滨江转一圈', '2025-12-05 08:22:00');
+INSERT INTO `post_comments` VALUES (45, 1, 8, '江边风大不大？我每次回来嗓子都挺干', '2025-12-05 08:30:00');
+INSERT INTO `post_comments` VALUES (46, 1, 2, '可以顺路买杯热的，骑完喝感觉很幸福', '2025-12-05 08:33:00');
+INSERT INTO `post_comments` VALUES (47, 2, 1, '爬坡那段平均心率多少？看着挺狠的', '2025-12-05 08:26:00');
+INSERT INTO `post_comments` VALUES (48, 2, 2, '这条路线挺适合练节奏的，多刷几次就有感觉了', '2025-12-05 08:28:00');
+INSERT INTO `post_comments` VALUES (49, 2, 3, '下次如果周末去的话，提前一天喊我', '2025-12-05 08:46:00');
+INSERT INTO `post_comments` VALUES (50, 2, 8, '我还在纠结要不要换轻一点的飞轮', '2025-12-05 08:50:00');
+INSERT INTO `post_comments` VALUES (51, 2, 1, '先适应现在这套，动作顺了再升级也不迟', '2025-12-05 08:55:00');
+INSERT INTO `post_comments` VALUES (52, 3, 1, '通勤顺路骑车太爽了，比挤地铁开心多了', '2025-12-05 07:38:00');
+INSERT INTO `post_comments` VALUES (53, 3, 2, '记得预留点时间，别骑太嗨迟到哈哈', '2025-12-05 07:42:00');
+INSERT INTO `post_comments` VALUES (54, 3, 3, '公司楼下有淋浴间就完美了', '2025-12-05 07:45:00');
+INSERT INTO `post_comments` VALUES (55, 3, 8, '你雨天还会骑车上班吗？', '2025-12-05 07:48:00');
+INSERT INTO `post_comments` VALUES (56, 4, 2, '周末拉练有补给车吗？', '2025-12-04 09:10:00');
+INSERT INTO `post_comments` VALUES (57, 4, 3, '建议带一件轻薄风衣，早晚温差有点大', '2025-12-04 09:13:00');
+INSERT INTO `post_comments` VALUES (58, 4, 1, '路线 GPX 能发群里一份吗？', '2025-12-04 09:16:00');
+INSERT INTO `post_comments` VALUES (59, 4, 8, '求一个预计爬升，我好心理准备', '2025-12-04 09:20:00');
+INSERT INTO `post_comments` VALUES (60, 5, 1, '夜骑照片太好看了，想知道是啥灯', '2025-12-04 21:11:00');
+INSERT INTO `post_comments` VALUES (61, 5, 3, '这条路有几段没路灯，小心一点', '2025-12-04 21:13:00');
+INSERT INTO `post_comments` VALUES (62, 5, 2, '最近也想买一套尾灯，有推荐吗', '2025-12-04 21:16:00');
+INSERT INTO `post_comments` VALUES (63, 5, 8, '我用的是便宜款的，亮度还行，就是续航一般', '2025-12-04 21:20:00');
+INSERT INTO `post_comments` VALUES (64, 6, 1, '成都早上这么早就有人一起骑，太羡慕了', '2025-12-03 06:53:00');
+INSERT INTO `post_comments` VALUES (65, 6, 3, '集合点旁边那家豆浆店不错，可以顺便吃早饭', '2025-12-03 06:56:00');
+INSERT INTO `post_comments` VALUES (66, 6, 2, '有安排新人队吗，怕跟不上主力', '2025-12-03 07:00:00');
+INSERT INTO `post_comments` VALUES (67, 6, 8, '可以先跟在队尾，实在不行就提前掉头', '2025-12-03 07:05:00');
+INSERT INTO `post_comments` VALUES (68, 7, 2, '午休还能溜出去骑一圈，你们公司真不错', '2025-12-10 12:25:00');
+INSERT INTO `post_comments` VALUES (69, 7, 3, '这种小短途刚好醒醒脑，下午干活更有精神', '2025-12-10 12:27:00');
+INSERT INTO `post_comments` VALUES (70, 7, 1, '其实就绕了十几公里，当成脑袋放空休息', '2025-12-10 12:28:00');
+INSERT INTO `post_comments` VALUES (71, 7, 8, '你们那边中午不热吗？夏天中午我都不敢出门骑', '2025-12-10 12:30:00');
+INSERT INTO `post_comments` VALUES (72, 8, 3, '不戴耳机骑车确实更安心一点', '2025-12-10 19:50:00');
+INSERT INTO `post_comments` VALUES (73, 8, 1, '我现在也是只开导航提示音，其他都关掉', '2025-12-10 19:55:00');
+INSERT INTO `post_comments` VALUES (74, 8, 2, '偶尔听听城市的声音，其实还挺有氛围感', '2025-12-10 20:00:00');
+INSERT INTO `post_comments` VALUES (75, 9, 1, '控车练好了下坡才更有底气', '2025-12-11 07:15:00');
+INSERT INTO `post_comments` VALUES (76, 9, 2, '可以先练单手喝水、单手打灯那种基础动作，慢慢来', '2025-12-11 07:20:00');
+INSERT INTO `post_comments` VALUES (77, 9, 3, '我最近也在练绕桩，发现胎压太高也不太好压弯', '2025-12-11 07:23:00');
+INSERT INTO `post_comments` VALUES (78, 10, 2, '100km 想冲一冲，平均速度大概多少？', '2025-12-11 21:15:00');
+INSERT INTO `post_comments` VALUES (79, 10, 3, '能不能分成体验组和进阶组，两种配速', '2025-12-11 21:18:00');
+INSERT INTO `post_comments` VALUES (80, 10, 1, '可以，体验组 25km/h 左右，进阶组看天气再定', '2025-12-11 21:25:00');
+INSERT INTO `post_comments` VALUES (81, 10, 8, '有车技一般的新手名额吗，我怕把队伍拖慢', '2025-12-11 21:28:00');
 
 -- ----------------------------
 -- Table structure for post_dislikes
@@ -358,6 +369,9 @@ CREATE TABLE `post_dislikes`  (
 INSERT INTO `post_dislikes` VALUES (3, 1, '2025-12-18 20:20:49');
 INSERT INTO `post_dislikes` VALUES (5, 1, '2025-12-18 20:20:44');
 INSERT INTO `post_dislikes` VALUES (6, 1, '2025-12-18 20:21:05');
+INSERT INTO `post_dislikes` VALUES (8, 9, '2025-12-10 20:05:00');
+INSERT INTO `post_dislikes` VALUES (9, 11, '2025-12-11 07:30:00');
+INSERT INTO `post_dislikes` VALUES (10, 2, '2025-12-11 21:30:00');
 
 -- ----------------------------
 -- Table structure for post_likes
@@ -398,6 +412,21 @@ INSERT INTO `post_likes` VALUES (5, 12, '2025-12-16 15:08:37');
 INSERT INTO `post_likes` VALUES (6, 1, '2025-12-12 21:16:41');
 INSERT INTO `post_likes` VALUES (6, 2, '2025-12-03 07:00:00');
 INSERT INTO `post_likes` VALUES (6, 3, '2025-12-03 06:52:00');
+INSERT INTO `post_likes` VALUES (7, 1, '2025-12-10 12:22:00');
+INSERT INTO `post_likes` VALUES (7, 2, '2025-12-10 12:23:00');
+INSERT INTO `post_likes` VALUES (7, 3, '2025-12-10 12:24:00');
+INSERT INTO `post_likes` VALUES (8, 1, '2025-12-10 19:46:00');
+INSERT INTO `post_likes` VALUES (8, 2, '2025-12-10 19:47:00');
+INSERT INTO `post_likes` VALUES (8, 3, '2025-12-10 19:48:00');
+INSERT INTO `post_likes` VALUES (8, 8, '2025-12-10 19:49:00');
+INSERT INTO `post_likes` VALUES (9, 1, '2025-12-11 07:11:00');
+INSERT INTO `post_likes` VALUES (9, 2, '2025-12-11 07:12:00');
+INSERT INTO `post_likes` VALUES (9, 3, '2025-12-11 07:13:00');
+INSERT INTO `post_likes` VALUES (9, 8, '2025-12-11 07:14:00');
+INSERT INTO `post_likes` VALUES (10, 1, '2025-12-11 21:11:00');
+INSERT INTO `post_likes` VALUES (10, 2, '2025-12-11 21:12:00');
+INSERT INTO `post_likes` VALUES (10, 3, '2025-12-11 21:13:00');
+INSERT INTO `post_likes` VALUES (10, 9, '2025-12-11 21:14:00');
 
 -- ----------------------------
 -- Table structure for race_tags
@@ -669,18 +698,36 @@ CREATE TABLE `user_achievement_progress`  (
 -- ----------------------------
 -- Records of user_achievement_progress
 -- ----------------------------
-INSERT INTO `user_achievement_progress` VALUES (1, 1, 26, 0.00, 0, 100.00, 1, '2025-12-01 08:00:00', '2025-12-19 15:20:11');
+INSERT INTO `user_achievement_progress` VALUES (1, 1, 28, 0.00, 0, 100.00, 1, '2025-12-01 08:00:00', '2025-12-19 18:16:22');
 INSERT INTO `user_achievement_progress` VALUES (1, 2, 0, 0.00, 5, 71.43, 0, NULL, '2025-12-19 15:20:11');
-INSERT INTO `user_achievement_progress` VALUES (1, 3, 26, 0.00, 0, 26.00, 0, NULL, '2025-12-19 15:20:12');
+INSERT INTO `user_achievement_progress` VALUES (1, 3, 28, 0.00, 0, 28.00, 0, NULL, '2025-12-19 18:16:23');
 INSERT INTO `user_achievement_progress` VALUES (1, 4, 0, 32.50, 0, 77.38, 0, '2025-12-10 10:00:00', '2025-12-19 15:20:12');
 INSERT INTO `user_achievement_progress` VALUES (1, 5, 3, 0.00, 0, 100.00, 1, NULL, '2025-12-19 15:20:12');
-INSERT INTO `user_achievement_progress` VALUES (1, 6, 25, 0.00, 0, 100.00, 1, NULL, '2025-12-19 15:20:12');
+INSERT INTO `user_achievement_progress` VALUES (1, 6, 27, 0.00, 0, 100.00, 1, NULL, '2025-12-19 18:16:23');
+INSERT INTO `user_achievement_progress` VALUES (8, 1, 13, 0.00, 0, 100.00, 1, NULL, '2025-12-23 19:20:38');
+INSERT INTO `user_achievement_progress` VALUES (8, 2, 0, 0.00, 1, 14.29, 0, NULL, '2025-12-23 19:19:21');
+INSERT INTO `user_achievement_progress` VALUES (8, 3, 13, 0.00, 0, 13.00, 0, NULL, '2025-12-23 19:20:39');
+INSERT INTO `user_achievement_progress` VALUES (8, 4, 0, 0.05, 0, 0.12, 0, NULL, '2025-12-23 19:20:39');
+INSERT INTO `user_achievement_progress` VALUES (8, 5, 0, 0.00, 0, 0.00, 0, NULL, '2025-12-23 19:19:22');
+INSERT INTO `user_achievement_progress` VALUES (8, 6, 13, 0.00, 0, 65.00, 0, NULL, '2025-12-23 19:20:40');
+INSERT INTO `user_achievement_progress` VALUES (11, 1, 55, 0.00, 0, 100.00, 1, NULL, '2025-12-22 22:56:33');
+INSERT INTO `user_achievement_progress` VALUES (11, 2, 0, 0.00, 1, 14.29, 0, NULL, '2025-12-22 20:14:16');
+INSERT INTO `user_achievement_progress` VALUES (11, 3, 55, 0.00, 0, 55.00, 0, NULL, '2025-12-22 22:56:33');
+INSERT INTO `user_achievement_progress` VALUES (11, 4, 0, 0.08, 0, 0.19, 0, NULL, '2025-12-22 20:14:16');
+INSERT INTO `user_achievement_progress` VALUES (11, 5, 4, 0.00, 0, 100.00, 1, NULL, '2025-12-22 20:14:17');
+INSERT INTO `user_achievement_progress` VALUES (11, 6, 55, 0.00, 0, 100.00, 1, NULL, '2025-12-22 22:56:34');
 INSERT INTO `user_achievement_progress` VALUES (14, 1, 1, 0.00, 0, 100.00, 1, NULL, '2025-12-19 15:21:32');
 INSERT INTO `user_achievement_progress` VALUES (14, 2, 0, 0.00, 1, 14.29, 0, NULL, '2025-12-19 15:21:32');
 INSERT INTO `user_achievement_progress` VALUES (14, 3, 1, 0.00, 0, 1.00, 0, NULL, '2025-12-19 15:21:32');
 INSERT INTO `user_achievement_progress` VALUES (14, 4, 0, 0.00, 0, 0.00, 0, NULL, '2025-12-19 15:21:32');
 INSERT INTO `user_achievement_progress` VALUES (14, 5, 0, 0.00, 0, 0.00, 0, NULL, '2025-12-19 15:21:32');
 INSERT INTO `user_achievement_progress` VALUES (14, 6, 1, 0.00, 0, 5.00, 0, NULL, '2025-12-19 15:21:32');
+INSERT INTO `user_achievement_progress` VALUES (15, 1, 4, 0.00, 0, 100.00, 1, NULL, '2025-12-23 22:37:44');
+INSERT INTO `user_achievement_progress` VALUES (15, 2, 0, 0.00, 1, 14.29, 0, NULL, '2025-12-21 17:42:45');
+INSERT INTO `user_achievement_progress` VALUES (15, 3, 4, 0.00, 0, 4.00, 0, NULL, '2025-12-23 22:37:45');
+INSERT INTO `user_achievement_progress` VALUES (15, 4, 0, 0.00, 0, 0.00, 0, NULL, '2025-12-21 17:42:45');
+INSERT INTO `user_achievement_progress` VALUES (15, 5, 0, 0.00, 0, 0.00, 0, NULL, '2025-12-21 17:42:45');
+INSERT INTO `user_achievement_progress` VALUES (15, 6, 4, 0.00, 0, 20.00, 0, NULL, '2025-12-23 22:37:45');
 
 -- ----------------------------
 -- Table structure for user_achievement_record_links
@@ -728,7 +775,6 @@ CREATE TABLE `user_activities`  (
 -- Records of user_activities
 -- ----------------------------
 INSERT INTO `user_activities` VALUES (9, 1, 4, 'favorite', 'upcoming', '2025-12-12 18:12:46', '????');
-INSERT INTO `user_activities` VALUES (13, 1, 5, 'favorite', 'upcoming', '2025-12-17 09:27:02', '????');
 INSERT INTO `user_activities` VALUES (14, 1, 3, 'favorite', 'upcoming', '2025-12-17 09:39:05', '????');
 
 -- ----------------------------
@@ -836,6 +882,7 @@ INSERT INTO `user_follows` VALUES (8, 1, '2025-12-16 17:05:05');
 INSERT INTO `user_follows` VALUES (8, 2, '2025-12-17 09:41:43');
 INSERT INTO `user_follows` VALUES (8, 3, '2025-12-16 16:07:09');
 INSERT INTO `user_follows` VALUES (11, 2, '2025-12-17 09:02:41');
+INSERT INTO `user_follows` VALUES (15, 3, '2025-12-21 17:43:10');
 
 -- ----------------------------
 -- Table structure for user_race_stats
@@ -951,108 +998,122 @@ CREATE TABLE `user_ride_records`  (
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `climb` int NULL DEFAULT NULL,
   `max_speed_kmh` decimal(5, 2) NULL DEFAULT NULL,
+  `track_image_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '骑行轨迹截图URL',
   PRIMARY KEY (`record_id`) USING BTREE,
   INDEX `route_id`(`route_id` ASC) USING BTREE,
   INDEX `idx_ride_records_user`(`user_id` ASC) USING BTREE,
   INDEX `idx_ride_records_start_time`(`start_time` ASC) USING BTREE,
   CONSTRAINT `user_ride_records_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `user_ride_records_ibfk_2` FOREIGN KEY (`route_id`) REFERENCES `routes` (`route_id`) ON DELETE SET NULL ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 897967848 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户骑行记录' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1269100220 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户骑行记录' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of user_ride_records
 -- ----------------------------
-INSERT INTO `user_ride_records` VALUES (1, 1, 1, '2025-11-21 19:00:00', 0, 5400, 32.50, 21.67, 850, NULL, '夜骑很爽', '2025-12-04 23:00:55', NULL, NULL);
-INSERT INTO `user_ride_records` VALUES (2, 2, 2, '2025-11-22 08:00:00', 0, 10800, 65.00, 21.66, 1600, NULL, '爬坡辛苦', '2025-12-04 23:00:55', NULL, NULL);
-INSERT INTO `user_ride_records` VALUES (3, 3, 3, '2025-11-23 20:00:00', 0, 3600, 18.30, 18.30, 600, NULL, '城市风光不错', '2025-12-04 23:00:55', NULL, NULL);
-INSERT INTO `user_ride_records` VALUES (96398612, 11, NULL, '2025-12-10 00:52:37', 0, 3, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 08:52:39', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (97431832, 11, NULL, '2025-12-10 01:09:50', 0, 3, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 09:09:53', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (98194425, 1, NULL, '2025-12-10 09:22:33', 0, 5, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 09:22:34', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (101425626, 11, NULL, '2025-12-10 02:16:24', 0, 3, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:16:26', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (101443771, 11, NULL, '2025-12-10 02:16:42', 0, 8, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:16:44', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (101503576, 1, NULL, '2025-12-10 02:17:42', 0, 13, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:17:45', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (101774447, 11, NULL, '2025-12-10 10:22:13', 0, 49, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:22:13', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (101779699, 11, NULL, '2025-12-10 10:22:18', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:22:19', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (101901621, 11, NULL, '2025-12-10 10:24:20', 0, 71, 0.08, 3.60, 4, NULL, NULL, '2025-12-10 10:24:20', 0, 5.25);
-INSERT INTO `user_ride_records` VALUES (102513116, 11, NULL, '2025-12-10 10:34:31', 0, 4, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:34:33', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (102862332, 11, NULL, '2025-12-10 02:40:20', 0, 8, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:40:24', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (102944728, 11, NULL, '2025-12-10 02:41:43', 0, 17, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:41:46', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (103418061, 11, NULL, '2025-12-10 02:49:36', 0, 4, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:49:40', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (103423646, 11, NULL, '2025-12-10 02:49:42', 0, 0, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:49:48', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (103892224, 11, NULL, '2025-12-10 02:57:30', 0, 3, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:57:34', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (103897976, 11, NULL, '2025-12-10 02:57:36', 0, 2, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:57:42', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (104400404, 11, NULL, '2025-12-10 11:05:59', 0, 16, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 11:06:00', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (104413160, 11, NULL, '2025-12-10 11:06:11', 0, 4, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 11:06:13', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (104466393, 11, NULL, '2025-12-10 11:07:05', 0, 37, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 11:07:07', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (104570600, 11, NULL, '2025-12-10 11:08:49', 0, 4, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 11:08:50', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (107079789, 1, NULL, '2025-12-10 11:50:38', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 11:50:39', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (107090646, 1, NULL, '2025-12-10 11:50:49', 0, 6, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 11:50:50', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (107112978, 1, NULL, '2025-12-10 11:51:11', 0, 19, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 11:51:13', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (107180767, 1, NULL, '2025-12-10 11:52:19', 0, 55, 0.06, 3.90, 2, NULL, NULL, '2025-12-10 11:52:20', 0, 16.05);
-INSERT INTO `user_ride_records` VALUES (108412885, 1, NULL, '2025-12-10 12:12:51', 0, 0, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 12:12:53', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (116037532, 11, NULL, '2025-12-10 06:19:56', 0, 4, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 14:19:56', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (563172296, 11, NULL, '2025-12-15 10:32:10', 0, 2, 0.00, 0.00, 0, NULL, NULL, '2025-12-15 18:32:13', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (565878035, 1, NULL, '2025-12-15 19:17:16', 0, 18, 0.02, 4.10, 1, NULL, NULL, '2025-12-15 19:17:17', 0, 7.12);
-INSERT INTO `user_ride_records` VALUES (566008307, 1, NULL, '2025-12-15 19:19:26', 0, 2, 0.00, 0.00, 0, NULL, NULL, '2025-12-15 19:19:27', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (576081334, 1, NULL, '2025-12-15 22:07:19', 0, 0, 0.00, 0.00, 0, NULL, NULL, '2025-12-15 22:07:20', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (577649998, 11, NULL, '2025-12-15 22:33:28', 0, 10, 0.00, 0.00, 0, NULL, NULL, '2025-12-15 22:33:30', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (577852135, 1, NULL, '2025-12-15 22:36:50', 0, 11, 0.00, 0.00, 0, NULL, NULL, '2025-12-15 22:36:52', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (577955975, 1, NULL, '2025-12-15 22:38:34', 0, 0, 0.00, 0.00, 0, NULL, NULL, '2025-12-15 22:38:36', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (578309981, 11, NULL, '2025-12-15 22:44:28', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-15 22:44:30', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (581556357, 11, NULL, '2025-12-15 23:38:35', 0, 21, 0.03, 4.40, 1, NULL, NULL, '2025-12-15 23:38:35', 0, 5.69);
-INSERT INTO `user_ride_records` VALUES (581559488, 11, NULL, '2025-12-15 23:38:38', 0, 37, 0.00, 0.00, 0, NULL, NULL, '2025-12-15 23:38:38', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (637264043, 12, NULL, '2025-12-16 07:07:02', 0, 20, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 15:07:02', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (642581256, 1, NULL, '2025-12-16 08:35:39', 0, 17, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 16:35:39', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (652318713, 11, NULL, '2025-12-16 11:17:57', 0, 2, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 19:17:59', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (653895593, 11, NULL, '2025-12-16 11:44:14', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 19:44:16', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (654786094, 11, NULL, '2025-12-16 11:59:04', 0, 4, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 19:59:07', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (658168974, 11, NULL, '2025-12-16 20:55:27', 0, 6, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 20:55:27', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (658172197, 11, NULL, '2025-12-16 20:55:30', 0, 0, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 20:55:31', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (658178828, 11, NULL, '2025-12-16 20:55:37', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 20:55:37', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (658188614, 11, NULL, '2025-12-16 20:55:47', 0, 3, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 20:55:47', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (658353237, 11, NULL, '2025-12-16 20:58:31', 0, 25, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 20:58:32', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (658949345, 11, NULL, '2025-12-16 21:08:28', 0, 21, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 21:08:28', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (659260733, 1, NULL, '2025-12-16 21:13:39', 0, 164, 0.18, 3.90, 9, NULL, NULL, '2025-12-16 21:13:39', 0, 13.19);
-INSERT INTO `user_ride_records` VALUES (659661863, 1, NULL, '2025-12-16 13:20:20', 0, 58, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 21:20:20', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (659901185, 1, NULL, '2025-12-16 13:24:19', 0, 2, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 21:24:20', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (661147521, 11, NULL, '2025-12-16 21:45:06', 0, 728, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 21:45:06', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (699491936, 11, NULL, '2025-12-17 08:24:10', 0, 42, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:24:10', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (699681149, 11, NULL, '2025-12-17 08:27:19', 0, 180, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:27:20', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (699737931, 11, NULL, '2025-12-17 00:28:16', 0, 4, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:28:20', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (699890514, 11, NULL, '2025-12-17 08:30:49', 0, 3, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:30:49', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (700280303, 11, NULL, '2025-12-17 08:37:18', 0, 3, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:37:19', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (700286219, 11, NULL, '2025-12-17 08:37:24', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:37:25', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (700336146, 11, NULL, '2025-12-17 08:38:14', 0, 2, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:38:15', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (700357627, 11, NULL, '2025-12-17 08:38:36', 0, 5, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:38:36', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (700609712, 11, NULL, '2025-12-17 08:42:48', 0, 20, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:42:48', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (700807518, 11, NULL, '2025-12-17 08:46:06', 0, 2, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:46:06', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (701637376, 1, NULL, '2025-12-17 00:59:56', 0, 22, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:59:58', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (701787707, 11, NULL, '2025-12-17 09:02:26', 0, 22, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:02:26', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (702330200, 11, NULL, '2025-12-17 09:11:28', 0, 7, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:11:29', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (702401331, 8, NULL, '2025-12-17 09:12:39', 0, 17, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:12:41', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (702430593, 8, NULL, '2025-12-17 09:13:09', 0, 8, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:13:09', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (702445472, 8, NULL, '2025-12-17 09:13:24', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:13:24', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (702570705, 8, NULL, '2025-12-17 09:15:29', 0, 7, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:15:29', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (703261803, 11, NULL, '2025-12-17 09:27:00', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:27:01', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (703289524, 11, NULL, '2025-12-17 09:27:28', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:27:28', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (703897782, 11, NULL, '2025-12-17 09:37:36', 0, 4, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:37:36', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (703946872, 11, NULL, '2025-12-17 09:38:25', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:38:25', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (704046264, 11, NULL, '2025-12-17 09:40:04', 0, 82, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:40:05', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (704313850, 8, NULL, '2025-12-17 09:44:32', 0, 20, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:44:33', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (705460654, 1, NULL, '2025-12-17 02:03:39', 0, 0, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 10:04:11', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (811087845, 1, NULL, '2025-12-18 07:24:06', 0, 3, 0.00, 0.00, 0, NULL, NULL, '2025-12-18 15:24:07', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (811298996, 1, NULL, '2025-12-18 07:27:37', 0, 5, 0.00, 0.00, 0, NULL, NULL, '2025-12-18 15:27:37', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (813220565, 1, NULL, '2025-12-18 07:59:39', 0, 6, 0.00, 0.00, 0, NULL, NULL, '2025-12-18 15:59:39', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (818851203, 1, NULL, '2025-12-18 09:33:10', 0, 15, 0.00, 0.00, 0, NULL, NULL, '2025-12-18 17:33:57', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (892145338, 1, NULL, '2025-12-19 05:54:52', 0, 4, 0.00, 0.00, 0, NULL, NULL, '2025-12-19 13:55:05', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (892628469, 1, NULL, '2025-12-19 06:03:05', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-19 14:03:09', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (897250873, 1, NULL, '2025-12-19 07:20:07', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-19 15:20:10', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (897272744, 8, NULL, '2025-12-19 15:20:31', 0, 3, 0.00, 0.00, 0, NULL, NULL, '2025-12-19 15:20:31', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (897330992, 14, NULL, '2025-12-19 07:21:28', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-19 15:21:31', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (897360181, 8, NULL, '2025-12-19 15:21:58', 0, 5, 0.01, 5.50, 0, NULL, NULL, '2025-12-19 15:21:59', 0, 3.10);
-INSERT INTO `user_ride_records` VALUES (897936590, 8, NULL, '2025-12-19 15:31:35', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-19 15:31:35', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (897939172, 8, NULL, '2025-12-19 15:31:37', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-19 15:31:38', 0, 0.00);
-INSERT INTO `user_ride_records` VALUES (897967847, 8, NULL, '2025-12-19 15:32:06', 0, 13, 0.00, 0.50, 0, NULL, NULL, '2025-12-19 15:32:06', 0, 0.39);
+INSERT INTO `user_ride_records` VALUES (1, 1, 1, '2025-11-21 19:00:00', 0, 5400, 32.50, 21.67, 850, NULL, '夜骑很爽', '2025-12-04 23:00:55', NULL, NULL, NULL);
+INSERT INTO `user_ride_records` VALUES (2, 2, 2, '2025-11-22 08:00:00', 0, 10800, 65.00, 21.66, 1600, NULL, '爬坡辛苦', '2025-12-04 23:00:55', NULL, NULL, NULL);
+INSERT INTO `user_ride_records` VALUES (3, 3, 3, '2025-11-23 20:00:00', 0, 3600, 18.30, 18.30, 600, NULL, '城市风光不错', '2025-12-04 23:00:55', NULL, NULL, NULL);
+INSERT INTO `user_ride_records` VALUES (96398612, 11, NULL, '2025-12-10 00:52:37', 0, 3, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 08:52:39', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (97431832, 11, NULL, '2025-12-10 01:09:50', 0, 3, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 09:09:53', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (98194425, 1, NULL, '2025-12-10 09:22:33', 0, 5, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 09:22:34', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (101425626, 11, NULL, '2025-12-10 02:16:24', 0, 3, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:16:26', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (101443771, 11, NULL, '2025-12-10 02:16:42', 0, 8, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:16:44', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (101503576, 1, NULL, '2025-12-10 02:17:42', 0, 13, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:17:45', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (101774447, 11, NULL, '2025-12-10 10:22:13', 0, 49, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:22:13', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (101779699, 11, NULL, '2025-12-10 10:22:18', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:22:19', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (101901621, 11, NULL, '2025-12-10 10:24:20', 0, 71, 0.08, 3.60, 4, NULL, NULL, '2025-12-10 10:24:20', 0, 5.25, NULL);
+INSERT INTO `user_ride_records` VALUES (102513116, 11, NULL, '2025-12-10 10:34:31', 0, 4, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:34:33', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (102862332, 11, NULL, '2025-12-10 02:40:20', 0, 8, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:40:24', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (102944728, 11, NULL, '2025-12-10 02:41:43', 0, 17, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:41:46', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (103418061, 11, NULL, '2025-12-10 02:49:36', 0, 4, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:49:40', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (103423646, 11, NULL, '2025-12-10 02:49:42', 0, 0, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:49:48', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (103892224, 11, NULL, '2025-12-10 02:57:30', 0, 3, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:57:34', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (103897976, 11, NULL, '2025-12-10 02:57:36', 0, 2, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 10:57:42', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (104400404, 11, NULL, '2025-12-10 11:05:59', 0, 16, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 11:06:00', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (104413160, 11, NULL, '2025-12-10 11:06:11', 0, 4, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 11:06:13', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (104466393, 11, NULL, '2025-12-10 11:07:05', 0, 37, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 11:07:07', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (104570600, 11, NULL, '2025-12-10 11:08:49', 0, 4, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 11:08:50', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (107079789, 1, NULL, '2025-12-10 11:50:38', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 11:50:39', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (107090646, 1, NULL, '2025-12-10 11:50:49', 0, 6, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 11:50:50', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (107112978, 1, NULL, '2025-12-10 11:51:11', 0, 19, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 11:51:13', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (107180767, 1, NULL, '2025-12-10 11:52:19', 0, 55, 0.06, 3.90, 2, NULL, NULL, '2025-12-10 11:52:20', 0, 16.05, NULL);
+INSERT INTO `user_ride_records` VALUES (108412885, 1, NULL, '2025-12-10 12:12:51', 0, 0, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 12:12:53', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (116037532, 11, NULL, '2025-12-10 06:19:56', 0, 4, 0.00, 0.00, 0, NULL, NULL, '2025-12-10 14:19:56', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (563172296, 11, NULL, '2025-12-15 10:32:10', 0, 2, 0.00, 0.00, 0, NULL, NULL, '2025-12-15 18:32:13', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (565878035, 1, NULL, '2025-12-15 19:17:16', 0, 18, 0.02, 4.10, 1, NULL, NULL, '2025-12-15 19:17:17', 0, 7.12, NULL);
+INSERT INTO `user_ride_records` VALUES (566008307, 1, NULL, '2025-12-15 19:19:26', 0, 2, 0.00, 0.00, 0, NULL, NULL, '2025-12-15 19:19:27', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (576081334, 1, NULL, '2025-12-15 22:07:19', 0, 0, 0.00, 0.00, 0, NULL, NULL, '2025-12-15 22:07:20', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (577649998, 11, NULL, '2025-12-15 22:33:28', 0, 10, 0.00, 0.00, 0, NULL, NULL, '2025-12-15 22:33:30', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (577852135, 1, NULL, '2025-12-15 22:36:50', 0, 11, 0.00, 0.00, 0, NULL, NULL, '2025-12-15 22:36:52', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (577955975, 1, NULL, '2025-12-15 22:38:34', 0, 0, 0.00, 0.00, 0, NULL, NULL, '2025-12-15 22:38:36', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (578309981, 11, NULL, '2025-12-15 22:44:28', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-15 22:44:30', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (581556357, 11, NULL, '2025-12-15 23:38:35', 0, 21, 0.03, 4.40, 1, NULL, NULL, '2025-12-15 23:38:35', 0, 5.69, NULL);
+INSERT INTO `user_ride_records` VALUES (581559488, 11, NULL, '2025-12-15 23:38:38', 0, 37, 0.00, 0.00, 0, NULL, NULL, '2025-12-15 23:38:38', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (637264043, 12, NULL, '2025-12-16 07:07:02', 0, 20, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 15:07:02', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (642581256, 1, NULL, '2025-12-16 08:35:39', 0, 17, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 16:35:39', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (652318713, 11, NULL, '2025-12-16 11:17:57', 0, 2, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 19:17:59', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (653895593, 11, NULL, '2025-12-16 11:44:14', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 19:44:16', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (654786094, 11, NULL, '2025-12-16 11:59:04', 0, 4, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 19:59:07', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (658168974, 11, NULL, '2025-12-16 20:55:27', 0, 6, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 20:55:27', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (658172197, 11, NULL, '2025-12-16 20:55:30', 0, 0, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 20:55:31', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (658178828, 11, NULL, '2025-12-16 20:55:37', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 20:55:37', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (658188614, 11, NULL, '2025-12-16 20:55:47', 0, 3, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 20:55:47', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (658353237, 11, NULL, '2025-12-16 20:58:31', 0, 25, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 20:58:32', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (658949345, 11, NULL, '2025-12-16 21:08:28', 0, 21, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 21:08:28', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (659260733, 1, NULL, '2025-12-16 21:13:39', 0, 164, 0.18, 3.90, 9, NULL, NULL, '2025-12-16 21:13:39', 0, 13.19, NULL);
+INSERT INTO `user_ride_records` VALUES (659661863, 1, NULL, '2025-12-16 13:20:20', 0, 58, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 21:20:20', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (659901185, 1, NULL, '2025-12-16 13:24:19', 0, 2, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 21:24:20', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (661147521, 11, NULL, '2025-12-16 21:45:06', 0, 728, 0.00, 0.00, 0, NULL, NULL, '2025-12-16 21:45:06', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (699491936, 11, NULL, '2025-12-17 08:24:10', 0, 42, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:24:10', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (699681149, 11, NULL, '2025-12-17 08:27:19', 0, 180, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:27:20', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (699737931, 11, NULL, '2025-12-17 00:28:16', 0, 4, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:28:20', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (699890514, 11, NULL, '2025-12-17 08:30:49', 0, 3, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:30:49', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (700280303, 11, NULL, '2025-12-17 08:37:18', 0, 3, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:37:19', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (700286219, 11, NULL, '2025-12-17 08:37:24', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:37:25', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (700336146, 11, NULL, '2025-12-17 08:38:14', 0, 2, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:38:15', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (700357627, 11, NULL, '2025-12-17 08:38:36', 0, 5, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:38:36', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (700609712, 11, NULL, '2025-12-17 08:42:48', 0, 20, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:42:48', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (700807518, 11, NULL, '2025-12-17 08:46:06', 0, 2, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:46:06', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (701637376, 1, NULL, '2025-12-17 00:59:56', 0, 22, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 08:59:58', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (701787707, 11, NULL, '2025-12-17 09:02:26', 0, 22, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:02:26', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (702330200, 11, NULL, '2025-12-17 09:11:28', 0, 7, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:11:29', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (702401331, 8, NULL, '2025-12-17 09:12:39', 0, 17, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:12:41', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (702430593, 8, NULL, '2025-12-17 09:13:09', 0, 8, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:13:09', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (702445472, 8, NULL, '2025-12-17 09:13:24', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:13:24', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (702570705, 8, NULL, '2025-12-17 09:15:29', 0, 7, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:15:29', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (703261803, 11, NULL, '2025-12-17 09:27:00', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:27:01', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (703289524, 11, NULL, '2025-12-17 09:27:28', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:27:28', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (703897782, 11, NULL, '2025-12-17 09:37:36', 0, 4, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:37:36', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (703946872, 11, NULL, '2025-12-17 09:38:25', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:38:25', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (704046264, 11, NULL, '2025-12-17 09:40:04', 0, 82, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:40:05', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (704313850, 8, NULL, '2025-12-17 09:44:32', 0, 20, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 09:44:33', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (705460654, 1, NULL, '2025-12-17 02:03:39', 0, 0, 0.00, 0.00, 0, NULL, NULL, '2025-12-17 10:04:11', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (811087845, 1, NULL, '2025-12-18 07:24:06', 0, 3, 0.00, 0.00, 0, NULL, NULL, '2025-12-18 15:24:07', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (811298996, 1, NULL, '2025-12-18 07:27:37', 0, 5, 0.00, 0.00, 0, NULL, NULL, '2025-12-18 15:27:37', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (813220565, 1, NULL, '2025-12-18 07:59:39', 0, 6, 0.00, 0.00, 0, NULL, NULL, '2025-12-18 15:59:39', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (818851203, 1, NULL, '2025-12-18 09:33:10', 0, 15, 0.00, 0.00, 0, NULL, NULL, '2025-12-18 17:33:57', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (892145338, 1, NULL, '2025-12-19 05:54:52', 0, 4, 0.00, 0.00, 0, NULL, NULL, '2025-12-19 13:55:05', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (892628469, 1, NULL, '2025-12-19 06:03:05', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-19 14:03:09', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (897250873, 1, NULL, '2025-12-19 07:20:07', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-19 15:20:10', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (897272744, 8, NULL, '2025-12-19 15:20:31', 0, 3, 0.00, 0.00, 0, NULL, NULL, '2025-12-19 15:20:31', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (897330992, 14, NULL, '2025-12-19 07:21:28', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-19 15:21:31', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (897360181, 8, NULL, '2025-12-19 15:21:58', 0, 5, 0.01, 5.50, 0, NULL, NULL, '2025-12-19 15:21:59', 0, 3.10, NULL);
+INSERT INTO `user_ride_records` VALUES (897936590, 8, NULL, '2025-12-19 15:31:35', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-19 15:31:35', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (897939172, 8, NULL, '2025-12-19 15:31:37', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-19 15:31:38', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (897967847, 8, NULL, '2025-12-19 15:32:06', 0, 13, 0.00, 0.50, 0, NULL, NULL, '2025-12-19 15:32:06', 0, 0.39, NULL);
+INSERT INTO `user_ride_records` VALUES (903336207, 1, NULL, '2025-12-19 09:01:31', 0, 3, 0.00, 0.00, 0, NULL, NULL, '2025-12-19 17:01:39', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (907818234, 1, NULL, '2025-12-19 10:16:13', 0, 3, 0.00, 0.00, 0, NULL, NULL, '2025-12-19 18:16:22', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (1078579169, 15, NULL, '2025-12-21 09:42:15', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-21 17:42:45', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (1174093636, 11, NULL, '2025-12-22 12:13:28', 0, 29, 0.00, 0.00, 0, NULL, NULL, '2025-12-22 20:14:14', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (1177360984, 11, NULL, '2025-12-22 13:08:23', 0, 9, 0.00, 0.00, 0, NULL, NULL, '2025-12-22 21:08:43', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (1183744785, 11, NULL, '2025-12-22 14:54:57', 0, 2, 0.00, 0.00, 0, NULL, NULL, '2025-12-22 22:55:05', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (1183831893, 11, NULL, '2025-12-22 14:56:26', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-22 22:56:32', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (1257199785, 8, NULL, '2025-12-23 19:19:13', 0, 2, 0.00, 0.00, 0, NULL, NULL, '2025-12-23 19:19:19', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (1257217999, 8, NULL, '2025-12-23 19:19:34', 0, 1, 0.00, 0.00, 0, NULL, NULL, '2025-12-23 19:19:37', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (1257277291, 8, NULL, '2025-12-23 19:19:56', 0, 39, 0.05, 4.70, 2, NULL, NULL, '2025-12-23 19:20:36', 0, 5.22, NULL);
+INSERT INTO `user_ride_records` VALUES (1266226664, 15, NULL, '2025-12-23 13:49:43', 0, 2, 0.00, 0.00, 0, NULL, NULL, '2025-12-23 21:49:49', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (1267125847, 15, NULL, '2025-12-23 14:04:41', 0, 2, 0.00, 0.00, 0, NULL, NULL, '2025-12-23 22:04:48', 0, 0.00, NULL);
+INSERT INTO `user_ride_records` VALUES (1269100219, 15, NULL, '2025-12-23 14:37:35', 0, 0, 0.00, 0.00, 0, NULL, NULL, '2025-12-23 22:37:43', 0, 0.00, 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/ridemap/1269100219_1766500655808.jpg');
 
 -- ----------------------------
 -- Table structure for users
@@ -1079,7 +1140,7 @@ CREATE TABLE `users`  (
   INDEX `idx_users_email`(`email` ASC) USING BTREE,
   INDEX `idx_users_nickname`(`nickname` ASC) USING BTREE,
   INDEX `idx_users_status`(`status` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 15 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 16 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of users
@@ -1091,9 +1152,10 @@ INSERT INTO `users` VALUES (7, 'a', 'a@qq.com', 'aaaaaa', 'https://rideapp.oss-c
 INSERT INTO `users` VALUES (8, '123456', '710963274@qq.com', '123456', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/User%20Icon/1764739092619.png', '1', 'male', '1000-01-01', '56588655633', 0, 0, '2025-12-17 09:07:38', '2025-12-02 12:09:25', '2025-12-17 09:07:38');
 INSERT INTO `users` VALUES (9, 'ddd', 'aaa@gmail.com', 'sssssss', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/User%20Icon/1764739110342.png', NULL, 'other', NULL, NULL, 0, 0, '2025-12-02 20:24:26', '2025-12-02 20:24:26', '2025-12-09 23:51:09');
 INSERT INTO `users` VALUES (10, '111', '111@gmail.com', '111111', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/User%20Icon/1764739127863.png', NULL, 'other', NULL, NULL, 0, 0, '2025-12-16 00:39:45', '2025-12-02 20:48:47', '2025-12-16 00:39:45');
-INSERT INTO `users` VALUES (11, '1', '1@gmail.com', '123123', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/User%20Icon/1764739143896.png', NULL, 'other', NULL, NULL, 0, 0, '2025-12-17 09:26:48', '2025-12-09 19:31:59', '2025-12-17 09:26:48');
+INSERT INTO `users` VALUES (11, '1', '1@gmail.com', '123123', 'https://rideapp.oss-cn-hangzhou.aliyuncs.com/User%20Icon/1764739143896.png', NULL, 'other', NULL, NULL, 0, 0, '2025-12-22 20:02:47', '2025-12-09 19:31:59', '2025-12-22 20:02:47');
 INSERT INTO `users` VALUES (12, 'as', 'test@qq.com', '123456', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-12-16 15:06:12', '2025-12-16 15:06:11', '2025-12-16 15:06:12');
 INSERT INTO `users` VALUES (13, '123456/', 'test6@example.com', '123456', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-12-17 08:55:24', '2025-12-17 08:53:10', '2025-12-17 08:55:24');
 INSERT INTO `users` VALUES (14, 'aaa', 'aaaa@qq.com', 'aaaaaa', NULL, NULL, 'other', NULL, NULL, 0, 0, '2025-12-19 15:21:21', '2025-12-19 15:21:20', '2025-12-19 15:21:21');
+INSERT INTO `users` VALUES (15, 'ttt@qq.com', 'ttt@qq.com', 'ttttttt', NULL, NULL, NULL, NULL, NULL, 0, 0, NULL, '2025-12-21 17:42:07', '2025-12-21 17:45:35');
 
 SET FOREIGN_KEY_CHECKS = 1;

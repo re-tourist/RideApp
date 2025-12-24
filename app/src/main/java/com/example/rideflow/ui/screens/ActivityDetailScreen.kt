@@ -263,14 +263,12 @@ fun ActivityDetailScreen(navController: NavController, activityId: Int = 0, onBa
                     RuleItem("5. 请保持环境清洁，不要随意丢弃垃圾")
                 }
                 
-                // 底部按钮区域
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 24.dp, bottom = 16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // 联系主办方按钮
                     Button(
                         onClick = { showContactDialog = true },
                         modifier = Modifier
@@ -281,19 +279,6 @@ fun ActivityDetailScreen(navController: NavController, activityId: Int = 0, onBa
                         )
                     ) {
                         Text(text = "联系主办方", color = Color.White)
-                    }
-                    
-                    // 立即报名按钮
-                    Button(
-                        onClick = { navController.navigate("${AppRoutes.ACTIVITY_REGISTRATION}/${activityId}") },
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(start = 8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF007AFF)
-                        )
-                    ) {
-                        Text(text = "立即报名", color = Color.White)
                     }
                 }
             }
