@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.rideflow.backend.DatabaseHelper
 import com.example.rideflow.model.TradeItem
+import com.example.rideflow.ui.components.AdaptiveIndicatorTabRow
 import com.example.rideflow.ui.components.TradePostCard
 import com.example.rideflow.navigation.AppRoutes
 
@@ -59,15 +60,17 @@ fun CommunityTradeScreen(navController: NavController) {
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        TabRow(selectedTabIndex = selectedTabIndex, containerColor = Color.White) {
-            tabs.forEachIndexed { index, title ->
-                Tab(
-                    selected = selectedTabIndex == index,
-                    onClick = { selectedTabIndex = index },
-                    text = { Text(title, color = if (selectedTabIndex == index) MaterialTheme.colorScheme.primary else Color.Black) }
-                )
-            }
-        }
+        AdaptiveIndicatorTabRow(
+            tabs = tabs,
+            selectedIndex = selectedTabIndex,
+            onSelect = { selectedTabIndex = it },
+            containerColor = Color.White,
+            selectedColor = MaterialTheme.colorScheme.primary,
+            unselectedColor = Color.Black,
+            indicatorHorizontalPadding = 10.dp,
+            indicatorHeight = 3.dp,
+            scrollable = false
+        )
 
         Spacer(Modifier.height(8.dp))
 
