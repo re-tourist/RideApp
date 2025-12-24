@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,6 +24,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import com.example.rideflow.model.*
@@ -39,6 +41,7 @@ import org.koin.androidx.compose.koinViewModel
 import com.example.rideflow.auth.AuthViewModel
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.launch
 import android.widget.Toast
 
@@ -148,6 +151,97 @@ fun LoadMoreFooter(hasMore: Boolean, isLoadingMore: Boolean, onLoadMore: () -> U
 // ------------------------------------
 // 2. 分类标签栏
 // ------------------------------------
+
+@Composable
+fun AdaptiveIndicatorTabRow(
+    tabs: List<String>,
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    containerColor: Color = Color.White,
+    selectedColor: Color = MaterialTheme.colorScheme.primary,
+    unselectedColor: Color = Color.Black,
+    indicatorHorizontalPadding: Dp = 10.dp,
+    indicatorHeight: Dp = 3.dp,
+    scrollable: Boolean = false
+) {
+    val density = LocalDensity.current
+    val textWidthsPx = remember { mutableStateMapOf<Int, Int>() }
+
+    val indicator: @Composable (List<TabPosition>) -> Unit = { tabPositions ->
+        val safeIndex = selectedIndex.coerceIn(0, tabPositions.lastIndex)
+        val tabPosition = tabPositions[safeIndex]
+        val textWidthDp = with(density) { (textWidthsPx[safeIndex] ?: 0).toDp() }
+        val desiredWidth = if (textWidthDp > 0.dp) {
+            (textWidthDp + indicatorHorizontalPadding * 2).coerceAtMost(tabPosition.width)
+        } else {
+            (tabPosition.width - indicatorHorizontalPadding * 2).coerceAtLeast(24.dp)
+        }
+
+        val targetLeft = tabPosition.left + (tabPosition.width - desiredWidth) / 2
+        val animatedLeft by animateDpAsState(targetValue = targetLeft, animationSpec = tween(180), label = "tabIndicatorLeft")
+        val animatedWidth by animateDpAsState(targetValue = desiredWidth, animationSpec = tween(180), label = "tabIndicatorWidth")
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentSize(Alignment.BottomStart)
+                .offset(x = animatedLeft)
+                .width(animatedWidth)
+                .height(indicatorHeight)
+                .clip(RoundedCornerShape(indicatorHeight / 2))
+                .background(selectedColor)
+        )
+    }
+
+    val divider: @Composable () -> Unit = {
+        HorizontalDivider(color = Color(0xFFF0F0F0))
+    }
+
+    val tabsContent: @Composable () -> Unit = {
+        tabs.forEachIndexed { index, title ->
+            Tab(
+                selected = selectedIndex == index,
+                onClick = { onSelect(index) },
+                text = {
+                    Text(
+                        text = title,
+                        color = if (selectedIndex == index) selectedColor else unselectedColor,
+                        fontWeight = if (selectedIndex == index) FontWeight.Bold else FontWeight.Normal,
+                        onTextLayout = { textWidthsPx[index] = it.size.width },
+                        maxLines = 1
+                    )
+                }
+            )
+        }
+    }
+
+    if (scrollable) {
+        ScrollableTabRow(
+            selectedTabIndex = selectedIndex,
+            modifier = modifier,
+            containerColor = containerColor,
+            contentColor = selectedColor,
+            edgePadding = 16.dp,
+            indicator = indicator,
+            divider = divider
+        ) {
+            tabsContent()
+        }
+    } else {
+        TabRow(
+            selectedTabIndex = selectedIndex,
+            modifier = modifier,
+            containerColor = containerColor,
+            contentColor = selectedColor,
+            indicator = indicator,
+            divider = divider
+        ) {
+            tabsContent()
+        }
+    }
+}
+
 @Composable
 fun CategoryTabs(
     categories: List<String>,
@@ -156,35 +250,24 @@ fun CategoryTabs(
 ) {
     val displayedCategories = categories.take(4)
 
-    Row(
+    val selectedIndex = remember(displayedCategories, selectedCategory) {
+        displayedCategories.indexOf(selectedCategory).takeIf { it >= 0 } ?: 0
+    }
+
+    AdaptiveIndicatorTabRow(
+        tabs = displayedCategories,
+        selectedIndex = selectedIndex,
+        onSelect = { onCategorySelected(displayedCategories[it]) },
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp, horizontal = 16.dp),
-        horizontalArrangement = Arrangement.SpaceAround
-    ) {
-        displayedCategories.forEach { category ->
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = category,
-                    color = if (category == selectedCategory) MaterialTheme.colorScheme.primary else Color.Black,
-                    fontWeight = if (category == selectedCategory) FontWeight.Bold else FontWeight.Normal,
-                    modifier = Modifier.clickable { onCategorySelected(category) }
-                )
-                if (category == selectedCategory) {
-                    Box(
-                        modifier = Modifier
-                            .width(18.dp)
-                            .height(3.dp)
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(MaterialTheme.colorScheme.primary)
-                    )
-                } else {
-                    Spacer(modifier = Modifier.height(3.dp))
-                }
-            }
-        }
-    }
-    HorizontalDivider(color = Color(0xFFF0F0F0))
+            .padding(vertical = 4.dp),
+        containerColor = Color.White,
+        selectedColor = MaterialTheme.colorScheme.primary,
+        unselectedColor = Color.Black,
+        indicatorHorizontalPadding = 10.dp,
+        indicatorHeight = 3.dp,
+        scrollable = false
+    )
 }
 
 // ------------------------------------
