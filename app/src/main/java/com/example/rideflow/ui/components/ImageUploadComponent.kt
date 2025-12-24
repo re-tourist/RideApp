@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.rideflow.R
 import com.example.rideflow.utils.ImageUploadUtils
+import coil.compose.AsyncImage
 import java.io.File
 
 /**
@@ -93,8 +94,8 @@ fun ImageUploadComponent(
             modifier = Modifier.fillMaxSize()
         ) {
             if (selectedImage != null) {
-                Image(
-                    painter = painterResource(id = placeholderIcon),
+                AsyncImage(
+                    model = selectedImage,
                     contentDescription = "上传的图片",
                     modifier = Modifier
                         .size(120.dp)

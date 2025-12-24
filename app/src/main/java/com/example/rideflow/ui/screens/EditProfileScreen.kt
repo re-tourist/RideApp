@@ -24,6 +24,13 @@ import androidx.compose.ui.unit.sp
 import com.example.rideflow.profile.EditProfileViewModel
 import org.koin.androidx.compose.koinViewModel
 import coil.compose.AsyncImage
+import androidx.compose.ui.platform.LocalContext
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.example.rideflow.utils.ImageUploadUtils
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,6 +41,9 @@ fun EditProfileScreen(onBackPress: () -> Unit) {
     val isLoading by editProfileViewModel.isLoading.collectAsState()
     val errorMessage by editProfileViewModel.errorMessage.collectAsState()
     val updateSuccess by editProfileViewModel.updateSuccess.collectAsState()
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    var selectedAvatarFile by remember { mutableStateOf<File?>(null) }
     
     // 页面加载时获取用户资料
     LaunchedEffect(Unit) {
@@ -52,9 +62,26 @@ fun EditProfileScreen(onBackPress: () -> Unit) {
         return dateString ?: ""
     }
     
-    // 保存资料函数
     fun saveProfile() {
-        editProfileViewModel.saveUserProfile()
+        coroutineScope.launch {
+            val file = selectedAvatarFile
+            val avatarUrl = if (file != null) {
+                try {
+                    val dir = "User Icon"
+                    val objectKey = "$dir/${System.currentTimeMillis()}_${file.name}"
+                    ImageUploadUtils.uploadFileToOss(
+                        context = context,
+                        localFile = file,
+                        ossObjectKey = objectKey
+                    )
+                } catch (_: Exception) {
+                    null
+                }
+            } else {
+                null
+            }
+            editProfileViewModel.saveUserProfile(avatarUrl)
+        }
     }
     
     Column(
@@ -105,7 +132,17 @@ fun EditProfileScreen(onBackPress: () -> Unit) {
                 }
             }
             
-            // 头像区域
+            val imagePickerLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.GetContent()
+            ) { uri ->
+                if (uri != null) {
+                    val file = ImageUploadUtils.uriToFile(context, uri)
+                    if (file != null) {
+                        selectedAvatarFile = file
+                    }
+                }
+            }
+            
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -114,8 +151,16 @@ fun EditProfileScreen(onBackPress: () -> Unit) {
                     modifier = Modifier.size(100.dp),
                     contentAlignment = Alignment.Center
                 ) {
+                    val localFile = selectedAvatarFile
                     val avatar = userProfile?.avatarUrl
-                    if (!avatar.isNullOrBlank()) {
+                    if (localFile != null) {
+                        AsyncImage(
+                            model = localFile,
+                            contentDescription = "头像",
+                            modifier = Modifier.size(80.dp).clip(CircleShape).background(Color.LightGray.copy(alpha = 0.2f)),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else if (!avatar.isNullOrBlank()) {
                         AsyncImage(
                             model = avatar,
                             contentDescription = "头像",
@@ -131,7 +176,7 @@ fun EditProfileScreen(onBackPress: () -> Unit) {
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                TextButton(onClick = { }) {
+                TextButton(onClick = { imagePickerLauncher.launch("image/*") }) {
                     Text("更换头像")
                 }
             }
