@@ -23,15 +23,17 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import android.os.Handler
 import android.os.Looper
+import androidx.navigation.NavController
 import com.example.rideflow.backend.DatabaseHelper
+import com.example.rideflow.auth.AuthViewModel
 import java.text.SimpleDateFormat
 import java.util.Locale
 import com.example.rideflow.R
 import com.example.rideflow.model.Post
 import com.example.rideflow.ui.components.PostCard
+import org.koin.androidx.compose.koinViewModel
 
 // UI显示用的轻量级俱乐部信息
 data class UIClubInfo(
@@ -54,6 +56,9 @@ fun CommunityClubDetailScreen(
     var clubInfo by remember(clubId) { mutableStateOf<UIClubInfo?>(null) }
     var clubPosts by remember(clubId) { mutableStateOf<List<com.example.rideflow.model.Post>>(emptyList()) }
     val handler = Handler(Looper.getMainLooper())
+    val authViewModel = koinViewModel<AuthViewModel>()
+    val currentUserId = authViewModel.getCurrentUser()?.userId?.toIntOrNull()
+    var isMember by remember(clubId, currentUserId) { mutableStateOf(false) }
 
     LaunchedEffect(clubId) {
         // 加载俱乐部基本信息
@@ -83,6 +88,21 @@ fun CommunityClubDetailScreen(
                 Unit
             }
         }.start()
+
+        if (currentUserId != null && currentUserId > 0) {
+            Thread {
+                DatabaseHelper.processQuery(
+                    "SELECT 1 FROM club_members WHERE club_id = ? AND user_id = ? LIMIT 1",
+                    listOf(clubId, currentUserId)
+                ) { rs ->
+                    val has = rs.next()
+                    handler.post { isMember = has }
+                    Unit
+                }
+            }.start()
+        } else {
+            isMember = false
+        }
 
         // 加载俱乐部动态（来自数据库 community_posts）
         Thread {
@@ -144,8 +164,7 @@ fun CommunityClubDetailScreen(
     // 2. 弹窗状态管理
     var showRankingDialog by remember { mutableStateOf(false) }
     var showManageDialog by remember { mutableStateOf(false) }
-    var showJoinDialog by remember { mutableStateOf(false) }
-    var joinReason by remember { mutableStateOf("") }
+    var showAnnouncementDialog by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -154,6 +173,7 @@ fun CommunityClubDetailScreen(
                 val info = clubInfo ?: UIClubInfo("俱乐部", 1, "0", "认证俱乐部", "俱", Color(0xFF1976D2), "", null)
                 ClubDetailHeader(
                     info = info,
+                    isMember = isMember,
                     onBackClick = { navController.popBackStack() },
                     // [修改点]：点击详情图标，传递参数告知目标页面隐藏加入按钮
                     onDetailClick = { navController.navigate("${com.example.rideflow.navigation.AppRoutes.COMMUNITY_CLUB_DETAIL}/$clubId") },
@@ -181,7 +201,25 @@ fun CommunityClubDetailScreen(
             item {
                 ClubDetailMenuSection(
                     onManageClick = { showManageDialog = true },
-                    onJoinClick = { showJoinDialog = true }
+                    isMember = isMember,
+                    onJoinClick = {
+                        val uid = currentUserId
+                        if (uid != null && uid > 0 && !isMember) {
+                            Thread {
+                                val inserted = DatabaseHelper.executeUpdate(
+                                    "INSERT IGNORE INTO club_members (club_id, user_id, role) VALUES (?, ?, 'member')",
+                                    listOf(clubId, uid)
+                                )
+                                if (inserted >= 0) {
+                                    DatabaseHelper.executeUpdate(
+                                        "UPDATE clubs SET members_count = members_count + 1 WHERE club_id = ?",
+                                        listOf(clubId)
+                                    )
+                                    handler.post { isMember = true }
+                                }
+                            }.start()
+                        }
+                    }
                 )
             }
 
@@ -265,11 +303,37 @@ fun CommunityClubDetailScreen(
                 title = { Text("管理面板") },
                 text = {
                     Column {
-                        Text("当前权限：普通成员")
+                        Text(if (isMember) "当前权限：普通成员" else "当前权限：未加入")
                         Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedButton(onClick = { }, modifier = Modifier.fillMaxWidth()) { Text("查看公告") }
+                        OutlinedButton(
+                            onClick = { showAnnouncementDialog = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("查看公告") }
                         Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedButton(onClick = { }, modifier = Modifier.fillMaxWidth()) { Text("退出俱乐部", color = MaterialTheme.colorScheme.primary) }
+                        OutlinedButton(
+                            onClick = {
+                                val uid = currentUserId
+                                if (uid != null && uid > 0 && isMember) {
+                                    Thread {
+                                        val deleted = DatabaseHelper.executeUpdate(
+                                            "DELETE FROM club_members WHERE club_id = ? AND user_id = ?",
+                                            listOf(clubId, uid)
+                                        )
+                                        if (deleted >= 0) {
+                                            DatabaseHelper.executeUpdate(
+                                                "UPDATE clubs SET members_count = GREATEST(members_count - 1, 0) WHERE club_id = ?",
+                                                listOf(clubId)
+                                            )
+                                            handler.post {
+                                                isMember = false
+                                                showManageDialog = false
+                                            }
+                                        }
+                                    }.start()
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("退出俱乐部", color = MaterialTheme.colorScheme.primary) }
                     }
                 },
                 confirmButton = {
@@ -278,32 +342,32 @@ fun CommunityClubDetailScreen(
             )
         }
 
-        // 3. 入队申请弹窗
-        if (showJoinDialog) {
+        if (showAnnouncementDialog) {
             AlertDialog(
-                onDismissRequest = { showJoinDialog = false },
-                title = { Text("申请加入") },
+                onDismissRequest = { showAnnouncementDialog = false },
+                title = { Text("俱乐部公告") },
                 text = {
-                    Column {
-                        Text("申请加入 ${clubInfo?.name ?: "俱乐部"}，请填写申请理由：")
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedTextField(
-                            value = joinReason,
-                            onValueChange = { joinReason = it },
-                            label = { Text("我是骑行爱好者...") },
-                            modifier = Modifier.fillMaxWidth(),
-                            minLines = 3
-                        )
+                    Column(
+                        modifier = Modifier
+                            .heightIn(max = 320.dp)
+                            .verticalScroll(androidx.compose.foundation.rememberScrollState())
+                    ) {
+                        if (clubPosts.isEmpty()) {
+                            Text("暂无公告", color = Color.Gray)
+                        } else {
+                            clubPosts.forEach { post ->
+                                Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                                    Text(post.timeAgo, fontSize = 12.sp, color = Color.Gray)
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(post.content, fontSize = 14.sp, color = Color.Black)
+                                }
+                                HorizontalDivider(color = Color(0xFFF0F0F0))
+                            }
+                        }
                     }
                 },
                 confirmButton = {
-                    Button(onClick = {
-                        showJoinDialog = false
-                        joinReason = ""
-                    }) { Text("发送申请") }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showJoinDialog = false }) { Text("取消") }
+                    TextButton(onClick = { showAnnouncementDialog = false }) { Text("关闭") }
                 }
             )
         }
@@ -313,7 +377,7 @@ fun CommunityClubDetailScreen(
 // --- 组件部分 ---
 
 @Composable
-private fun ClubDetailHeader(info: UIClubInfo, onBackClick: () -> Unit, onDetailClick: () -> Unit, onShareClick: () -> Unit) {
+private fun ClubDetailHeader(info: UIClubInfo, isMember: Boolean, onBackClick: () -> Unit, onDetailClick: () -> Unit, onShareClick: () -> Unit) {
     Box(modifier = Modifier.fillMaxWidth().height(220.dp)) {
         Box(modifier = Modifier.fillMaxSize().background(info.themeColor.copy(alpha = 0.3f)))
         Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f)))
@@ -356,8 +420,16 @@ private fun ClubDetailHeader(info: UIClubInfo, onBackClick: () -> Unit, onDetail
                     }
                 }
                 Spacer(Modifier.width(16.dp))
-                Column(modifier = Modifier.clickable(onClick = onDetailClick)) { // 点击名字也能跳转
-                    Text(info.name, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Column(modifier = Modifier.clickable(onClick = onDetailClick)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(info.name, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            if (isMember) "已加入" else "未加入",
+                            color = if (isMember) Color(0xFF00E676) else Color.LightGray,
+                            fontSize = 12.sp
+                        )
+                    }
                     Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("总热度: ${info.heat}", color = Color.LightGray, fontSize = 12.sp)
@@ -442,11 +514,16 @@ private fun ClubDetailActionGrid(onRankingClick: () -> Unit, onLocationClick: ()
 }
 
 @Composable
-private fun ClubDetailMenuSection(onManageClick: () -> Unit, onJoinClick: () -> Unit) {
+private fun ClubDetailMenuSection(onManageClick: () -> Unit, isMember: Boolean, onJoinClick: () -> Unit) {
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         ClubDetailMenuItem(Icons.Default.Settings, "俱乐部管理", "管理员功能", onManageClick)
         HorizontalDivider(color = Color(0xFFEEEEEE))
-        ClubDetailMenuItem(Icons.Default.Add, "入队申请", "招募中", onJoinClick)
+        ClubDetailMenuItem(
+            Icons.Default.Add,
+            "进入俱乐部",
+            if (isMember) "已加入" else "未加入",
+            onJoinClick
+        )
     }
 }
 

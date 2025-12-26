@@ -11,7 +11,7 @@
  Target Server Version : 80044 (8.0.44-0ubuntu0.22.04.1)
  File Encoding         : 65001
 
- Date: 26/12/2025 13:57:08
+ Date: 26/12/2025 14:15:46
 */
 
 SET NAMES utf8mb4;
@@ -70,7 +70,7 @@ CREATE TABLE `activities`  (
   PRIMARY KEY (`activity_id`) USING BTREE,
   INDEX `idx_activities_date`(`event_date` ASC) USING BTREE,
   INDEX `idx_activities_type`(`event_type` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '活动' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 8 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '活动' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of activities
@@ -481,7 +481,7 @@ CREATE TABLE `races`  (
   PRIMARY KEY (`race_id`) USING BTREE,
   INDEX `idx_races_date`(`event_date` ASC) USING BTREE,
   INDEX `idx_races_type`(`event_type` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '赛事' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '赛事' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of races
@@ -789,7 +789,7 @@ CREATE TABLE `user_activities`  (
   INDEX `idx_user_activities_activity`(`activity_id` ASC) USING BTREE,
   CONSTRAINT `fk_user_activities_activity` FOREIGN KEY (`activity_id`) REFERENCES `activities` (`activity_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_user_activities_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 16 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户-活动关系' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 17 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户-活动关系' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of user_activities
@@ -797,6 +797,7 @@ CREATE TABLE `user_activities`  (
 INSERT INTO `user_activities` VALUES (9, 1, 4, 'favorite', 'upcoming', '2025-12-12 18:12:46', '????');
 INSERT INTO `user_activities` VALUES (14, 1, 3, 'favorite', 'upcoming', '2025-12-17 09:39:05', '????');
 INSERT INTO `user_activities` VALUES (15, 16, 5, 'registered', 'upcoming', '2025-12-26 13:22:40', '????');
+INSERT INTO `user_activities` VALUES (16, 1, 5, 'favorite', 'upcoming', '2025-12-26 14:04:33', '????');
 
 -- ----------------------------
 -- Table structure for user_activity_stats
