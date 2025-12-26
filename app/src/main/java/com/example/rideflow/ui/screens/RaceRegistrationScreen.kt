@@ -37,12 +37,20 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.rideflow.R
 import com.example.rideflow.navigation.AppRoutes
+import com.example.rideflow.backend.DatabaseHelper
+import android.os.Handler
+import android.os.Looper
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RaceRegistrationScreen(navController: NavController, raceId: Int = 0, onBack: () -> Unit = { navController.popBackStack() }) {
     var isAgreed by remember { mutableStateOf(false) }
     var hasCard by remember { mutableStateOf(false) }
+    val handler = Handler(Looper.getMainLooper())
+    val context = LocalContext.current
+    val authViewModel: com.example.rideflow.auth.AuthViewModel = org.koin.androidx.compose.koinViewModel()
 
     Scaffold(
         topBar = {
@@ -129,11 +137,35 @@ fun RaceRegistrationScreen(navController: NavController, raceId: Int = 0, onBack
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Button(
-                        onClick = { /* 实现下一步逻辑 */ },
+                        onClick = {
+                            val userId = authViewModel.getCurrentUser()?.userId?.toIntOrNull() ?: 0
+                            if (userId <= 0) {
+                                Toast.makeText(context, "用户未登录，请先登录后再报名", Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
+                            Thread {
+                                val sql = """
+                                    INSERT INTO user_races (user_id, race_id, relation, status, notes)
+                                    VALUES (?, ?, 'registered', 'upcoming', '报名成功')
+                                    ON DUPLICATE KEY UPDATE 
+                                        status = VALUES(status),
+                                        notes = VALUES(notes)
+                                """.trimIndent()
+                                val result = DatabaseHelper.executeUpdate(sql, listOf(userId, raceId))
+                                handler.post {
+                                    if (result >= 0) {
+                                        Toast.makeText(context, "报名成功", Toast.LENGTH_SHORT).show()
+                                        navController.navigate(com.example.rideflow.navigation.AppRoutes.RACE)
+                                    } else {
+                                        Toast.makeText(context, "报名失败，请稍后重试", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }.start()
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
-                        enabled = isAgreed && hasCard
+                        enabled = isAgreed
                     ) {
                         Text(text = "下一步", fontSize = 16.sp)
                     }

@@ -43,7 +43,7 @@ data class Race(
 
 private val raceCategories = listOf("全部", "我的赛事", "娱乐赛", "竞速赛")
 
-private fun loadRaces(handler: Handler, onLoaded: (List<Race>) -> Unit) {
+private fun loadRaces(handler: Handler, userId: Int?, onLoaded: (List<Race>) -> Unit) {
     Thread {
         val list = mutableListOf<Race>()
         DatabaseHelper.processQuery("SELECT race_id, title, event_date, location, event_type, is_open, cover_image_url FROM races ORDER BY event_date DESC LIMIT 100") { rs ->
@@ -61,12 +61,14 @@ private fun loadRaces(handler: Handler, onLoaded: (List<Race>) -> Unit) {
                     Unit
                 }
                 var mine = false
-                DatabaseHelper.processQuery(
-                    "SELECT 1 FROM user_races WHERE user_id = ? AND race_id = ? AND relation IN ('registered','favorite') LIMIT 1",
-                    listOf(1, id)
-                ) { urs ->
-                    mine = urs.next()
-                    Unit
+                if (userId != null && userId > 0) {
+                    DatabaseHelper.processQuery(
+                        "SELECT 1 FROM user_races WHERE user_id = ? AND race_id = ? AND relation = 'registered' LIMIT 1",
+                        listOf(userId, id)
+                    ) { urs ->
+                        mine = urs.next()
+                        Unit
+                    }
                 }
                 list.add(Race(id, title, "时间：" + (if (date.isNotEmpty()) date.substring(0, 10) else "待定"), "地点：" + loc, if (tags.isEmpty()) listOf(type) else tags, R.drawable.ic_launcher_foreground, coverUrl, open, mine))
             }
@@ -82,7 +84,11 @@ fun RaceScreen(onBack: () -> Unit, onCreateRace: () -> Unit = {}, navController:
     var selectedCategory by remember { mutableStateOf(0) }
     val handler = Handler(Looper.getMainLooper())
     var dbRaces by remember { mutableStateOf<List<Race>>(emptyList()) }
-    LaunchedEffect(Unit) { loadRaces(handler) { list -> dbRaces = list } }
+    val authViewModel: com.example.rideflow.auth.AuthViewModel = org.koin.androidx.compose.koinViewModel()
+    LaunchedEffect(Unit) {
+        val uid = authViewModel.getCurrentUser()?.userId?.toIntOrNull()
+        loadRaces(handler, uid) { list -> dbRaces = list }
+    }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -178,7 +184,7 @@ fun RaceCard(race: Race, onClick: () -> Unit = {}) {
                             onClick = {},
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853))
                         ) {
-                            Text(text = "报名中")
+                            Text(text = if (race.isMine) "已报名" else "报名中")
                         }
                     }
                 }

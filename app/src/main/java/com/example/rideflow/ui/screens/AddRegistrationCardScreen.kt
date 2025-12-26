@@ -1,28 +1,23 @@
 package com.example.rideflow.ui.screens
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -38,6 +33,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import android.app.DatePickerDialog
+import java.text.SimpleDateFormat
+import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,12 +56,10 @@ fun AddRegistrationCardScreen(navController: NavController, raceId: Int = 0, onB
     // 下拉菜单状态
     var genderExpanded by remember { mutableStateOf(false) }
     var idTypeExpanded by remember { mutableStateOf(false) }
-    var birthdayExpanded by remember { mutableStateOf(false) }
     var addressExpanded by remember { mutableStateOf(false) }
 
     val genderOptions = listOf("请选择", "男", "女")
     val idTypeOptions = listOf("二代身份证", "护照", "军官证")
-    val birthdayOptions = listOf("请选择日期") // 实际应用中应使用日期选择器
     val addressOptions = listOf("请选择省/市/区") // 实际应用中应使用地址选择器
 
     Scaffold(
@@ -204,36 +200,42 @@ fun AddRegistrationCardScreen(navController: NavController, raceId: Int = 0, onB
                             .padding(bottom = 16.dp)
                     )
 
-                    // 出生日期
-                    ExposedDropdownMenuBox(
-                        expanded = birthdayExpanded,
-                        onExpandedChange = { birthdayExpanded = !birthdayExpanded },
+                    val birthdayCalendar = remember { Calendar.getInstance() }
+                    val birthdayFormatter = remember {
+                        SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                    }
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 16.dp)
                     ) {
-                        TextField(
-                            value = birthday.ifEmpty { "请选择" },
+                        OutlinedTextField(
+                            value = birthday.ifEmpty { "" },
                             onValueChange = {},
                             label = { Text(text = "出生日期 *") },
+                            placeholder = { Text(text = "请选择") },
+                            modifier = Modifier.fillMaxWidth(),
                             readOnly = true,
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = birthdayExpanded) },
-                            modifier = Modifier.menuAnchor()
+                            singleLine = true
                         )
-                        ExposedDropdownMenu(
-                            expanded = birthdayExpanded,
-                            onDismissRequest = { birthdayExpanded = false }
-                        ) {
-                            birthdayOptions.forEach { option ->
-                                DropdownMenuItem(
-                                    text = { Text(text = option) },
-                                    onClick = {
-                                        birthday = option
-                                        birthdayExpanded = false
-                                    }
-                                )
-                            }
-                        }
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .clickable {
+                                    DatePickerDialog(
+                                        navController.context,
+                                        { _, year, month, dayOfMonth ->
+                                            birthdayCalendar.set(Calendar.YEAR, year)
+                                            birthdayCalendar.set(Calendar.MONTH, month)
+                                            birthdayCalendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                                            birthday = birthdayFormatter.format(birthdayCalendar.time)
+                                        },
+                                        birthdayCalendar.get(Calendar.YEAR),
+                                        birthdayCalendar.get(Calendar.MONTH),
+                                        birthdayCalendar.get(Calendar.DAY_OF_MONTH)
+                                    ).show()
+                                }
+                        )
                     }
 
                     // 邮箱

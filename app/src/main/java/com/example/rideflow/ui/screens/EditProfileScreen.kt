@@ -1,6 +1,7 @@
 package com.example.rideflow.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Person
@@ -29,6 +30,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import com.example.rideflow.utils.ImageUploadUtils
 import kotlinx.coroutines.launch
+import java.util.Calendar
+import android.app.DatePickerDialog
+import java.text.SimpleDateFormat
 import androidx.compose.runtime.rememberCoroutineScope
 import java.io.File
 
@@ -233,15 +237,44 @@ fun EditProfileScreen(onBackPress: () -> Unit) {
                     }
                 }
                 
-                // 出生日期
-                OutlinedTextField(
-                    value = formData.birthday ?: "",
-                    onValueChange = { editProfileViewModel.updateFormData(birthday = it) },
-                    label = { Text("出生日期") },
-                    placeholder = { Text("格式：xxxx-xx-xx") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
+                val calendar = remember { Calendar.getInstance() }
+                val dateFormatter = remember {
+                    SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = formData.birthday ?: "",
+                        onValueChange = {},
+                        label = { Text("出生日期") },
+                        placeholder = { Text("请选择出生日期") },
+                        modifier = Modifier.fillMaxWidth(),
+                        readOnly = true,
+                        singleLine = true
+                    )
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .clickable {
+                                val picker = DatePickerDialog(
+                                    context,
+                                    { _, year, month, dayOfMonth ->
+                                        calendar.set(Calendar.YEAR, year)
+                                        calendar.set(Calendar.MONTH, month)
+                                        calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                                        val formatted = dateFormatter.format(calendar.time)
+                                        editProfileViewModel.updateFormData(birthday = formatted)
+                                    },
+                                    calendar.get(Calendar.YEAR),
+                                    calendar.get(Calendar.MONTH),
+                                    calendar.get(Calendar.DAY_OF_MONTH)
+                                )
+                                picker.show()
+                            }
+                    )
+                }
                 
                 // 邮箱
                 OutlinedTextField(

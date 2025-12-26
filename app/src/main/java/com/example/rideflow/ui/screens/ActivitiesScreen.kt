@@ -108,7 +108,9 @@ fun ActivitiesScreen(
     var selectedCategory by remember { mutableStateOf(initialCategoryIndex) }
     val handler = Handler(Looper.getMainLooper())
     var dbActivities by remember { mutableStateOf<List<Activity>>(emptyList()) }
+    val authViewModel: com.example.rideflow.auth.AuthViewModel = org.koin.androidx.compose.koinViewModel()
     LaunchedEffect(Unit) {
+        val uid = authViewModel.getCurrentUser()?.userId?.toIntOrNull()
         Thread {
             val list = mutableListOf<Activity>()
             DatabaseHelper.processQuery(
@@ -130,14 +132,16 @@ fun ActivitiesScreen(
                         while (trs.next()) tags.add(trs.getString(1) ?: "")
                         Unit
                     }
-                var mine = false
-                DatabaseHelper.processQuery(
-                    "SELECT 1 FROM user_activities WHERE user_id = ? AND activity_id = ? AND relation IN ('registered','favorite') LIMIT 1",
-                    listOf(1, id)
-                ) { urs ->
-                    mine = urs.next()
-                    Unit
-                }
+                    var mine = false
+                    if (uid != null && uid > 0) {
+                        DatabaseHelper.processQuery(
+                            "SELECT 1 FROM user_activities WHERE user_id = ? AND activity_id = ? AND relation = 'registered' LIMIT 1",
+                            listOf(uid, id)
+                        ) { urs ->
+                            mine = urs.next()
+                            Unit
+                        }
+                    }
                 val item = Activity(
                     id = id,
                     title = title,
@@ -255,7 +259,7 @@ fun ActivityItemCard(activity: Activity, onClick: () -> Unit) {
                             onClick = {},
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF007AFF))
                         ) {
-                            Text(text = "报名中")
+                            Text(text = if (activity.isMine) "已报名" else "报名中")
                         }
                     }
                 }
