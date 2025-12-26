@@ -21,11 +21,14 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
-import com.example.rideflow.R
 import android.os.Handler
 import android.os.Looper
+import androidx.navigation.NavController
+import com.example.rideflow.R
 import coil.compose.AsyncImage
+import com.example.rideflow.auth.AuthViewModel
+import com.example.rideflow.backend.DatabaseHelper
+import org.koin.androidx.compose.koinViewModel
 
 // 俱乐部徽章数据类
 private data class Badge(val name: String, val color: Color)
@@ -60,10 +63,13 @@ fun ClubDetailScreen(
 ) {
     val handler = Handler(Looper.getMainLooper())
     var clubDetail by remember { mutableStateOf<ClubDetail?>(null) }
+    val authViewModel = koinViewModel<AuthViewModel>()
+    val currentUserId = authViewModel.getCurrentUser()?.userId?.toIntOrNull()
+    var isMember by remember(clubId, currentUserId) { mutableStateOf(false) }
 
     LaunchedEffect(clubId) {
         Thread {
-            com.example.rideflow.backend.DatabaseHelper.processQuery(
+            DatabaseHelper.processQuery(
                 "SELECT name, city, logo_url, members_count, heat FROM clubs WHERE club_id = ?",
                 listOf(clubId)
             ) { rs ->
@@ -97,6 +103,21 @@ fun ClubDetailScreen(
                 Unit
             }
         }.start()
+
+        if (currentUserId != null && currentUserId > 0) {
+            Thread {
+                DatabaseHelper.processQuery(
+                    "SELECT 1 FROM club_members WHERE club_id = ? AND user_id = ? LIMIT 1",
+                    listOf(clubId, currentUserId)
+                ) { rs ->
+                    val has = rs.next()
+                    handler.post { isMember = has }
+                    Unit
+                }
+            }.start()
+        } else {
+            isMember = false
+        }
     }
 
     Scaffold(
@@ -119,7 +140,11 @@ fun ClubDetailScreen(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = clubDetail?.themeColor ?: Color.Gray)
                     ) {
-                        Text(text = "已加入俱乐部", color = Color.White, fontSize = 16.sp)
+                        Text(
+                            text = if (isMember) "已加入俱乐部" else "未加入俱乐部",
+                            color = Color.White,
+                            fontSize = 16.sp
+                        )
                     }
                 }
             }

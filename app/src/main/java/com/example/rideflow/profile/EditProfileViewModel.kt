@@ -111,10 +111,7 @@ class EditProfileViewModel(
         )
     }
 
-    /**
-     * 保存用户资料
-     */
-    fun saveUserProfile() {
+    fun saveUserProfile(avatarUrl: String? = null) {
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
@@ -132,6 +129,7 @@ class EditProfileViewModel(
                 val result = profileRepository.updateUserProfile(
                     nickname = currentFormData.nickname.ifBlank { null },
                     email = currentFormData.email.ifBlank { null },
+                    avatarUrl = avatarUrl,
                     bio = currentFormData.bio.ifBlank { null },
                     gender = currentFormData.gender.ifBlank { null },
                     birthday = currentFormData.birthday.ifBlank { null },

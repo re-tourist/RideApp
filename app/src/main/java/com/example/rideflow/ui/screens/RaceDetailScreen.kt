@@ -44,35 +44,46 @@ import coil.compose.AsyncImage
 fun RaceDetailScreen(navController: NavController, raceId: Int = 0, onBack: () -> Unit = { navController.popBackStack() }) {
     var showContactDialog by remember { mutableStateOf(false) }
     val handler = Handler(Looper.getMainLooper())
+    val authViewModel: com.example.rideflow.auth.AuthViewModel = org.koin.androidx.compose.koinViewModel()
     var eventTitle by remember { mutableStateOf("") }
+    var organizerStr by remember { mutableStateOf("") }
     var eventDateStr by remember { mutableStateOf("") }
+    var registrationTimeStr by remember { mutableStateOf("") }
     var locationStr by remember { mutableStateOf("") }
+    var checkinLocationStr by remember { mutableStateOf("") }
     var eventTypeStr by remember { mutableStateOf("") }
     var isOpen by remember { mutableStateOf(true) }
     var coverImageUrl by remember { mutableStateOf<String?>(null) }
     var description by remember { mutableStateOf("") }
     var tags by remember { mutableStateOf<List<String>>(emptyList()) }
+    var isRegistered by remember { mutableStateOf(false) }
     LaunchedEffect(raceId) {
         if (raceId > 0) {
             Thread {
                 val sdf = SimpleDateFormat("yyyy.MM.dd HH:mm", Locale.getDefault())
                 DatabaseHelper.processQuery(
-                    "SELECT title, event_date, location, event_type, is_open, cover_image_url, description FROM races WHERE race_id = ?",
+                    "SELECT title, organizer, event_date, registration_time, location, checkin_location, event_type, is_open, cover_image_url, description FROM races WHERE race_id = ?",
                     listOf(raceId)
                 ) { rs ->
                     if (rs.next()) {
                         val title = rs.getString(1) ?: ""
-                        val ts = rs.getTimestamp(2)
+                        val organizer = rs.getString(2) ?: ""
+                        val ts = rs.getTimestamp(3)
                         val dateStr = if (ts != null) sdf.format(Date(ts.time)) else ""
-                        val location = rs.getString(3) ?: ""
-                        val eventType = rs.getString(4) ?: ""
-                        val open = (rs.getInt(5) == 1)
-                        val cover = rs.getString(6)
-                        val desc = rs.getString(7) ?: ""
+                        val registrationTime = rs.getString(4) ?: ""
+                        val location = rs.getString(5) ?: ""
+                        val checkinLocation = rs.getString(6) ?: ""
+                        val eventType = rs.getString(7) ?: ""
+                        val open = (rs.getInt(8) == 1)
+                        val cover = rs.getString(9)
+                        val desc = rs.getString(10) ?: ""
                         handler.post {
                             eventTitle = title
+                            organizerStr = organizer
                             eventDateStr = dateStr
+                            registrationTimeStr = registrationTime
                             locationStr = location
+                            checkinLocationStr = checkinLocation
                             eventTypeStr = eventType
                             isOpen = open
                             coverImageUrl = cover
@@ -91,6 +102,19 @@ fun RaceDetailScreen(navController: NavController, raceId: Int = 0, onBack: () -
                     }
                     handler.post { tags = list }
                     Unit
+                }
+                val userId = authViewModel.getCurrentUser()?.userId?.toIntOrNull()
+                if (userId != null && userId > 0) {
+                    DatabaseHelper.processQuery(
+                        "SELECT status FROM user_races WHERE user_id = ? AND race_id = ? AND relation = 'registered' LIMIT 1",
+                        listOf(userId, raceId)
+                    ) { urs ->
+                        val has = urs.next()
+                        handler.post {
+                            isRegistered = has
+                        }
+                        Unit
+                    }
                 }
             }.start()
         }
@@ -151,7 +175,11 @@ fun RaceDetailScreen(navController: NavController, raceId: Int = 0, onBack: () -
                         )
                     // 报名状态
                     Text(
-                        text = if (isOpen) "报名中" else "已结束",
+                        text = when {
+                            !isOpen -> "已结束"
+                            isRegistered -> "已报名"
+                            else -> "报名中"
+                        },
                         style = TextStyle(
                             fontSize = 14.sp,
                             color = Color.White
@@ -182,11 +210,18 @@ fun RaceDetailScreen(navController: NavController, raceId: Int = 0, onBack: () -
                     }
 
                     // 赛事信息列表
-                    RaceInfoItem(label = "主办方", value = "—")
+                    RaceInfoItem(label = "主办方", value = if (organizerStr.isNotBlank()) organizerStr else "—")
+                    RaceInfoItem(label = "赛事类型", value = if (eventTypeStr.isNotBlank()) eventTypeStr else "—")
                     RaceInfoItem(label = "比赛时间", value = eventDateStr)
-                    RaceInfoItem(label = "报名时间", value = "—")
-                    RaceInfoItem(label = "签到时间", value = "—")
-                    RaceInfoItem(label = "签到地点", value = if (locationStr.isNotBlank()) locationStr else "—")
+                    RaceInfoItem(label = "报名时间", value = if (registrationTimeStr.isNotBlank()) registrationTimeStr else "—")
+                    RaceInfoItem(
+                        label = "签到地点",
+                        value = when {
+                            checkinLocationStr.isNotBlank() -> checkinLocationStr
+                            locationStr.isNotBlank() -> locationStr
+                            else -> "—"
+                        }
+                    )
                 }
 
                 // 标签页
@@ -239,28 +274,33 @@ fun RaceDetailScreen(navController: NavController, raceId: Int = 0, onBack: () -
                             }
                         }
                         1 -> {
-                            // 赛事组别
-                            RaceGroupItem(
-                                title = "骑行组",
-                                distance = "50km",
-                                price = "¥59",
-                                description = "适合有一定骑行基础的爱好者"
+                            Text(
+                                text = "赛事组别",
+                                style = TextStyle(
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                modifier = Modifier.padding(bottom = 8.dp)
                             )
-                            RaceGroupItem(
-                                title = "竞速组",
-                                distance = "100km",
-                                price = "¥99",
-                                description = "适合追求速度和挑战的资深骑手"
+                            RaceInfoItem(
+                                label = "赛事类型",
+                                value = if (eventTypeStr.isNotBlank()) eventTypeStr else "—"
                             )
-                            RaceGroupItem(
-                                title = "长距离组",
-                                distance = "200km",
-                                price = "¥159",
-                                description = "适合耐力型骑手"
-                            )
+                            if (tags.isNotEmpty()) {
+                                Text(
+                                    text = "标签：" + tags.joinToString("、"),
+                                    style = TextStyle(fontSize = 14.sp),
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            } else {
+                                Text(
+                                    text = "暂无标签信息",
+                                    style = TextStyle(fontSize = 14.sp, color = Color.Gray),
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
                         }
                         2 -> {
-                            // 赛事规则
                             Text(
                                 text = "赛事规则",
                                 style = TextStyle(
@@ -269,15 +309,19 @@ fun RaceDetailScreen(navController: NavController, raceId: Int = 0, onBack: () -
                                 ),
                                 modifier = Modifier.padding(bottom = 8.dp)
                             )
-                            Text(
-                                text = "1. 参赛选手需在规定时间内完成相应距离的骑行任务\n" +
-                                      "2. 需使用指定的骑行记录APP记录骑行数据\n" +
-                                      "3. 必须是单次骑行完成，不允许分段累计\n" +
-                                      "4. 严禁作弊行为，一经发现取消参赛资格\n" +
-                                      "5. 最终解释权归主办方所有",
-                                style = TextStyle(fontSize = 14.sp),
-                                modifier = Modifier.padding(bottom = 16.dp)
-                            )
+                            if (description.isNotBlank()) {
+                                Text(
+                                    text = description,
+                                    style = TextStyle(fontSize = 14.sp),
+                                    modifier = Modifier.padding(bottom = 16.dp)
+                                )
+                            } else {
+                                Text(
+                                    text = "暂无赛事规则，具体以主办方说明为准",
+                                    style = TextStyle(fontSize = 14.sp, color = Color.Gray),
+                                    modifier = Modifier.padding(bottom = 16.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -320,9 +364,12 @@ fun RaceDetailScreen(navController: NavController, raceId: Int = 0, onBack: () -
                         title = { Text(text = "联系主办方") },
                         text = {
                             Column {
-                                RaceInfoItem(label = "主办方", value = "—")
-                                RaceInfoItem(label = "联系电话", value = "—")
-                                RaceInfoItem(label = "邮箱", value = "—")
+                                RaceInfoItem(
+                                    label = "主办方",
+                                    value = if (organizerStr.isNotBlank()) organizerStr else "乐体体育"
+                                )
+                                RaceInfoItem(label = "联系电话", value = "400-987-6543")
+                                RaceInfoItem(label = "邮箱", value = "race-support@rideflow.com")
                             }
                         },
                         confirmButton = {

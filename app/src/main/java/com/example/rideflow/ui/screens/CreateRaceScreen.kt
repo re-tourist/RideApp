@@ -1,6 +1,7 @@
 package com.example.rideflow.ui.screens
 
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -27,15 +28,21 @@ import com.example.rideflow.backend.DatabaseHelper
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
+import com.example.rideflow.utils.ImageUploadUtils
+import kotlinx.coroutines.runBlocking
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.io.File
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
+import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateRaceScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val handler = Handler(Looper.getMainLooper())
+    val calendar = remember { Calendar.getInstance() }
     
     // 基本信息
     var raceTitle by remember { mutableStateOf("") }
@@ -72,6 +79,37 @@ fun CreateRaceScreen(onBack: () -> Unit) {
     
     // 参赛口令
     var participationPassword by remember { mutableStateOf("") }
+
+    fun pickDateTime(onResult: (String) -> Unit) {
+        val year = calendar.get(Calendar.YEAR)
+        val month = calendar.get(Calendar.MONTH)
+        val day = calendar.get(Calendar.DAY_OF_MONTH)
+        DatePickerDialog(
+            context,
+            { _, y, m, d ->
+                calendar.set(Calendar.YEAR, y)
+                calendar.set(Calendar.MONTH, m)
+                calendar.set(Calendar.DAY_OF_MONTH, d)
+                val hour = calendar.get(Calendar.HOUR_OF_DAY)
+                val minute = calendar.get(Calendar.MINUTE)
+                TimePickerDialog(
+                    context,
+                    { _, h, min ->
+                        calendar.set(Calendar.HOUR_OF_DAY, h)
+                        calendar.set(Calendar.MINUTE, min)
+                        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+                        onResult(sdf.format(calendar.time))
+                    },
+                    hour,
+                    minute,
+                    true
+                ).show()
+            },
+            year,
+            month,
+            day
+        ).show()
+    }
 
     // 添加新奖品
     fun addPrize() {
@@ -188,27 +226,51 @@ fun CreateRaceScreen(onBack: () -> Unit) {
                         }
                     }
                     
-                    // 报名时间段
-                    OutlinedTextField(
-                        value = registrationTime,
-                        onValueChange = { registrationTime = it },
-                        label = { Text("报名时间段 *") },
-                        placeholder = { Text("格式：yyyy-MM-dd HH:mm ~ yyyy-MM-dd HH:mm") },
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                        singleLine = true,
-                        isError = registrationTime.isEmpty()
-                    )
+                    // 报名时间
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = registrationTime,
+                            onValueChange = {},
+                            label = { Text("报名时间 *") },
+                            placeholder = { Text("点击选择时间") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            readOnly = true,
+                            isError = registrationTime.isEmpty()
+                        )
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .clickable { pickDateTime { registrationTime = it } }
+                        )
+                    }
 
-                    // 比赛时间段
-                    OutlinedTextField(
-                        value = raceTime,
-                        onValueChange = { raceTime = it },
-                        label = { Text("比赛时间段 *") },
-                        placeholder = { Text("格式：yyyy-MM-dd HH:mm ~ yyyy-MM-dd HH:mm") },
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                        singleLine = true,
-                        isError = raceTime.isEmpty()
-                    )
+                    // 比赛时间
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = raceTime,
+                            onValueChange = {},
+                            label = { Text("比赛时间 *") },
+                            placeholder = { Text("点击选择时间") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            readOnly = true,
+                            isError = raceTime.isEmpty()
+                        )
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .clickable { pickDateTime { raceTime = it } }
+                        )
+                    }
 
                     // 比赛地点
                     OutlinedTextField(
@@ -364,15 +426,40 @@ fun CreateRaceScreen(onBack: () -> Unit) {
                         } else {
                             Thread {
                                 val isOpen = 1
-                                val coverUrl: String? = null
+                                var coverUrl: String? = null
+                                val imageFile = selectedImageFile
+                                if (imageFile != null) {
+                                    try {
+                                        coverUrl = runBlocking {
+                                            val dir = "posts"
+                                            val objectKey = "$dir/${System.currentTimeMillis()}_${imageFile.name}"
+                                            ImageUploadUtils.uploadFileToOss(
+                                                context = context,
+                                                localFile = imageFile,
+                                                ossObjectKey = objectKey
+                                            )
+                                        }
+                                    } catch (_: Exception) {
+                                    }
+                                }
                                 val insertId = DatabaseHelper.insertAndReturnId(
-                                    "INSERT INTO events (title, event_date, location, is_open, cover_image_url, description) VALUES (?,?,?,?,?,?)",
-                                    listOf<Any>(raceTitle, match, raceLocation, isOpen, coverUrl ?: "", raceDescription)
+                                    "INSERT INTO races (title, organizer, event_date, registration_time, location, checkin_location, is_open, cover_image_url, description) VALUES (?,?,?,?,?,?,?,?,?)",
+                                    listOf<Any>(
+                                        raceTitle,
+                                        organizer,
+                                        match,
+                                        registrationTime,
+                                        raceLocation,
+                                        raceLocation,
+                                        isOpen,
+                                        coverUrl ?: "",
+                                        raceDescription
+                                    )
                                 )
                                 if (insertId != null) {
                                     selectedTags.forEach { tag ->
                                         DatabaseHelper.executeUpdate(
-                                            "INSERT INTO event_tags (event_id, tag_name) VALUES (?,?)",
+                                            "INSERT INTO race_tags (race_id, tag_name) VALUES (?,?)",
                                             listOf(insertId, tag)
                                         )
                                     }
@@ -387,7 +474,7 @@ fun CreateRaceScreen(onBack: () -> Unit) {
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
-                    enabled = raceTitle.isNotEmpty() && organizer.isNotEmpty() && 
+                    enabled = raceTitle.isNotEmpty() && organizer.isNotEmpty() &&
                              registrationTime.isNotEmpty() && raceTime.isNotEmpty() && raceLocation.isNotEmpty()
                 ) {
                     Text(text = "创建赛事", fontSize = 16.sp)

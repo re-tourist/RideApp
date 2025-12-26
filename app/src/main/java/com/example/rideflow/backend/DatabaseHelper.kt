@@ -216,6 +216,9 @@ object DatabaseHelper {
             if (keys != null && keys!!.next()) keys!!.getInt(1) else null
         } catch (e: Exception) {
             Log.e(TAG, "插入返回ID失败: ${e.message}")
+            Log.e(TAG, "SQL: $sql")
+            Log.e(TAG, "参数: $params")
+            Log.e(TAG, "异常类型: ${e.javaClass.simpleName}")
             null
         } finally {
             closeResources(connection, statement, keys)

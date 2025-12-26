@@ -716,12 +716,14 @@ private fun FeedActions(
                     .clickable(onClick = onDislikeClick)
                     .padding(horizontal = 8.dp, vertical = 6.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.ThumbDown,
-                    contentDescription = "踩",
-                    tint = if (isDisliked) activeColor else iconColor,
-                    modifier = Modifier.size(20.dp)
-                )
+                Crossfade(targetState = isDisliked, label = "dislike") { disliked ->
+                    Icon(
+                        imageVector = if (disliked) Icons.Default.ThumbDown else Icons.Default.ThumbDownOffAlt,
+                        contentDescription = "踩",
+                        tint = if (disliked) activeColor else iconColor,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
                 Text(
                     text = dislikeCount.toString(),
                     fontSize = 12.sp,

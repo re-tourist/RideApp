@@ -1,0 +1,14 @@
+com\rideapp\backend\dto\DbUpdateRequest.class
+com\rideapp\backend\service\AuthService.class
+com\rideapp\backend\dto\ApiResponse.class
+com\rideapp\backend\domain\User.class
+com\rideapp\backend\repository\UserRepository.class
+com\rideapp\backend\dto\DbInsertRequest.class
+com\rideapp\backend\BackendApplication.class
+com\rideapp\backend\dto\AuthResultDTO.class
+com\rideapp\backend\controller\DatabaseProxyController.class
+com\rideapp\backend\dto\DbQueryRequest.class
+com\rideapp\backend\dto\LoginRequestDTO.class
+com\rideapp\backend\controller\AuthController.class
+com\rideapp\backend\dto\DbBatchUpdateRequest.class
+com\rideapp\backend\dto\RegisterRequestDTO.class

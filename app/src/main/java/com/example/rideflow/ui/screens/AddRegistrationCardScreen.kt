@@ -1,28 +1,24 @@
 package com.example.rideflow.ui.screens
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -37,11 +33,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
+import android.app.DatePickerDialog
+import java.text.SimpleDateFormat
+import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddRegistrationCardScreen(navController: NavController, raceId: Int = 0, onBack: () -> Unit = { navController.popBackStack() }) {
+    val authViewModel: com.example.rideflow.auth.AuthViewModel = org.koin.androidx.compose.koinViewModel()
+    val context = LocalContext.current
     // 表单字段状态
     var name by remember { mutableStateOf("") }
     var gender by remember { mutableStateOf("") }
@@ -58,12 +60,10 @@ fun AddRegistrationCardScreen(navController: NavController, raceId: Int = 0, onB
     // 下拉菜单状态
     var genderExpanded by remember { mutableStateOf(false) }
     var idTypeExpanded by remember { mutableStateOf(false) }
-    var birthdayExpanded by remember { mutableStateOf(false) }
     var addressExpanded by remember { mutableStateOf(false) }
 
     val genderOptions = listOf("请选择", "男", "女")
     val idTypeOptions = listOf("二代身份证", "护照", "军官证")
-    val birthdayOptions = listOf("请选择日期") // 实际应用中应使用日期选择器
     val addressOptions = listOf("请选择省/市/区") // 实际应用中应使用地址选择器
 
     Scaffold(
@@ -133,7 +133,7 @@ fun AddRegistrationCardScreen(navController: NavController, raceId: Int = 0, onB
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = genderExpanded) },
                             modifier = Modifier.menuAnchor()
                         )
-                        ExposedDropdownMenu(
+                        DropdownMenu(
                             expanded = genderExpanded,
                             onDismissRequest = { genderExpanded = false }
                         ) {
@@ -177,7 +177,7 @@ fun AddRegistrationCardScreen(navController: NavController, raceId: Int = 0, onB
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = idTypeExpanded) },
                             modifier = Modifier.menuAnchor()
                         )
-                        ExposedDropdownMenu(
+                        DropdownMenu(
                             expanded = idTypeExpanded,
                             onDismissRequest = { idTypeExpanded = false }
                         ) {
@@ -204,36 +204,42 @@ fun AddRegistrationCardScreen(navController: NavController, raceId: Int = 0, onB
                             .padding(bottom = 16.dp)
                     )
 
-                    // 出生日期
-                    ExposedDropdownMenuBox(
-                        expanded = birthdayExpanded,
-                        onExpandedChange = { birthdayExpanded = !birthdayExpanded },
+                    val birthdayCalendar = remember { Calendar.getInstance() }
+                    val birthdayFormatter = remember {
+                        SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                    }
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 16.dp)
                     ) {
-                        TextField(
-                            value = birthday.ifEmpty { "请选择" },
+                        OutlinedTextField(
+                            value = birthday.ifEmpty { "" },
                             onValueChange = {},
                             label = { Text(text = "出生日期 *") },
+                            placeholder = { Text(text = "请选择") },
+                            modifier = Modifier.fillMaxWidth(),
                             readOnly = true,
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = birthdayExpanded) },
-                            modifier = Modifier.menuAnchor()
+                            singleLine = true
                         )
-                        ExposedDropdownMenu(
-                            expanded = birthdayExpanded,
-                            onDismissRequest = { birthdayExpanded = false }
-                        ) {
-                            birthdayOptions.forEach { option ->
-                                DropdownMenuItem(
-                                    text = { Text(text = option) },
-                                    onClick = {
-                                        birthday = option
-                                        birthdayExpanded = false
-                                    }
-                                )
-                            }
-                        }
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .clickable {
+                                    DatePickerDialog(
+                                        navController.context,
+                                        { _, year, month, dayOfMonth ->
+                                            birthdayCalendar.set(Calendar.YEAR, year)
+                                            birthdayCalendar.set(Calendar.MONTH, month)
+                                            birthdayCalendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                                            birthday = birthdayFormatter.format(birthdayCalendar.time)
+                                        },
+                                        birthdayCalendar.get(Calendar.YEAR),
+                                        birthdayCalendar.get(Calendar.MONTH),
+                                        birthdayCalendar.get(Calendar.DAY_OF_MONTH)
+                                    ).show()
+                                }
+                        )
                     }
 
                     // 邮箱
@@ -265,7 +271,7 @@ fun AddRegistrationCardScreen(navController: NavController, raceId: Int = 0, onB
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = addressExpanded) },
                             modifier = Modifier.menuAnchor()
                         )
-                        ExposedDropdownMenu(
+                        DropdownMenu(
                             expanded = addressExpanded,
                             onDismissRequest = { addressExpanded = false }
                         ) {
@@ -317,7 +323,62 @@ fun AddRegistrationCardScreen(navController: NavController, raceId: Int = 0, onB
 
                     // 提交按钮
                     Button(
-                        onClick = { onBack() }, // 实际应用中应实现表单提交逻辑
+                        onClick = {
+                            val userId = authViewModel.getCurrentUser()?.userId?.toIntOrNull() ?: 0
+                            if (userId <= 0) {
+                                android.widget.Toast.makeText(context, "用户未登录，请先登录后再提交报名卡", android.widget.Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
+                            if (name.isBlank() || gender.isBlank() || phone.isBlank() || idNumber.isBlank() || birthday.isBlank()) {
+                                android.widget.Toast.makeText(context, "请填写所有必填项", android.widget.Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
+                            val genderValue = if (gender == "请选择") "" else gender
+                            val addressValue = if (address == "请选择省/市/区") "" else address
+                            Thread {
+                                val sql = """
+                                    INSERT INTO user_registration_cards (
+                                        user_id, name, gender, phone, id_type, id_number, birthday,
+                                        email, address, detailed_address, emergency_contact, emergency_phone
+                                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                    ON DUPLICATE KEY UPDATE
+                                        name = VALUES(name),
+                                        gender = VALUES(gender),
+                                        phone = VALUES(phone),
+                                        id_type = VALUES(id_type),
+                                        id_number = VALUES(id_number),
+                                        birthday = VALUES(birthday),
+                                        email = VALUES(email),
+                                        address = VALUES(address),
+                                        detailed_address = VALUES(detailed_address),
+                                        emergency_contact = VALUES(emergency_contact),
+                                        emergency_phone = VALUES(emergency_phone)
+                                """.trimIndent()
+                                val params = listOf(
+                                    userId,
+                                    name,
+                                    genderValue,
+                                    phone,
+                                    idType,
+                                    idNumber,
+                                    birthday,
+                                    email,
+                                    addressValue,
+                                    detailedAddress,
+                                    emergencyContact,
+                                    emergencyPhone
+                                )
+                                val result = com.example.rideflow.backend.DatabaseHelper.executeUpdate(sql, params)
+                                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                    if (result >= 0) {
+                                        android.widget.Toast.makeText(context, "报名卡保存成功", android.widget.Toast.LENGTH_SHORT).show()
+                                        onBack()
+                                    } else {
+                                        android.widget.Toast.makeText(context, "报名卡保存失败，请稍后重试", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }.start()
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp)
