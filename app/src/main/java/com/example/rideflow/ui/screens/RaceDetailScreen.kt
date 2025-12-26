@@ -364,9 +364,12 @@ fun RaceDetailScreen(navController: NavController, raceId: Int = 0, onBack: () -
                         title = { Text(text = "联系主办方") },
                         text = {
                             Column {
-                                RaceInfoItem(label = "主办方", value = if (organizerStr.isNotBlank()) organizerStr else "—")
-                                RaceInfoItem(label = "联系电话", value = "—")
-                                RaceInfoItem(label = "邮箱", value = "—")
+                                RaceInfoItem(
+                                    label = "主办方",
+                                    value = if (organizerStr.isNotBlank()) organizerStr else "乐体体育"
+                                )
+                                RaceInfoItem(label = "联系电话", value = "400-987-6543")
+                                RaceInfoItem(label = "邮箱", value = "race-support@rideflow.com")
                             }
                         },
                         confirmButton = {

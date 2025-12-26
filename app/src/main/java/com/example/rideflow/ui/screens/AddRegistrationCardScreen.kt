@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -132,7 +133,7 @@ fun AddRegistrationCardScreen(navController: NavController, raceId: Int = 0, onB
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = genderExpanded) },
                             modifier = Modifier.menuAnchor()
                         )
-                        ExposedDropdownMenu(
+                        DropdownMenu(
                             expanded = genderExpanded,
                             onDismissRequest = { genderExpanded = false }
                         ) {
@@ -176,7 +177,7 @@ fun AddRegistrationCardScreen(navController: NavController, raceId: Int = 0, onB
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = idTypeExpanded) },
                             modifier = Modifier.menuAnchor()
                         )
-                        ExposedDropdownMenu(
+                        DropdownMenu(
                             expanded = idTypeExpanded,
                             onDismissRequest = { idTypeExpanded = false }
                         ) {
@@ -270,7 +271,7 @@ fun AddRegistrationCardScreen(navController: NavController, raceId: Int = 0, onB
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = addressExpanded) },
                             modifier = Modifier.menuAnchor()
                         )
-                        ExposedDropdownMenu(
+                        DropdownMenu(
                             expanded = addressExpanded,
                             onDismissRequest = { addressExpanded = false }
                         ) {
