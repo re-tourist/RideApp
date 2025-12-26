@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
 import android.app.DatePickerDialog
 import java.text.SimpleDateFormat
@@ -40,6 +41,8 @@ import java.util.Calendar
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddRegistrationCardScreen(navController: NavController, raceId: Int = 0, onBack: () -> Unit = { navController.popBackStack() }) {
+    val authViewModel: com.example.rideflow.auth.AuthViewModel = org.koin.androidx.compose.koinViewModel()
+    val context = LocalContext.current
     // 表单字段状态
     var name by remember { mutableStateOf("") }
     var gender by remember { mutableStateOf("") }
@@ -319,7 +322,62 @@ fun AddRegistrationCardScreen(navController: NavController, raceId: Int = 0, onB
 
                     // 提交按钮
                     Button(
-                        onClick = { onBack() }, // 实际应用中应实现表单提交逻辑
+                        onClick = {
+                            val userId = authViewModel.getCurrentUser()?.userId?.toIntOrNull() ?: 0
+                            if (userId <= 0) {
+                                android.widget.Toast.makeText(context, "用户未登录，请先登录后再提交报名卡", android.widget.Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
+                            if (name.isBlank() || gender.isBlank() || phone.isBlank() || idNumber.isBlank() || birthday.isBlank()) {
+                                android.widget.Toast.makeText(context, "请填写所有必填项", android.widget.Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
+                            val genderValue = if (gender == "请选择") "" else gender
+                            val addressValue = if (address == "请选择省/市/区") "" else address
+                            Thread {
+                                val sql = """
+                                    INSERT INTO user_registration_cards (
+                                        user_id, name, gender, phone, id_type, id_number, birthday,
+                                        email, address, detailed_address, emergency_contact, emergency_phone
+                                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                    ON DUPLICATE KEY UPDATE
+                                        name = VALUES(name),
+                                        gender = VALUES(gender),
+                                        phone = VALUES(phone),
+                                        id_type = VALUES(id_type),
+                                        id_number = VALUES(id_number),
+                                        birthday = VALUES(birthday),
+                                        email = VALUES(email),
+                                        address = VALUES(address),
+                                        detailed_address = VALUES(detailed_address),
+                                        emergency_contact = VALUES(emergency_contact),
+                                        emergency_phone = VALUES(emergency_phone)
+                                """.trimIndent()
+                                val params = listOf(
+                                    userId,
+                                    name,
+                                    genderValue,
+                                    phone,
+                                    idType,
+                                    idNumber,
+                                    birthday,
+                                    email,
+                                    addressValue,
+                                    detailedAddress,
+                                    emergencyContact,
+                                    emergencyPhone
+                                )
+                                val result = com.example.rideflow.backend.DatabaseHelper.executeUpdate(sql, params)
+                                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                    if (result >= 0) {
+                                        android.widget.Toast.makeText(context, "报名卡保存成功", android.widget.Toast.LENGTH_SHORT).show()
+                                        onBack()
+                                    } else {
+                                        android.widget.Toast.makeText(context, "报名卡保存失败，请稍后重试", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }.start()
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp)

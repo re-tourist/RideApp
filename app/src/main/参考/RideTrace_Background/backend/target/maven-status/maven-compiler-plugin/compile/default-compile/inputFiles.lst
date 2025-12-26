@@ -1,0 +1,14 @@
+D:\111\RideApp\app\src\main\参考\RideTrace_Background\backend\src\main\java\com\rideapp\backend\BackendApplication.java
+D:\111\RideApp\app\src\main\参考\RideTrace_Background\backend\src\main\java\com\rideapp\backend\controller\AuthController.java
+D:\111\RideApp\app\src\main\参考\RideTrace_Background\backend\src\main\java\com\rideapp\backend\controller\DatabaseProxyController.java
+D:\111\RideApp\app\src\main\参考\RideTrace_Background\backend\src\main\java\com\rideapp\backend\domain\User.java
+D:\111\RideApp\app\src\main\参考\RideTrace_Background\backend\src\main\java\com\rideapp\backend\dto\ApiResponse.java
+D:\111\RideApp\app\src\main\参考\RideTrace_Background\backend\src\main\java\com\rideapp\backend\dto\AuthResultDTO.java
+D:\111\RideApp\app\src\main\参考\RideTrace_Background\backend\src\main\java\com\rideapp\backend\dto\DbBatchUpdateRequest.java
+D:\111\RideApp\app\src\main\参考\RideTrace_Background\backend\src\main\java\com\rideapp\backend\dto\DbInsertRequest.java
+D:\111\RideApp\app\src\main\参考\RideTrace_Background\backend\src\main\java\com\rideapp\backend\dto\DbQueryRequest.java
+D:\111\RideApp\app\src\main\参考\RideTrace_Background\backend\src\main\java\com\rideapp\backend\dto\DbUpdateRequest.java
+D:\111\RideApp\app\src\main\参考\RideTrace_Background\backend\src\main\java\com\rideapp\backend\dto\LoginRequestDTO.java
+D:\111\RideApp\app\src\main\参考\RideTrace_Background\backend\src\main\java\com\rideapp\backend\dto\RegisterRequestDTO.java
+D:\111\RideApp\app\src\main\参考\RideTrace_Background\backend\src\main\java\com\rideapp\backend\repository\UserRepository.java
+D:\111\RideApp\app\src\main\参考\RideTrace_Background\backend\src\main\java\com\rideapp\backend\service\AuthService.java

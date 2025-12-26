@@ -144,6 +144,18 @@ fun RaceRegistrationScreen(navController: NavController, raceId: Int = 0, onBack
                                 return@Button
                             }
                             Thread {
+                                val hasCard = DatabaseHelper.processQuery(
+                                    "SELECT 1 FROM user_registration_cards WHERE user_id = ? LIMIT 1",
+                                    listOf(userId)
+                                ) { rs ->
+                                    rs.next()
+                                } ?: false
+                                if (!hasCard) {
+                                    handler.post {
+                                        Toast.makeText(context, "请先填写报名卡", Toast.LENGTH_SHORT).show()
+                                    }
+                                    return@Thread
+                                }
                                 val sql = """
                                     INSERT INTO user_races (user_id, race_id, relation, status, notes)
                                     VALUES (?, ?, 'registered', 'upcoming', '报名成功')

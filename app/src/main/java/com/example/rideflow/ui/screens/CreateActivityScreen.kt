@@ -462,8 +462,18 @@ fun CreateActivityScreen(onBack: () -> Unit) {
                                     }
                                 }
                                 val insertId = DatabaseHelper.insertAndReturnId(
-                                    "INSERT INTO activities (title, event_date, location, is_open, cover_image_url, description) VALUES (?,?,?,?,?,?)",
-                                    listOf<Any>(activityTitle, match, activityLocation, isOpen, coverUrl ?: "", activityDescription)
+                                    "INSERT INTO activities (title, organizer, event_date, registration_time, location, checkin_location, is_open, cover_image_url, description) VALUES (?,?,?,?,?,?,?,?,?)",
+                                    listOf<Any>(
+                                        activityTitle,
+                                        organizer,
+                                        match,
+                                        registrationTime,
+                                        activityLocation,
+                                        activityLocation,
+                                        isOpen,
+                                        coverUrl ?: "",
+                                        activityDescription
+                                    )
                                 )
                                 if (insertId != null) {
                                     selectedTags.forEach { tag ->

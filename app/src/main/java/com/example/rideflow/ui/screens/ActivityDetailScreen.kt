@@ -46,37 +46,61 @@ fun ActivityDetailScreen(navController: NavController, activityId: Int = 0, onBa
     var showContactDialog by remember { mutableStateOf(false) }
     val handler = Handler(Looper.getMainLooper())
     var eventTitle by remember { mutableStateOf("") }
+    var organizerStr by remember { mutableStateOf("") }
     var eventDateStr by remember { mutableStateOf("") }
+    var registrationTimeStr by remember { mutableStateOf("") }
     var locationStr by remember { mutableStateOf("") }
+    var checkinLocationStr by remember { mutableStateOf("") }
+    var eventTypeStr by remember { mutableStateOf("") }
     var isOpen by remember { mutableStateOf(true) }
     var coverImageUrl by remember { mutableStateOf<String?>(null) }
     var description by remember { mutableStateOf("") }
     var isFavorited by remember { mutableStateOf(false) }
+    var tags by remember { mutableStateOf<List<String>>(emptyList()) }
     LaunchedEffect(activityId) {
         if (activityId > 0) {
             Thread {
                 val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
                 DatabaseHelper.processQuery(
-                    "SELECT title, event_date, location, is_open, cover_image_url, description FROM activities WHERE activity_id = ?",
+                    "SELECT title, organizer, event_date, registration_time, location, checkin_location, event_type, is_open, cover_image_url, description FROM activities WHERE activity_id = ?",
                     listOf(activityId)
                 ) { rs ->
                     if (rs.next()) {
                         val title = rs.getString(1) ?: ""
-                        val ts = rs.getTimestamp(2)
+                        val organizer = rs.getString(2) ?: ""
+                        val ts = rs.getTimestamp(3)
                         val dateStr = if (ts != null) sdf.format(Date(ts.time)) else ""
-                        val location = rs.getString(3) ?: ""
-                        val open = (rs.getInt(4) == 1)
-                        val cover = rs.getString(5)
-                        val desc = rs.getString(6) ?: ""
+                        val registrationTime = rs.getString(4) ?: ""
+                        val location = rs.getString(5) ?: ""
+                        val checkinLocation = rs.getString(6) ?: ""
+                        val eventType = rs.getString(7) ?: ""
+                        val open = (rs.getInt(8) == 1)
+                        val cover = rs.getString(9)
+                        val desc = rs.getString(10) ?: ""
                         handler.post {
                             eventTitle = title
+                            organizerStr = organizer
                             eventDateStr = dateStr
+                            registrationTimeStr = registrationTime
                             locationStr = location
+                            checkinLocationStr = checkinLocation
+                            eventTypeStr = eventType
                             isOpen = open
                             coverImageUrl = cover
                             description = desc
                         }
                     }
+                    Unit
+                }
+                DatabaseHelper.processQuery(
+                    "SELECT tag_name FROM activity_tags WHERE activity_id = ?",
+                    listOf(activityId)
+                ) { trs ->
+                    val list = mutableListOf<String>()
+                    while (trs.next()) {
+                        list.add(trs.getString(1) ?: "")
+                    }
+                    handler.post { tags = list }
                     Unit
                 }
                 DatabaseHelper.processQuery(
@@ -186,6 +210,52 @@ fun ActivityDetailScreen(navController: NavController, activityId: Int = 0, onBa
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
+                if (eventTypeStr.isNotBlank()) {
+                    Text(
+                        text = "类型：$eventTypeStr",
+                        fontSize = 14.sp,
+                        color = Color.Gray,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+                if (tags.isNotEmpty()) {
+                    Row(modifier = Modifier.padding(bottom = 8.dp)) {
+                        tags.forEach { tag ->
+                            OutlinedButton(
+                                onClick = {},
+                                modifier = Modifier.padding(end = 8.dp),
+                                shape = RoundedCornerShape(20.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                            ) {
+                                Text(text = tag, fontSize = 12.sp)
+                            }
+                        }
+                    }
+                }
+                if (organizerStr.isNotBlank()) {
+                    Text(
+                        text = "主办方：$organizerStr",
+                        fontSize = 14.sp,
+                        color = Color.Gray,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                }
+                if (registrationTimeStr.isNotBlank()) {
+                    Text(
+                        text = "报名时间：$registrationTimeStr",
+                        fontSize = 14.sp,
+                        color = Color.Gray,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                }
+                if (locationStr.isNotBlank() || checkinLocationStr.isNotBlank()) {
+                    Text(
+                        text = "签到地点：" + if (checkinLocationStr.isNotBlank()) checkinLocationStr else locationStr,
+                        fontSize = 14.sp,
+                        color = Color.Gray,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
                 
                 // 活动时间和地点
                 Row(
@@ -256,11 +326,20 @@ fun ActivityDetailScreen(navController: NavController, activityId: Int = 0, onBa
                 )
                 
                 Column(modifier = Modifier.padding(horizontal = 8.dp)) {
-                    RuleItem("1. 参与者需年满18周岁，身体健康")
-                    RuleItem("2. 请自备骑行装备，包括头盔、手套等安全装备")
-                    RuleItem("3. 活动过程中请遵守交通规则，听从组织者指挥")
-                    RuleItem("4. 如有任何不适，请及时告知组织者")
-                    RuleItem("5. 请保持环境清洁，不要随意丢弃垃圾")
+                    Text(
+                        text = "类型：${if (eventTypeStr.isNotBlank()) eventTypeStr else "—"}",
+                        fontSize = 14.sp
+                    )
+                    Text(
+                        text = "时间：$eventDateStr",
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                    Text(
+                        text = "地点：${if (locationStr.isNotBlank()) locationStr else "—"}",
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
                 }
                 
                 // 底部按钮区域

@@ -443,8 +443,18 @@ fun CreateRaceScreen(onBack: () -> Unit) {
                                     }
                                 }
                                 val insertId = DatabaseHelper.insertAndReturnId(
-                                    "INSERT INTO races (title, event_date, location, is_open, cover_image_url, description) VALUES (?,?,?,?,?,?)",
-                                    listOf<Any>(raceTitle, match, raceLocation, isOpen, coverUrl ?: "", raceDescription)
+                                    "INSERT INTO races (title, organizer, event_date, registration_time, location, checkin_location, is_open, cover_image_url, description) VALUES (?,?,?,?,?,?,?,?,?)",
+                                    listOf<Any>(
+                                        raceTitle,
+                                        organizer,
+                                        match,
+                                        registrationTime,
+                                        raceLocation,
+                                        raceLocation,
+                                        isOpen,
+                                        coverUrl ?: "",
+                                        raceDescription
+                                    )
                                 )
                                 if (insertId != null) {
                                     selectedTags.forEach { tag ->
