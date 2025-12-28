@@ -13,9 +13,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,6 +27,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -40,6 +44,7 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -49,12 +54,15 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TextField
+import androidx.compose.material3.rememberBottomSheetScaffoldState
+import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -73,6 +81,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -144,6 +153,61 @@ sealed class RideStatus {
     object NotStarted : RideStatus()
     object InProgress : RideStatus()
     object Paused : RideStatus()
+}
+
+object RideSessionKeeper {
+    var keepAlive by mutableStateOf(false)
+}
+
+private fun formatRideDuration(elapsedSeconds: Long): String {
+    val totalMinutes = elapsedSeconds / 60
+    val hours = totalMinutes / 60
+    val minutes = totalMinutes % 60
+    val seconds = elapsedSeconds % 60
+    if (hours <= 99) {
+        return String.format("%02d:%02d:%02d", hours, minutes, seconds)
+    }
+    val days = hours / 24
+    val remainingHours = hours % 24
+    return String.format("%03d:%02d:%02d", days, remainingHours, minutes)
+}
+
+private object RideGoalSession {
+    var selectedMode by mutableStateOf(RideStartMode.FreeRide)
+    var selectedGoalType by mutableStateOf(TargetGoalType.Distance)
+    var selectedDistanceKm by mutableStateOf(10.0)
+    var selectedDurationMinutes by mutableStateOf(30)
+    var selectedCaloriesKcal by mutableStateOf(200)
+
+    var active by mutableStateOf(false)
+    var goalType by mutableStateOf(TargetGoalType.Distance)
+    var targetDistanceKm by mutableStateOf(10.0)
+    var targetDurationMinutes by mutableStateOf(30)
+    var targetCaloriesKcal by mutableStateOf(200)
+    var reached by mutableStateOf(false)
+
+    fun startSession() {
+        active = selectedMode == RideStartMode.TargetRide
+        reached = false
+        goalType = selectedGoalType
+        targetDistanceKm = selectedDistanceKm
+        targetDurationMinutes = selectedDurationMinutes
+        targetCaloriesKcal = selectedCaloriesKcal
+    }
+
+    fun stopSession() {
+        active = false
+        reached = false
+    }
+
+    fun updateProgress(distanceKm: Double, elapsedSeconds: Long, caloriesKcal: Int) {
+        if (!active || reached) return
+        reached = when (goalType) {
+            TargetGoalType.Distance -> distanceKm >= targetDistanceKm
+            TargetGoalType.Duration -> elapsedSeconds >= targetDurationMinutes * 60L
+            TargetGoalType.Calories -> caloriesKcal >= targetCaloriesKcal
+        }
+    }
 }
 
 private enum class RideStartMode {
@@ -450,12 +514,7 @@ fun RideMainContent(
     var rideStatus = rememberSaveable(saver = rideStatusStateSaver) { mutableStateOf<RideStatus>(RideStatus.NotStarted) }
     var elapsedSeconds by rememberSaveable { mutableStateOf(0L) }
     val reportSeconds = remember { mutableStateOf(0L) }
-    val rideDurationText = remember(elapsedSeconds) {
-        val h = elapsedSeconds / 3600
-        val m = (elapsedSeconds % 3600) / 60
-        val s = elapsedSeconds % 60
-        String.format("%02d:%02d:%02d", h, m, s)
-    }
+    val rideDurationText = remember(elapsedSeconds) { formatRideDuration(elapsedSeconds) }
     var showReportDialog = remember { mutableStateOf(false) }
 
     var rideDuration = remember { mutableStateOf("00:00:00") }
@@ -598,6 +657,12 @@ fun RideMainContent(
             calories.value = caloriesValue.toInt().toString()
 
             updateRideDuration()
+
+            RideGoalSession.updateProgress(
+                distanceKm = totalDistance.value / 1000.0,
+                elapsedSeconds = elapsedSeconds,
+                caloriesKcal = calories.value.toIntOrNull() ?: 0
+            )
         }
 
         trackPoints.add(latLng)
@@ -777,7 +842,8 @@ fun RideMainContent(
         elevation = "${elevation.value} m"
     )
 
-    val onStartClick = { 
+    val onStartClick = {
+        RideGoalSession.startSession()
         // 重置轨迹点和统计数据
         trackPoints.clear()
         startTime.value = System.currentTimeMillis()
@@ -798,6 +864,7 @@ fun RideMainContent(
     val onPauseClick = { rideStatus.value = RideStatus.Paused }
     val onResumeClick = { rideStatus.value = RideStatus.InProgress }
     val onStopClick: () -> Unit = {
+        RideGoalSession.stopSession()
         rideMapUrl.value = null
         rideMapUploading.value = false
         rideMapUploadError.value = null
@@ -927,6 +994,7 @@ fun RideMainContent(
     }
 
     LaunchedEffect(rideStatus.value) {
+        RideSessionKeeper.keepAlive = rideStatus.value is RideStatus.InProgress || rideStatus.value is RideStatus.Paused
         when (rideStatus.value) {
             RideStatus.InProgress -> {
                 // 进入骑行状态：如果还没记录过 startTime，就记一下
@@ -935,6 +1003,11 @@ fun RideMainContent(
                 while (true) {
                     delay(1_000)
                     elapsedSeconds += 1
+                    RideGoalSession.updateProgress(
+                        distanceKm = totalDistance.value / 1000.0,
+                        elapsedSeconds = elapsedSeconds,
+                        caloriesKcal = calories.value.toIntOrNull() ?: 0
+                    )
                 }
             }
             RideStatus.Paused  -> {
@@ -944,6 +1017,7 @@ fun RideMainContent(
                 // 回到未开始：清零
                 elapsedSeconds = 0
                 startTime.value = null
+                RideGoalSession.stopSession()
             }
         }
     }
@@ -1283,6 +1357,10 @@ fun RideMainContent(
                     duration = rideDurationText,
                     distance = rideDistance.value,
                     currentSpeed = currentSpeed.value,
+                    avgSpeed = avgSpeed.value,
+                    maxSpeed = maxSpeed.value,
+                    calories = calories.value,
+                    elevation = elevation.value,
                     onPauseClick = onPauseClick,
                     onStopClick = onStopClick,
                     myLocation = currentLocation.value,
@@ -1296,6 +1374,10 @@ fun RideMainContent(
                     duration = rideDurationText,
                     distance = rideDistance.value,
                     currentSpeed = currentSpeed.value,
+                    avgSpeed = avgSpeed.value,
+                    maxSpeed = maxSpeed.value,
+                    calories = calories.value,
+                    elevation = elevation.value,
                     onResumeClick = onResumeClick,
                     onStopClick = onStopClick,
                     myLocation = currentLocation.value,
@@ -1345,6 +1427,22 @@ fun NotStartedContent(
     var targetCaloriesKcal by rememberSaveable { mutableStateOf(200) }
     var showTargetSheet by rememberSaveable { mutableStateOf(false) }
 
+    LaunchedEffect(mode) {
+        RideGoalSession.selectedMode = mode
+    }
+    LaunchedEffect(targetGoalType) {
+        RideGoalSession.selectedGoalType = targetGoalType
+    }
+    LaunchedEffect(targetDistanceKm) {
+        RideGoalSession.selectedDistanceKm = targetDistanceKm
+    }
+    LaunchedEffect(targetDurationMinutes) {
+        RideGoalSession.selectedDurationMinutes = targetDurationMinutes
+    }
+    LaunchedEffect(targetCaloriesKcal) {
+        RideGoalSession.selectedCaloriesKcal = targetCaloriesKcal
+    }
+
     if (showTargetSheet) {
         when (targetGoalType) {
             TargetGoalType.Distance -> {
@@ -1390,6 +1488,8 @@ fun NotStartedContent(
             .fillMaxSize()
             .background(background)
     ) {
+        val navBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+        val bottomSpacing = navBarBottom + 24.dp
         val mapHeight = maxHeight * 0.60f
 
         Column(
@@ -1482,7 +1582,7 @@ fun NotStartedContent(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(horizontal = 16.dp)
-                .padding(bottom = 96.dp),
+                .padding(bottom = bottomSpacing),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             val routeGap = 10.dp
@@ -2339,6 +2439,10 @@ fun InProgressContent(
     duration: String,
     distance: String,
     currentSpeed: String,
+    avgSpeed: String,
+    maxSpeed: String,
+    calories: String,
+    elevation: String,
     onPauseClick: () -> Unit,
     onStopClick: () -> Unit,
     myLocation: LatLng?,
@@ -2373,7 +2477,12 @@ fun InProgressContent(
         duration = duration,
         distance = distance,
         currentSpeed = currentSpeed,
+        avgSpeed = avgSpeed,
+        maxSpeed = maxSpeed,
+        calories = calories,
+        elevation = elevation,
         highlightData = true,
+        goalReached = RideGoalSession.active && RideGoalSession.reached,
         myLocation = myLocation,
         accuracy = accuracy,
         routePoints = routePoints,
@@ -2405,6 +2514,10 @@ fun PausedContent(
     duration: String,
     distance: String,
     currentSpeed: String,
+    avgSpeed: String,
+    maxSpeed: String,
+    calories: String,
+    elevation: String,
     onResumeClick: () -> Unit,
     onStopClick: () -> Unit,
     myLocation: LatLng?,
@@ -2439,7 +2552,12 @@ fun PausedContent(
         duration = duration,
         distance = distance,
         currentSpeed = currentSpeed,
+        avgSpeed = avgSpeed,
+        maxSpeed = maxSpeed,
+        calories = calories,
+        elevation = elevation,
         highlightData = false,
+        goalReached = RideGoalSession.active && RideGoalSession.reached,
         myLocation = myLocation,
         accuracy = accuracy,
         routePoints = routePoints,
@@ -2466,12 +2584,18 @@ fun PausedContent(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RideWorkoutLayout(
     duration: String,
     distance: String,
     currentSpeed: String,
+    avgSpeed: String,
+    maxSpeed: String,
+    calories: String,
+    elevation: String,
     highlightData: Boolean,
+    goalReached: Boolean,
     myLocation: LatLng?,
     accuracy: Float?,
     routePoints: List<LatLng>,
@@ -2483,18 +2607,46 @@ private fun RideWorkoutLayout(
     secondaryButton: (@Composable RowScope.() -> Unit)?
 ) {
     val background = Color(0xFFF8F9FA)
-    BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(background)
-    ) {
-        val mapHeight = maxHeight * 0.62f
+    val navBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val sheetPeekHeight = 140.dp + navBarBottom
+    val sheetState = rememberStandardBottomSheetState(
+        initialValue = SheetValue.PartiallyExpanded,
+        skipHiddenState = true
+    )
+    val scaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = sheetState)
+    val coroutineScope = rememberCoroutineScope()
+    val expanded by remember { derivedStateOf { sheetState.currentValue == SheetValue.Expanded } }
 
+    BottomSheetScaffold(
+        scaffoldState = scaffoldState,
+        sheetPeekHeight = sheetPeekHeight,
+        sheetContainerColor = Color.White,
+        sheetShape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+        sheetContent = {
+            RideMetricsSheet(
+                duration = duration,
+                distance = distance,
+                currentSpeed = currentSpeed,
+                avgSpeed = avgSpeed,
+                maxSpeed = maxSpeed,
+                calories = calories,
+                elevation = elevation,
+                highlight = highlightData,
+                goalReached = goalReached,
+                expanded = expanded,
+                onToggle = {
+                    coroutineScope.launch {
+                        if (expanded) sheetState.partialExpand() else sheetState.expand()
+                    }
+                }
+            )
+        },
+        containerColor = background
+    ) { innerPadding ->
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(mapHeight)
-                .align(Alignment.TopCenter)
+                .fillMaxSize()
+                .padding(innerPadding)
         ) {
             AMap2DContainer(
                 modifier = Modifier.fillMaxSize(),
@@ -2517,62 +2669,221 @@ private fun RideWorkoutLayout(
                     }
                 }
             }
-        }
 
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 96.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            if (secondaryButton == null) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    primaryButton()
-                }
-            } else {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    primaryButton()
-                    secondaryButton()
+            val buttonBottomPadding = sheetPeekHeight + 12.dp
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = buttonBottomPadding)
+            ) {
+                if (secondaryButton == null) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        primaryButton()
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        primaryButton()
+                        secondaryButton()
+                    }
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
+
+            AnimatedVisibility(
+                visible = goalReached,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = buttonBottomPadding + 18.dp)
+            ) {
+                Card(
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF7EE))
+                ) {
+                    Text(
+                        text = "目标已达成",
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        fontSize = 13.sp,
+                        color = Color(0xFF1E7E34),
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+
+            AnimatedVisibility(
+                visible = !errorText.isNullOrBlank(),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = buttonBottomPadding + 72.dp)
+            ) {
+                Card(
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Text(
+                        text = errorText.orEmpty(),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        fontSize = 12.sp,
+                        color = Color(0xFF6C757D)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RideMetricsSheet(
+    duration: String,
+    distance: String,
+    currentSpeed: String,
+    avgSpeed: String,
+    maxSpeed: String,
+    calories: String,
+    elevation: String,
+    highlight: Boolean,
+    goalReached: Boolean,
+    expanded: Boolean,
+    onToggle: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp, bottom = 14.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 10.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(width = 38.dp, height = 4.dp)
+                    .background(Color(0xFFCED4DA), RoundedCornerShape(999.dp))
+                    .clickable(onClick = onToggle)
+            )
+        }
+
+        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
             RideRealtimeDataCard(
                 duration = duration,
                 distance = distance,
                 currentSpeed = currentSpeed,
-                highlight = highlightData
+                highlight = highlight,
+                goalReached = goalReached
             )
-        }
 
-        AnimatedVisibility(
-            visible = !errorText.isNullOrBlank(),
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 24.dp)
-        ) {
-            Card(
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
-            ) {
+            AnimatedVisibility(visible = expanded) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 14.dp)
+                ) {
+                    RideMetricsGridRow(
+                        leftLabel = "均速",
+                        leftValue = avgSpeed,
+                        leftUnit = "km/h",
+                        rightLabel = "最高速",
+                        rightValue = maxSpeed,
+                        rightUnit = "km/h"
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    RideMetricsGridRow(
+                        leftLabel = "消耗",
+                        leftValue = calories,
+                        leftUnit = "kcal",
+                        rightLabel = "爬升",
+                        rightValue = elevation,
+                        rightUnit = "m"
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RideMetricsGridRow(
+    leftLabel: String,
+    leftValue: String,
+    leftUnit: String,
+    rightLabel: String,
+    rightValue: String,
+    rightUnit: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        RideMetricsGridItem(
+            label = leftLabel,
+            value = leftValue,
+            unit = leftUnit,
+            modifier = Modifier.weight(1f)
+        )
+        RideMetricsGridItem(
+            label = rightLabel,
+            value = rightValue,
+            unit = rightUnit,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun RideMetricsGridItem(
+    label: String,
+    value: String,
+    unit: String,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F9FA)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+            Text(
+                text = label,
+                fontSize = 12.sp,
+                color = Color(0xFF6C757D),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.Bottom) {
                 Text(
-                    text = errorText.orEmpty(),
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    text = value,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF212529),
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = unit,
                     fontSize = 12.sp,
-                    color = Color(0xFF6C757D)
+                    color = Color(0xFF6C757D),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
@@ -2646,10 +2957,19 @@ private fun RideRealtimeDataCard(
     duration: String,
     distance: String,
     currentSpeed: String,
-    highlight: Boolean
+    highlight: Boolean,
+    goalReached: Boolean
 ) {
-    val borderColor = if (highlight) Color(0xFF007BFF) else Color(0xFFE9ECEF)
-    val containerColor = if (highlight) Color(0xFFF2F7FF) else Color.White
+    val borderColor = when {
+        goalReached -> Color(0xFF28A745)
+        highlight -> Color(0xFF007BFF)
+        else -> Color(0xFFE9ECEF)
+    }
+    val containerColor = when {
+        goalReached -> Color(0xFFF0FBF3)
+        highlight -> Color(0xFFF2F7FF)
+        else -> Color.White
+    }
 
     Card(
         modifier = Modifier
@@ -2695,18 +3015,28 @@ private fun RideDataItem(
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Row(verticalAlignment = Alignment.Bottom) {
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.Center) {
             AnimatedContent(targetState = value, label = "ride-data") { v ->
                 Text(
                     text = v,
                     fontSize = 32.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF212529)
+                    color = Color(0xFF212529),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    softWrap = false
                 )
             }
             if (unit.isNotEmpty()) {
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(text = unit, fontSize = 13.sp, color = Color(0xFF6C757D))
+                Text(
+                    text = unit,
+                    fontSize = 13.sp,
+                    color = Color(0xFF6C757D),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    softWrap = false
+                )
             }
         }
         Spacer(modifier = Modifier.height(6.dp))

@@ -3,11 +3,14 @@ package com.example.rideflow.ui.screens
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PageSize
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
@@ -240,35 +243,35 @@ fun DiscoverScreen(navController: androidx.navigation.NavController, userId: Str
 }
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 fun PromoCarousel(images: List<String>) {
-    val listState = rememberLazyListState()
-    val displayImages = remember(images) { if (images.size > 1) images + listOf(images.first()) else images }
-    var autoIndex by rememberSaveable { mutableStateOf(0) }
-    LaunchedEffect(displayImages.size) {
-        if (displayImages.isEmpty()) return@LaunchedEffect
+    if (images.isEmpty()) return
+    val pagerState = rememberPagerState(pageCount = { images.size })
+    val currentPage by remember { derivedStateOf { pagerState.currentPage } }
+    LaunchedEffect(images.size) {
+        if (images.size <= 1) return@LaunchedEffect
+        if (pagerState.currentPage > images.lastIndex) pagerState.scrollToPage(0)
         while (true) {
             delay(2200)
-            if (!listState.isScrollInProgress && displayImages.size > 1) {
-                val target = (autoIndex + 1).coerceAtMost(displayImages.size - 1)
-                autoIndex = target
-                listState.animateScrollToItem(target)
-                if (target == displayImages.size - 1) {
-                    listState.scrollToItem(0)
-                    autoIndex = 0
-                }
+            if (!pagerState.isScrollInProgress && images.size > 1) {
+                val next = (pagerState.currentPage + 1) % images.size
+                pagerState.animateScrollToPage(next)
             }
         }
     }
-    LazyRow(
-        modifier = Modifier.fillMaxWidth(),
-        state = listState
-    ) {
-        items(displayImages) { url ->
+    Column(modifier = Modifier.fillMaxWidth()) {
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxWidth(),
+            pageSize = PageSize.Fixed(320.dp),
+            pageSpacing = 12.dp,
+            contentPadding = PaddingValues(end = 12.dp)
+        ) { page ->
+            val url = images[page]
             Card(
                 modifier = Modifier
                     .width(320.dp)
-                    .height(180.dp)
-                    .padding(end = 12.dp),
+                    .height(180.dp),
                 shape = MaterialTheme.shapes.large,
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
@@ -278,6 +281,25 @@ fun PromoCarousel(images: List<String>) {
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
+            }
+        }
+
+        if (images.size > 1) {
+            Spacer(modifier = Modifier.height(10.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                images.forEachIndexed { index, _ ->
+                    val color = if (index == currentPage) Color(0xFF7A7A7A) else Color(0xFFD0D0D0)
+                    Box(
+                        modifier = Modifier
+                            .size(7.dp)
+                            .background(color = color, shape = androidx.compose.foundation.shape.CircleShape)
+                    )
+                    if (index != images.lastIndex) Spacer(modifier = Modifier.width(8.dp))
+                }
             }
         }
     }
