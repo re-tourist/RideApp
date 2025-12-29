@@ -87,7 +87,7 @@ private suspend fun loadArticlesIO(): List<Article> {
 
 @Composable
 fun DiscoverScreen(navController: androidx.navigation.NavController, userId: String = "") {
-    var subPage by remember { mutableStateOf(DiscoverSubPage.Main) }
+    var subPage by rememberSaveable { mutableStateOf(DiscoverSubPage.Main) }
     LaunchedEffect(Unit) {
         when {
             DiscoverNavigatorState.openRider -> {
