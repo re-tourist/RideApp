@@ -245,7 +245,7 @@ fun CommunityClubDetailScreen(
                         isFollowing = true,
                         onFollowToggle = { _, _ -> },
                         showFollowButton = false,
-                        onAvatarClick = { targetId, _ -> navController.navigate("${com.example.rideflow.navigation.AppRoutes.COMMUNITY_CLUB_DETAIL}/$targetId") },
+                        onAvatarClick = { _, _ -> },
                         onPostClick = { pid -> navController.navigate("${com.example.rideflow.navigation.AppRoutes.POST_DETAIL}/$pid") }
                     )
                     Spacer(modifier = Modifier.height(8.dp).background(Color(0xFFF0F0F0)))
@@ -404,7 +404,7 @@ private fun ClubDetailHeader(info: UIClubInfo, isMember: Boolean, onBackClick: (
                 Surface(
                     shape = RoundedCornerShape(12.dp),
                     color = Color.White,
-                    modifier = Modifier.size(70.dp).clickable(onClick = onDetailClick) // 点击头像也能跳转
+                    modifier = Modifier.size(70.dp)
                 ) {
                     if (!info.logoUrl.isNullOrBlank()) {
                         coil.compose.AsyncImage(
