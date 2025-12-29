@@ -228,6 +228,7 @@ fun ProfileScreen(navController: NavController, userId: String = "") {
                     IconButton(onClick = {
                         try {
                             DiscoverNavigatorState.openRider = true
+                            DiscoverNavigatorState.openRiderBackToProfile = true
                         } catch (_: Exception) {
                         }
                         navController.navigate("${AppRoutes.MAIN}?tab=discover")

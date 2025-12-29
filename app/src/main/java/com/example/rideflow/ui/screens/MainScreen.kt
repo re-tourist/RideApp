@@ -11,9 +11,14 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController // 添加缺失的引用
 import com.example.rideflow.ui.screens.community.CommunityScreen
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.zIndex
 
 @Composable
 fun MainScreen(navController: NavController, userId: String = "", startTab: String = "sport") {
@@ -78,8 +83,23 @@ fun MainScreen(navController: NavController, userId: String = "", startTab: Stri
                 }
             }
         }
-    ) {
-        navItems[currentIndex].screen(navController)
+    ) { innerPadding ->
+        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            navItems.forEachIndexed { index, item ->
+                val isSelected = currentIndex == index
+                val keepAlive = index == 0 && RideSessionKeeper.keepAlive
+                if (isSelected || keepAlive) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .zIndex(if (isSelected) 1f else 0f)
+                            .graphicsLayer(alpha = if (isSelected) 1f else 0f)
+                    ) {
+                        item.screen(navController)
+                    }
+                }
+            }
+        }
     }
 }
 
