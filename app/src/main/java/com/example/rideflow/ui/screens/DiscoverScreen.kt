@@ -54,6 +54,7 @@ import java.util.concurrent.TimeUnit
 object DiscoverNavigatorState {
     var openRouteBook: Boolean = false
     var openRider: Boolean = false
+    var openRiderBackToProfile: Boolean = false
 }
 data class Article(
     val id: Int,
@@ -88,11 +89,14 @@ private suspend fun loadArticlesIO(): List<Article> {
 @Composable
 fun DiscoverScreen(navController: androidx.navigation.NavController, userId: String = "") {
     var subPage by rememberSaveable { mutableStateOf(DiscoverSubPage.Main) }
+    var riderBackToProfile by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         when {
             DiscoverNavigatorState.openRider -> {
                 subPage = DiscoverSubPage.Rider
+                riderBackToProfile = DiscoverNavigatorState.openRiderBackToProfile
                 DiscoverNavigatorState.openRider = false
+                DiscoverNavigatorState.openRiderBackToProfile = false
             }
 
             DiscoverNavigatorState.openRouteBook -> {
@@ -237,7 +241,19 @@ fun DiscoverScreen(navController: androidx.navigation.NavController, userId: Str
         }
         // 骑友子页面
         DiscoverSubPage.Rider -> {
-            RiderScreen(onBack = { subPage = DiscoverSubPage.Main }, userId = userId, navController = navController)
+            RiderScreen(
+                onBack = {
+                    if (riderBackToProfile) {
+                        navController.navigate("${AppRoutes.MAIN}?tab=profile") {
+                            popUpTo(AppRoutes.MAIN) { inclusive = true }
+                        }
+                    } else {
+                        subPage = DiscoverSubPage.Main
+                    }
+                },
+                userId = userId,
+                navController = navController
+            )
         }
     }
 }
