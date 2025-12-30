@@ -1,6 +1,5 @@
 package com.example.rideflow.ui.screens
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -19,48 +18,96 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.os.Handler
+import android.os.Looper
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
+import androidx.compose.foundation.Image
 import com.example.rideflow.R
+import com.example.rideflow.auth.AuthViewModel
+import com.example.rideflow.backend.DatabaseHelper
+import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SetMainClubScreen(
     navController: NavController
 ) {
-    // 模拟数据：已加入的俱乐部列表
-    val joinedClubs = remember {
-        listOf(
-            Club(
-                id = 1,
-                name = "骑货单车俱乐部",
-                city = "北京市",
-                members = 4,
-                heat = 482053,
-                logoRes = R.drawable.ic_launcher_foreground
-            ),
-            Club(
-                id = 2,
-                name = "山地车爱好者协会",
-                city = "上海市",
-                members = 5,
-                heat = 321456,
-                logoRes = R.drawable.ic_launcher_foreground
-            ),
-            Club(
-                id = 3,
-                name = "公路车竞速队",
-                city = "广州市",
-                members = 3,
-                heat = 654321,
-                logoRes = R.drawable.ic_launcher_foreground
-            )
-        )
-    }
+    val handler = Handler(Looper.getMainLooper())
+    val authViewModel = koinViewModel<AuthViewModel>()
+    val currentUserId = authViewModel.getCurrentUser()?.userId?.toIntOrNull()
 
-    // 模拟当前选中的主俱乐部（null表示未设置）
-    val currentMainClub by remember { mutableStateOf<Club?>(null) }
+    var joinedClubs by remember { mutableStateOf<List<Club>>(emptyList()) }
+    var currentMainClub by remember { mutableStateOf<Club?>(null) }
     var selectedClubId by remember { mutableStateOf<Int?>(null) }
     var showSuccessDialog by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(currentUserId) {
+        val uid = currentUserId
+        if (uid != null && uid > 0) {
+            Thread {
+                var mainClubId: Int? = null
+                DatabaseHelper.processQuery(
+                    "SELECT main_club_id FROM rider_profiles WHERE user_id = ?",
+                    listOf(uid)
+                ) { rs ->
+                    if (rs.next()) {
+                        val id = rs.getInt(1)
+                        mainClubId = if (rs.wasNull()) null else id
+                    }
+                    Unit
+                }
+
+                val list = mutableListOf<Club>()
+                DatabaseHelper.processQuery(
+                    "SELECT c.club_id, c.name, c.city, c.logo_url, c.members_count, c.heat FROM club_members m JOIN clubs c ON m.club_id = c.club_id WHERE m.user_id = ? ORDER BY c.heat DESC",
+                    listOf(uid)
+                ) { rs ->
+                    while (rs.next()) {
+                        val id = rs.getInt(1)
+                        val name = rs.getString(2) ?: "俱乐部"
+                        val city = rs.getString(3) ?: ""
+                        val logo = rs.getString(4)
+                        val members = rs.getInt(5)
+                        val heat = rs.getInt(6)
+                        list.add(Club(id, name, city, members, heat, R.drawable.ic_launcher_foreground, logo))
+                    }
+                    Unit
+                }
+
+                handler.post {
+                    joinedClubs = list
+                    val mcid = mainClubId
+                    currentMainClub = if (mcid != null) list.firstOrNull { it.id == mcid } else null
+                    selectedClubId = mcid
+                    isLoading = false
+                }
+            }.start()
+        } else {
+            isLoading = false
+        }
+    }
+
+    fun setMainClub(targetClubId: Int?) {
+        val uid = currentUserId
+        val cid = targetClubId
+        if (uid == null || uid <= 0 || cid == null) return
+        Thread {
+            val updated = DatabaseHelper.executeUpdate(
+                "INSERT INTO rider_profiles (user_id, main_club_id) VALUES (?, ?) ON DUPLICATE KEY UPDATE main_club_id = VALUES(main_club_id)",
+                listOf(uid, cid)
+            )
+            if (updated >= 0) {
+                val club = joinedClubs.firstOrNull { it.id == cid }
+                handler.post {
+                    currentMainClub = club
+                    selectedClubId = cid
+                    showSuccessDialog = true
+                }
+            }
+        }.start()
+    }
 
     Scaffold(
         topBar = {
@@ -109,22 +156,29 @@ fun SetMainClubScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 12.dp)
-                        .clickable { 
-                            // 如果已选择俱乐部，则设置为主俱乐部
+                        .clickable {
                             if (selectedClubId != null) {
-                                showSuccessDialog = true
+                                setMainClub(selectedClubId)
                             }
                         },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // 主俱乐部Logo或加号
                     if (currentMainClub != null) {
-                        Image(
-                            painter = painterResource(id = currentMainClub!!.logoRes),
-                            contentDescription = currentMainClub!!.name,
-                            modifier = Modifier.size(48.dp),
-                            contentScale = ContentScale.Crop
-                        )
+                        if (!currentMainClub!!.logoUrl.isNullOrBlank()) {
+                            AsyncImage(
+                                model = currentMainClub!!.logoUrl,
+                                contentDescription = currentMainClub!!.name,
+                                modifier = Modifier.size(48.dp),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Image(
+                                painter = painterResource(id = currentMainClub!!.logoRes),
+                                contentDescription = currentMainClub!!.name,
+                                modifier = Modifier.size(48.dp),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
@@ -180,25 +234,36 @@ fun SetMainClubScreen(
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
 
-                LazyColumn(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                ) {
-                    items(joinedClubs) { club ->
-                        ClubItem(
-                            club = club,
-                            isSelected = selectedClubId == club.id,
-                            onSelect = { selectedClubId = club.id }
-                        )
-                        Divider()
+                if (isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                    ) {
+                        items(joinedClubs) { club ->
+                            ClubItem(
+                                club = club,
+                                isSelected = selectedClubId == club.id,
+                                onSelect = { selectedClubId = club.id }
+                            )
+                            Divider()
+                        }
                     }
                 }
 
                 Button(
                     onClick = {
                         if (selectedClubId != null) {
-                            showSuccessDialog = true
+                            setMainClub(selectedClubId)
                         }
                     },
                     modifier = Modifier
@@ -243,13 +308,21 @@ fun ClubItem(
             .clickable(onClick = onSelect),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 俱乐部Logo
-        Image(
-            painter = painterResource(id = club.logoRes),
-            contentDescription = club.name,
-            modifier = Modifier.size(48.dp),
-            contentScale = ContentScale.Crop
-        )
+        if (!club.logoUrl.isNullOrBlank()) {
+            AsyncImage(
+                model = club.logoUrl,
+                contentDescription = club.name,
+                modifier = Modifier.size(48.dp),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Image(
+                painter = painterResource(id = club.logoRes),
+                contentDescription = club.name,
+                modifier = Modifier.size(48.dp),
+                contentScale = ContentScale.Crop
+            )
+        }
 
         Spacer(modifier = Modifier.width(12.dp))
 
