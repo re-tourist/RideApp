@@ -36,6 +36,8 @@ import com.example.rideflow.ui.screens.community.CommunityClubDetailScreen
 import com.example.rideflow.ui.screens.UserProfileDetailScreen
 import com.example.rideflow.ui.screens.ChangePasswordScreen
 import com.example.rideflow.ui.screens.SettingsInfoScreen
+import com.example.rideflow.ui.screens.message.MessageDetailScreen
+import com.example.rideflow.ui.screens.message.MessageListScreen
 
 /**
  * 应用导航图
@@ -210,6 +212,26 @@ fun AppNavGraph(authViewModel: AuthViewModel) {
         composable("${AppRoutes.ACTIVITY_REGISTRATION}/{id}") { backStackEntry ->
             val id = backStackEntry.arguments?.getString("id")?.toIntOrNull() ?: 0
             ActivityRegistrationScreen(navController = navController, activityId = id)
+        }
+
+        composable(AppRoutes.MESSAGE_LIST) {
+            val uid = when (authState) {
+                is AuthState.Authenticated -> (authState as AuthState.Authenticated).userData.userId
+                else -> ""
+            }
+            MessageListScreen(navController = navController, ownerId = uid)
+        }
+
+        composable(
+            route = "${AppRoutes.MESSAGE_DETAIL}/{peerId}",
+            arguments = listOf(navArgument("peerId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val uid = when (authState) {
+                is AuthState.Authenticated -> (authState as AuthState.Authenticated).userData.userId
+                else -> ""
+            }
+            val peerId = backStackEntry.arguments?.getString("peerId").orEmpty()
+            MessageDetailScreen(navController = navController, ownerId = uid, peerId = peerId)
         }
 
         // 路书详情页面

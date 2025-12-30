@@ -300,76 +300,13 @@ fun UserProfileDetailScreen(navController: NavController, userId: Int) {
             }
             Spacer(modifier = Modifier.weight(1f))
             Button(
-                onClick = { navController.navigate("${AppRoutes.CHAT}/$userId") },
+                onClick = { navController.navigate("${AppRoutes.MESSAGE_DETAIL}/$userId") },
                 modifier = Modifier.fillMaxWidth().height(48.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF007AFF))
             ) {
                 Icon(imageVector = Icons.Filled.Send, contentDescription = null, tint = Color.White)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(text = "发消息", color = Color.White, fontSize = 16.sp)
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ChatScreen(navController: NavController, targetUserId: Int, currentUserId: Int) {
-    data class ChatMsg(val senderId: Int, val text: String)
-    var messages by remember {
-        mutableStateOf(
-            listOf(
-                ChatMsg(targetUserId, "你好，我是骑友$targetUserId"),
-                ChatMsg(currentUserId, "你好！最近有空吗？"),
-                ChatMsg(targetUserId, "一起夜骑吗？"),
-                ChatMsg(currentUserId, "周六晚上可以。")
-            )
-        )
-    }
-    var input by remember { mutableStateOf("") }
-    Scaffold(
-        topBar = {
-            TopAppBar(title = { Text(text = "私聊") }, navigationIcon = {
-                IconButton(onClick = { navController.popBackStack() }) { Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "返回") }
-            })
-        }
-    ) { innerPadding ->
-        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            LazyColumn(modifier = Modifier.weight(1f).padding(16.dp)) {
-                items(messages) { msg ->
-                    val isMine = msg.senderId == currentUserId
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                        horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (!isMine) {
-                            Icon(imageVector = Icons.Filled.Person, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(28.dp))
-                            Spacer(Modifier.width(6.dp))
-                        }
-                        Surface(
-                            shape = MaterialTheme.shapes.medium,
-                            color = if (isMine) Color(0xFFCCE5FF) else Color(0xFFEFEFEF)
-                        ) {
-                            Text(text = msg.text, modifier = Modifier.padding(10.dp))
-                        }
-                        if (isMine) {
-                            Spacer(Modifier.width(6.dp))
-                            Icon(imageVector = Icons.Filled.Person, contentDescription = null, tint = Color(0xFF007AFF), modifier = Modifier.size(28.dp))
-                        }
-                    }
-                }
-            }
-            Divider()
-            Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(value = input, onValueChange = { input = it }, modifier = Modifier.weight(1f), placeholder = { Text(text = "输入消息") })
-                Spacer(modifier = Modifier.width(8.dp))
-                Button(onClick = {
-                    if (input.isNotBlank()) {
-                        messages = messages + ChatMsg(currentUserId, input)
-                        input = ""
-                    }
-                }) { Text(text = "发送") }
             }
         }
     }

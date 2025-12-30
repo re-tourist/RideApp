@@ -22,6 +22,8 @@ object AppRoutes {
     const val PROFILE_DETAIL = "profile_detail"
     const val USER_PROFILE_DETAIL = "user_profile_detail"
     const val CHAT = "chat"
+    const val MESSAGE_LIST = "message_list"
+    const val MESSAGE_DETAIL = "message_detail"
     const val POST_DETAIL = "post_detail"
     const val RIDE_PREFERENCE = "ride_preference"
     const val ACHIEVEMENTS = "achievements"
