@@ -181,13 +181,6 @@ private fun openExternalLink(context: android.content.Context, url: String) {
     }
 
     val intent = Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    val pm = context.packageManager
-    val resolved = intent.resolveActivity(pm)
-    if (resolved == null) {
-        Toast.makeText(context, "未安装可打开该链接的应用", Toast.LENGTH_SHORT).show()
-        return
-    }
-
     try {
         context.startActivity(intent)
     } catch (_: ActivityNotFoundException) {
