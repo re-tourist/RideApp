@@ -84,6 +84,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.platform.LocalContext
@@ -2989,19 +2990,22 @@ private fun RideRealtimeDataCard(
                 label = "当前速度",
                 value = currentSpeed,
                 unit = "km/h",
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                valueFontSize = 26.sp
             )
             RideDataItem(
                 label = "总距离",
                 value = distance,
                 unit = "km",
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                valueFontSize = 26.sp
             )
             RideDataItem(
                 label = "用时",
                 value = duration,
                 unit = "",
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1.2f),
+                valueFontSize = 20.sp
             )
         }
     }
@@ -3012,14 +3016,15 @@ private fun RideDataItem(
     label: String,
     value: String,
     unit: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    valueFontSize: TextUnit = 26.sp
 ) {
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.Center) {
             AnimatedContent(targetState = value, label = "ride-data") { v ->
                 Text(
                     text = v,
-                    fontSize = 32.sp,
+                    fontSize = valueFontSize,
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFF212529),
                     maxLines = 1,
