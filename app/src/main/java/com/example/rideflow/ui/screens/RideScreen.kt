@@ -2609,107 +2609,77 @@ private fun RideWorkoutLayout(
 ) {
     val background = Color(0xFFF8F9FA)
     val navBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val sheetPeekHeight = 140.dp + navBarBottom
-    val sheetState = rememberStandardBottomSheetState(
-        initialValue = SheetValue.PartiallyExpanded,
-        skipHiddenState = true
-    )
-    val scaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = sheetState)
-    val coroutineScope = rememberCoroutineScope()
-    val expanded by remember { derivedStateOf { sheetState.currentValue == SheetValue.Expanded } }
 
-    BottomSheetScaffold(
-        scaffoldState = scaffoldState,
-        sheetPeekHeight = sheetPeekHeight,
-        sheetContainerColor = Color.White,
-        sheetShape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-        sheetContent = {
-            RideMetricsSheet(
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(background)
+    ) {
+        AMap2DContainer(
+            modifier = Modifier.fillMaxSize(),
+            myLocation = myLocation,
+            accuracy = accuracy,
+            routePoints = routePoints,
+            selectedLocation = selectedLocation,
+            snapshotterState = mapSnapshotterState
+        )
+
+        AnimatedVisibility(visible = isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Card(
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Box(modifier = Modifier.padding(12.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = Color(0xFF007BFF), strokeWidth = 3.dp)
+                    }
+                }
+            }
+        }
+
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .background(
+                    color = Color.White,
+                    shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+                )
+                .padding(horizontal = 16.dp, vertical = 14.dp)
+                .padding(bottom = navBarBottom)
+        ) {
+            RideRealtimeDataCard(
                 duration = duration,
                 distance = distance,
                 currentSpeed = currentSpeed,
-                avgSpeed = avgSpeed,
-                maxSpeed = maxSpeed,
-                calories = calories,
-                elevation = elevation,
                 highlight = highlightData,
-                goalReached = goalReached,
-                expanded = expanded,
-                onToggle = {
-                    coroutineScope.launch {
-                        if (expanded) sheetState.partialExpand() else sheetState.expand()
-                    }
-                }
-            )
-        },
-        containerColor = background
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            AMap2DContainer(
-                modifier = Modifier.fillMaxSize(),
-                myLocation = myLocation,
-                accuracy = accuracy,
-                routePoints = routePoints,
-                selectedLocation = selectedLocation,
-                snapshotterState = mapSnapshotterState
+                goalReached = goalReached
             )
 
-            AnimatedVisibility(visible = isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Card(
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White)
-                    ) {
-                        Box(modifier = Modifier.padding(12.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = Color(0xFF007BFF), strokeWidth = 3.dp)
-                        }
-                    }
-                }
-            }
+            Spacer(modifier = Modifier.height(12.dp))
 
-            val buttonBottomPadding = sheetPeekHeight + 12.dp
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .padding(bottom = buttonBottomPadding)
-            ) {
-                if (secondaryButton == null) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        primaryButton()
-                    }
-                } else {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        primaryButton()
-                        secondaryButton()
-                    }
-                }
-            }
+            RideMetricsGridRow(
+                leftLabel = "均速",
+                leftValue = avgSpeed,
+                leftUnit = "km/h",
+                rightLabel = "最高速",
+                rightValue = maxSpeed,
+                rightUnit = "km/h"
+            )
 
-            AnimatedVisibility(
-                visible = goalReached,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(horizontal = 16.dp)
-                    .padding(bottom = buttonBottomPadding + 18.dp)
-            ) {
+            Spacer(modifier = Modifier.height(10.dp))
+
+            RideMetricsGridRow(
+                leftLabel = "消耗",
+                leftValue = calories,
+                leftUnit = "kcal",
+                rightLabel = "爬升",
+                rightValue = elevation,
+                rightUnit = "m"
+            )
+
+            if (goalReached) {
+                Spacer(modifier = Modifier.height(10.dp))
                 Card(
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF7EE))
@@ -2724,13 +2694,8 @@ private fun RideWorkoutLayout(
                 }
             }
 
-            AnimatedVisibility(
-                visible = !errorText.isNullOrBlank(),
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(horizontal = 16.dp)
-                    .padding(bottom = buttonBottomPadding + 72.dp)
-            ) {
+            if (!errorText.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
                 Card(
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(containerColor = Color.White)
@@ -2741,6 +2706,31 @@ private fun RideWorkoutLayout(
                         fontSize = 12.sp,
                         color = Color(0xFF6C757D)
                     )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            if (secondaryButton == null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    primaryButton()
+                }
+            } else {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    primaryButton()
+                    secondaryButton()
                 }
             }
         }
