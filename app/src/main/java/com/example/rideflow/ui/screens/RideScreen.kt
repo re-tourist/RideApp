@@ -2496,7 +2496,7 @@ fun InProgressContent(
                 text = "暂停",
                 containerColor = Color(0xFF007BFF),
                 onClick = onPauseClick,
-                modifier = Modifier.weight(1.2f)
+                modifier = Modifier.weight(1f)
             )
         },
         secondaryButton = {
@@ -2571,7 +2571,7 @@ fun PausedContent(
                 text = "继续",
                 containerColor = Color(0xFF28A745),
                 onClick = onResumeClick,
-                modifier = Modifier.weight(1.2f)
+                modifier = Modifier.weight(1f)
             )
         },
         secondaryButton = {
@@ -2967,35 +2967,35 @@ private fun RideRealtimeDataCard(
             .fillMaxWidth()
             .border(1.dp, borderColor, RoundedCornerShape(12.dp)),
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(4.dp),
+        elevation = CardDefaults.cardElevation(2.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+                .padding(horizontal = 18.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             RideDataItem(
                 label = "当前速度",
                 value = currentSpeed,
                 unit = "km/h",
                 modifier = Modifier.weight(1f),
-                valueFontSize = 26.sp
+                valueFontSize = 22.sp
             )
             RideDataItem(
                 label = "总距离",
                 value = distance,
                 unit = "km",
                 modifier = Modifier.weight(1f),
-                valueFontSize = 26.sp
+                valueFontSize = 22.sp
             )
             RideDataItem(
                 label = "用时",
                 value = duration,
                 unit = "",
-                modifier = Modifier.weight(1.2f),
-                valueFontSize = 20.sp
+                modifier = Modifier.weight(1.1f),
+                valueFontSize = 18.sp
             )
         }
     }
@@ -3023,10 +3023,10 @@ private fun RideDataItem(
                 )
             }
             if (unit.isNotEmpty()) {
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = unit,
-                    fontSize = 13.sp,
+                    fontSize = 12.sp,
                     color = Color(0xFF6C757D),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -3034,8 +3034,8 @@ private fun RideDataItem(
                 )
             }
         }
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(text = label, fontSize = 12.sp, color = Color(0xFF6C757D))
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(text = label, fontSize = 11.sp, color = Color(0xFF6C757D))
     }
 }
 
